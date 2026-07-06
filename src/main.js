@@ -33,7 +33,12 @@ const BALL_SPEED   = 520;   // how fast a pass flies
 // ---- Distances ----
 const TACKLE_DIST = 15;   // defender this close to the ball = tackle
 const BLOCK_DIST  = 22;   // lineman this close to a rusher = blocks him
-const CATCH_CONTEST = 15; // defender this close to the catch = incomplete
+const CATCH_CONTEST = 15; // defender this close to the catch = contested
+
+// ---- Pass outcome chances (0..1) — tune for more/fewer drops & picks ----
+const CATCH_CHANCE = 0.85; // an OPEN receiver hauls it in...
+const DROP_CHANCE  = 0.12; // ...but might catch it and then drop it
+const INT_CHANCE   = 0.40; // if a defender is right there, he PICKS IT OFF (else knocks it down)
 
 const config = {
   type: Phaser.AUTO,
@@ -122,7 +127,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys };
+  window.__td = { G, offense, defense, keys, snap, throwTo, endPlay, setupPlay };
 }
 
 // ============================================================
@@ -223,18 +228,25 @@ function throwTo(num) {
 }
 
 function resolvePass(wr, x, y) {
-  // Is a defender right on the catch point? Then it's incomplete.
-  let contested = false;
+  // Who is closest to the ball when it arrives?
+  let nearestDef = Infinity;
   for (const d of defense) {
-    if (Phaser.Math.Distance.Between(d.s.x, d.s.y, x, y) < CATCH_CONTEST) {
-      contested = true; break;
-    }
+    nearestDef = Math.min(nearestDef, Phaser.Math.Distance.Between(d.s.x, d.s.y, x, y));
   }
-  if (contested) {
-    endPlay('incomplete');
+
+  // A defender is right there — he either intercepts it or knocks it away.
+  if (nearestDef < CATCH_CONTEST) {
+    if (Math.random() < INT_CHANCE) endPlay('interception');
+    else endPlay('incomplete', 'BROKEN UP!');
     return;
   }
-  // Caught! You now control this receiver.
+
+  // Wide open — but receivers aren't perfect. They can miss it...
+  if (Math.random() > CATCH_CHANCE) { endPlay('incomplete', 'INCOMPLETE'); return; }
+  // ...or catch it and drop it.
+  if (Math.random() < DROP_CHANCE)  { endPlay('incomplete', 'DROPPED IT!'); return; }
+
+  // Clean catch! You now control this receiver.
   G.ballCarrier = wr;
   G.state = 'live';
   ballFollow = true;
@@ -333,13 +345,20 @@ function checkTouchdown() {
 }
 
 // Decide what the next play is, show a banner, and pause briefly.
-function endPlay(result) {
+function endPlay(result, customMsg) {
   freezeEveryone();
-  let msg, next;
+  let msg, next, big = false;
 
   if (result === 'touchdown') {
     G.score += 7;
     msg = 'TOUCHDOWN!  +7';
+    big = true;
+    next = { los: 20, down: 1, fd: 30, fresh: true };
+  } else if (result === 'interception') {
+    // The other team caught it! You don't play defense yet, so the ball
+    // comes back out and you start a fresh drive at your own 20.
+    msg = customMsg || 'INTERCEPTED!';
+    big = true;
     next = { los: 20, down: 1, fd: 30, fresh: true };
   } else {
     const spot = (result === 'incomplete')
@@ -355,7 +374,7 @@ function endPlay(result) {
         msg = 'TURNOVER ON DOWNS';
         next = { los: 20, down: 1, fd: 30, fresh: true };
       } else {
-        msg = result === 'incomplete' ? 'INCOMPLETE' : 'TACKLE';
+        msg = customMsg || (result === 'incomplete' ? 'INCOMPLETE' : 'TACKLE');
         next = { los: spot, down: nd, fd: G.firstDownYards };
       }
     }
@@ -364,7 +383,7 @@ function endPlay(result) {
   G.next = next;
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1600;
-  showBanner(msg, result === 'touchdown');
+  showBanner(msg, big);
 }
 
 // ============================================================
@@ -448,12 +467,13 @@ function makePlayer(scene, color, role, opts) {
   s.setCollideWorldBounds(true);
   s.setDepth(5);
   const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, label: null };
-  // Number labels on QB and receivers so passing targets are obvious
-  if (role === 'QB' || role === 'WR') {
-    const txt = role === 'QB' ? 'QB' : String(opts.num);
+  // Labels so the key players are obvious: QB, receivers 1/2/3,
+  // and the two rushers ("the defense on the quarterback").
+  if (role === 'QB' || role === 'WR' || role === 'DL') {
+    const txt = role === 'QB' ? 'QB' : role === 'DL' ? 'RUSH' : String(opts.num);
     o.label = scene.add.text(0, 0, txt, {
-      fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#ffffff',
-      stroke: '#000', strokeThickness: 3
+      fontFamily: 'Arial Black, Arial', fontSize: role === 'DL' ? '9px' : '13px',
+      color: '#ffffff', stroke: '#000', strokeThickness: 3
     }).setOrigin(0.5).setDepth(7);
   }
   return o;
@@ -477,6 +497,7 @@ function buildHUD(scene) {
 function updateHUD() {
   // Keep number labels glued to their players
   for (const o of offense) if (o.label) o.label.setPosition(o.s.x, o.s.y);
+  for (const d of defense) if (d.label) d.label.setPosition(d.s.x, d.s.y);
 
   hud.score.setText('SCORE: ' + G.score);
 

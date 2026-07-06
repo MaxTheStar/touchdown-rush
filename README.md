@@ -22,6 +22,11 @@ python3 -m http.server 8000
 7-on-7. You're on offense (blue, **MAX FC**). Get 10 yards in 4 downs for a first
 down; reach the endzone for a **touchdown = 7 points**.
 
+**Passing isn't automatic:** receivers can drop the ball or miss it, and if you
+throw into coverage the defense can **intercept** it — that's a turnover, so your
+drive restarts. The key players are labeled: **QB**, receivers **1 / 2 / 3**, and
+the two **RUSH** defenders coming after your quarterback.
+
 ## Roadmap
 
 - [x] **v0.1 — The field.** Scrolling field, yard lines, chibi runner, touchdowns.
