@@ -27,7 +27,8 @@ const GRASS_LIGHT = 0x379437;
 // ---- Speeds (pixels/sec) — tune these to make it easier/harder ----
 const PLAYER_SPEED = 215;   // the player you control
 const WR_SPEED     = 195;   // receivers running routes
-const DEF_SPEED    = 188;   // defenders (a touch slower = beatable)
+const DEF_SPEED    = 196;   // defenders (a touch slower than you = still beatable)
+const OL_SPEED     = 182;   // your linemen mirroring the rush to protect the QB
 const BALL_SPEED   = 520;   // how fast a pass flies
 
 // ---- Distances ----
@@ -71,6 +72,7 @@ let offense = [];  // 7 blue players (objects, see makePlayer)
 let defense = [];  // 7 red players
 let ball;          // the football sprite
 let ballFollow = true;
+let referee;       // the striped official (flavor only, no physics)
 let keys;          // keyboard
 
 window.game = new Phaser.Game(config);
@@ -85,13 +87,15 @@ function create() {
   makeChibiTexture(this, 'blue', HOME_COLOR);
   makeChibiTexture(this, 'red', AWAY_COLOR);
   makeBallTexture(this);
+  makeRefTexture(this);
 
-  // --- Offense: QB, 3 receivers (numbered 1/2/3), 3 linemen ---
+  // --- Offense: QB, RB, 2 receivers (1/2), 3 linemen ---
+  // The RB is pass target #3 AND can take a handoff (press H).
   offense = [
     makePlayer(this, 'blue', 'QB', { num: 0 }),
+    makePlayer(this, 'blue', 'RB', { num: 3, route: 'swing' }),
     makePlayer(this, 'blue', 'WR', { num: 1, route: 'slant' }),
     makePlayer(this, 'blue', 'WR', { num: 2, route: 'streak' }),
-    makePlayer(this, 'blue', 'WR', { num: 3, route: 'out' }),
     makePlayer(this, 'blue', 'OL', {}),
     makePlayer(this, 'blue', 'OL', {}),
     makePlayer(this, 'blue', 'OL', {}),
@@ -110,10 +114,14 @@ function create() {
 
   ball = this.physics.add.sprite(0, 0, 'ball').setDepth(6);
 
+  // The referee — a plain sprite (no physics body), so he's on the field
+  // for realism but never blocks, tackles, or gets in the way.
+  referee = this.add.sprite(0, 0, 'ref').setDepth(4);
+
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE'
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H'
   });
 
   // Camera & world
@@ -127,7 +135,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, snap, throwTo, endPlay, setupPlay };
+  window.__td = { G, offense, defense, keys, snap, throwTo, handOff, endPlay, setupPlay };
 }
 
 // ============================================================
@@ -154,6 +162,7 @@ function update(time) {
 
   if (G.state === 'live') controlBallCarrier();
   updateReceivers(elapsed);
+  updateLine();
   updateDefense(elapsed);
   updateBall();
 
@@ -194,14 +203,23 @@ function controlBallCarrier() {
     if (Phaser.Input.Keyboard.JustDown(keys.one))   throwTo(1);
     else if (Phaser.Input.Keyboard.JustDown(keys.two))   throwTo(2);
     else if (Phaser.Input.Keyboard.JustDown(keys.three)) throwTo(3);
+    else if (Phaser.Input.Keyboard.JustDown(keys.hand))  handOff();
   }
+}
+
+// Hand the ball to the running back — now you control him.
+function handOff() {
+  const rb = offense[1];
+  G.ballCarrier = rb;
+  G.hasPassed = true; // no passing after a handoff; defense now chases the RB
+  G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
 }
 
 // ============================================================
 // PASSING — throw to the receiver wearing that number
 // ============================================================
 function throwTo(num) {
-  const wr = offense.find(o => o.role === 'WR' && o.num === num);
+  const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === num);
   if (!wr) return;
 
   G.hasPassed = true;
@@ -258,8 +276,8 @@ function resolvePass(wr, x, y) {
 // ============================================================
 function updateReceivers(elapsed) {
   for (const o of offense) {
-    if (o.role !== 'WR') continue;
-    if (o === G.ballCarrier) continue; // once caught, the player drives
+    if (o.role !== 'WR' && o.role !== 'RB') continue;
+    if (o === G.ballCarrier) continue; // once caught / handed the ball, the player drives
 
     const depth = o.startY - o.s.y; // yards upfield since the snap
     let vx = 0, vy = -WR_SPEED;
@@ -270,6 +288,10 @@ function updateReceivers(elapsed) {
       if (depth > 70) { vx = WR_SPEED * 0.7; vy = -WR_SPEED * 0.6; } // cut inside
     } else if (o.route === 'out') {
       if (depth > 110) { vx = -WR_SPEED * 0.7; vy = -WR_SPEED * 0.4; } // break to sideline
+    } else if (o.route === 'swing') {
+      // the running back swings out to the flat, then turns upfield
+      if (depth < 20) { vx = WR_SPEED * 0.85; vy = -WR_SPEED * 0.2; }
+      else { vx = WR_SPEED * 0.25; vy = -WR_SPEED * 0.9; }
     }
 
     // Don't run off the field or into the endzone wall
@@ -279,6 +301,37 @@ function updateReceivers(elapsed) {
 
     o.s.setVelocity(vx, vy);
     if (vx || vy) o.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+  }
+}
+
+// ============================================================
+// OFFENSIVE LINE — actively block the rushers to protect the QB
+// ------------------------------------------------------------
+// Each lineman slides in FRONT of a rusher (between him and the QB)
+// and mirrors him. A rusher near a blocker gets slowed (nearBlocker),
+// so a real pocket forms instead of the line standing still.
+// ============================================================
+function updateLine() {
+  const qb = offense[0].s;
+  const rushers = defense.filter(d => d.role === 'DL');
+  const linemen = offense.filter(o => o.role === 'OL' && o !== G.ballCarrier);
+  const claimed = new Set();
+
+  for (const ol of linemen) {
+    let best = null, bestD = Infinity;     // nearest rusher overall
+    let free = null, freeD = Infinity;     // nearest UNclaimed rusher
+    for (const r of rushers) {
+      const dd = Phaser.Math.Distance.Between(ol.s.x, ol.s.y, r.s.x, r.s.y);
+      if (dd < bestD) { bestD = dd; best = r; }
+      if (!claimed.has(r) && dd < freeD) { freeD = dd; free = r; }
+    }
+    const target = free || best;           // double-team if everyone's claimed
+    if (!target) { ol.s.setVelocity(0, 0); continue; }
+    if (free) claimed.add(free);
+
+    // Aim for a spot just goal-side of the rusher, on his path to the QB
+    const a = Math.atan2(qb.y - target.s.y, qb.x - target.s.x);
+    steer(ol.s, target.s.x + Math.cos(a) * 14, target.s.y + Math.sin(a) * 14, OL_SPEED);
   }
 }
 
@@ -301,12 +354,13 @@ function updateDefense(elapsed) {
       // ...unless an offensive lineman is blocking them.
       if (nearBlocker(d)) speed = DEF_SPEED * 0.4;
     } else if (d.role === 'LB') {
-      // Linebackers hesitate a beat, then pursue the ball carrier.
-      if (elapsed < 0.3) { d.s.setVelocity(0, 0); continue; }
-      tx = carrier.x; ty = carrier.y;
+      // Linebackers spy the QB in a short zone — they don't blitz, so the
+      // pocket holds; they pursue once the ball is thrown or handed off.
+      tx = offense[0].s.x; ty = G.losY - 45;
+      speed = DEF_SPEED * 0.8;
     } else { // DB
       // Cover your receiver — stay on the goal side (just above him).
-      const wr = offense.find(o => o.role === 'WR' && o.num === d.cover);
+      const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === d.cover);
       if (wr) { tx = wr.s.x; ty = wr.s.y - 24; }
       else { tx = carrier.x; ty = carrier.y; }
     }
@@ -409,23 +463,26 @@ function setupPlay(next) {
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
-  place(offense[1], 55,  L + 14);   // WR1 (left)
-  place(offense[2], 478, L + 14);   // WR2 (right)
-  place(offense[3], 150, L + 26);   // WR3 (slot)
+  place(offense[1], 266, L + 84);   // RB (behind the QB)
+  place(offense[2], 55,  L + 14);   // WR #1 (left)
+  place(offense[3], 478, L + 14);   // WR #2 (right)
   place(offense[4], 226, L + 16);   // OL
   place(offense[5], 266, L + 16);   // OL
   place(offense[6], 306, L + 16);   // OL
-  offense[1].startY = offense[1].s.y;
-  offense[2].startY = offense[2].s.y;
-  offense[3].startY = offense[3].s.y;
+  offense[1].startY = offense[1].s.y;   // RB
+  offense[2].startY = offense[2].s.y;   // WR #1
+  offense[3].startY = offense[3].s.y;   // WR #2
 
-  place(defense[0], 246, L - 16);   // DL
-  place(defense[1], 286, L - 16);   // DL
+  place(defense[0], 246, L - 16);   // DL RUSH
+  place(defense[1], 286, L - 16);   // DL RUSH
   place(defense[2], 226, L - 46);   // LB
   place(defense[3], 306, L - 46);   // LB
-  place(defense[4], 60,  L - 28);   // DB on WR1
-  place(defense[5], 473, L - 28);   // DB on WR2
-  place(defense[6], 150, L - 40);   // DB on WR3
+  place(defense[4], 60,  L - 28);   // DB on WR #1
+  place(defense[5], 473, L - 28);   // DB on WR #2
+  place(defense[6], 266, L - 40);   // DB on the RB
+
+  // Referee stands in the offensive backfield, off to the side (out of the way)
+  referee.setPosition(410, L + 90);
 
   G.state = 'presnap';
   G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
@@ -467,12 +524,12 @@ function makePlayer(scene, color, role, opts) {
   s.setCollideWorldBounds(true);
   s.setDepth(5);
   const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, label: null };
-  // Labels so the key players are obvious: QB, receivers 1/2/3,
+  // Labels so the key players are obvious: QB, RB, receivers 1/2,
   // and the two rushers ("the defense on the quarterback").
-  if (role === 'QB' || role === 'WR' || role === 'DL') {
-    const txt = role === 'QB' ? 'QB' : role === 'DL' ? 'RUSH' : String(opts.num);
+  if (role === 'QB' || role === 'WR' || role === 'DL' || role === 'RB') {
+    const txt = role === 'QB' ? 'QB' : role === 'DL' ? 'RUSH' : role === 'RB' ? 'RB' : String(opts.num);
     o.label = scene.add.text(0, 0, txt, {
-      fontFamily: 'Arial Black, Arial', fontSize: role === 'DL' ? '9px' : '13px',
+      fontFamily: 'Arial Black, Arial', fontSize: role === 'DL' ? '9px' : role === 'RB' ? '10px' : '13px',
       color: '#ffffff', stroke: '#000', strokeThickness: 3
     }).setOrigin(0.5).setDepth(7);
   }
@@ -509,7 +566,7 @@ function updateHUD() {
   if (G.state === 'presnap') {
     hud.help.setText('Press SPACE to hike the ball');
   } else if (G.state === 'live' && G.ballCarrier === offense[0] && !G.hasPassed) {
-    hud.help.setText('Arrows = run    1 / 2 / 3 = pass to that receiver');
+    hud.help.setText('1 / 2 pass to WR   ·   3 pass to RB   ·   H hand off   ·   arrows run');
   } else if (G.state === 'live') {
     hud.help.setText('Arrows = run to the endzone!');
   } else {
@@ -603,5 +660,20 @@ function makeBallTexture(scene) {
   g.fillStyle(0x8B4513); g.fillEllipse(8, 5, 14, 9);
   g.lineStyle(1.5, 0xffffff); g.beginPath(); g.moveTo(4, 5); g.lineTo(12, 5); g.strokePath();
   g.generateTexture('ball', 16, 10);
+  g.destroy();
+}
+
+function makeRefTexture(scene) {
+  const g = scene.make.graphics({ x: 0, y: 0, add: false });
+  // black-and-white striped shirt (chibi, seen from above)
+  g.fillStyle(0xffffff); g.fillEllipse(20, 26, 30, 16);
+  g.fillStyle(0x000000);
+  for (let i = 0; i < 4; i++) g.fillRect(9 + i * 7, 18, 3, 16);
+  // arms
+  g.fillStyle(0xd9a066); g.fillCircle(5, 26, 4); g.fillCircle(35, 26, 4);
+  // head with a black cap
+  g.fillStyle(0xd9a066); g.fillCircle(20, 15, 12);
+  g.fillStyle(0x111111); g.fillEllipse(20, 10, 26, 12);
+  g.generateTexture('ref', 40, 36);
   g.destroy();
 }

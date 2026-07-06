@@ -17,7 +17,9 @@ python3 -m http.server 8000
 |-----|--------|
 | SPACE | Hike the ball (start the play) |
 | ← → ↑ ↓ | Run with the ball carrier |
-| 1 / 2 / 3 | Throw to the receiver wearing that number (QB, behind the line) |
+| 1 / 2 | Throw to a wide receiver |
+| 3 | Throw to the running back |
+| H | Hand the ball off to the running back |
 
 7-on-7. You're on offense (blue, **MAX FC**). Get 10 yards in 4 downs for a first
 down; reach the endzone for a **touchdown = 7 points**.
@@ -32,6 +34,8 @@ the two **RUSH** defenders coming after your quarterback.
 - [x] **v0.1 — The field.** Scrolling field, yard lines, chibi runner, touchdowns.
 - [x] **v0.2 — Real football.** 7v7, the snap, run or pass, 7 AI defenders who rush,
       cover, and tackle, 4 downs to gain 10 yards, first downs, turnover on downs.
+- [x] **v0.2.1 — Realism.** Droppable passes and interceptions; a running back
+      (handoff or checkdown); an offensive line that actively blocks the pass rush.
 - [ ] **v0.3 — Better defense & routes.** Smarter coverage, more pass routes, a running back.
 - [ ] **v0.4 — Kicking game.** Field goals, punts, kickoffs.
 - [ ] **v0.5 — Two-player.** Player 2 controls the defense (WASD vs arrows,
