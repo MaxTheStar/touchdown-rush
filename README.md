@@ -15,17 +15,20 @@ python3 -m http.server 8000
 
 | Key | Action |
 |-----|--------|
-| ← → ↑ ↓ | Run with the ball |
+| SPACE | Hike the ball (start the play) |
+| ← → ↑ ↓ | Run with the ball carrier |
+| 1 / 2 / 3 | Throw to the receiver wearing that number (QB, behind the line) |
 
-Run to the far endzone. **Touchdown = 7 points.**
+7-on-7. You're on offense (blue, **MAX FC**). Get 10 yards in 4 downs for a first
+down; reach the endzone for a **touchdown = 7 points**.
 
 ## Roadmap
 
 - [x] **v0.1 — The field.** Scrolling field, yard lines, chibi runner, touchdowns.
-- [ ] **v0.2 — Real football.** Line of scrimmage, snap, 4 downs to gain 10 yards,
-      first downs, turnover on downs.
-- [ ] **v0.3 — Defense.** 7 AI defenders who chase the ball carrier. Tackles end the play.
-- [ ] **v0.4 — Passing.** QB throws to receivers running routes.
+- [x] **v0.2 — Real football.** 7v7, the snap, run or pass, 7 AI defenders who rush,
+      cover, and tackle, 4 downs to gain 10 yards, first downs, turnover on downs.
+- [ ] **v0.3 — Better defense & routes.** Smarter coverage, more pass routes, a running back.
+- [ ] **v0.4 — Kicking game.** Field goals, punts, kickoffs.
 - [ ] **v0.5 — Two-player.** Player 2 controls the defense (WASD vs arrows,
       works with one keyboard or two).
 - [ ] **v1.0 — Ship it!** Sounds, polish, and live on GitHub Pages.
