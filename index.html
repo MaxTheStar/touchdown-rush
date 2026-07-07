@@ -116,6 +116,37 @@
       border-color: rgba(255,120,120,0.75);
     }
     body.two-player #dpad2 { display: grid; }
+
+    /* ---- 4th-down choice panel (hidden until it's 4th down) ---- */
+    #fourth-down {
+      position: fixed; z-index: 30; inset: 0;
+      display: none;                          /* main.js flips this to flex */
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; background: rgba(10,16,32,0.72);
+    }
+    #fourth-down .title {
+      font: 800 26px "Arial Black", Arial; color: #ffe066;
+      text-shadow: 0 2px 6px #000; letter-spacing: 1px;
+    }
+    #fourth-down .choice {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      width: min(78vw, 300px); text-align: center;
+      padding: 18px 16px; border-radius: 16px;
+      font: 800 clamp(16px, 5.2vw, 22px) "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
+      box-shadow: 0 3px 10px rgba(0,0,0,.4);
+    }
+    #btn-kick { background: rgba(255,214,10,0.28); border-color: rgba(255,214,10,0.75); }
+    #fourth-down .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
+    #btn-kick:active { background: rgba(255,214,10,0.55); }
+
+    /* While kicking, hide the football controls so the whole screen is one
+       big "tap to kick" area (main.js adds/removes the .kicking class). */
+    body.kicking #dpad,
+    body.kicking #actions,
+    body.kicking #dpad2,
+    body.kicking #btn-mode,
+    body.kicking #btn-fs { display: none !important; }
   </style>
 </head>
 <body>
@@ -130,6 +161,14 @@
   <!-- Fullscreen + 1P/2P switch (top-right) -->
   <div class="btn" id="btn-fs">⛶</div>
   <div class="btn" id="btn-mode">1P</div>
+
+  <!-- 4th-down choice: play the down, or kick. main.js shows/hides this
+       and fills in whether button ② is a FIELD GOAL or a PUNT. -->
+  <div id="fourth-down">
+    <div class="title">4TH DOWN!</div>
+    <div class="choice" id="btn-go">① PLAY 4TH DOWN</div>
+    <div class="choice" id="btn-kick">② FIELD GOAL</div>
+  </div>
 
   <!-- Player 2's D-pad (top) — only shows in 2-player mode -->
   <div id="dpad2">
@@ -158,6 +197,8 @@
 
   <!-- Phaser 3: the open-source game engine doing the heavy lifting -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
+  <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses -->
+  <script src="src/kick.js"></script>
   <script src="src/main.js"></script>
 </body>
 </html>

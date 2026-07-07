@@ -45,6 +45,14 @@ const INT_CHANCE   = 0.40; // if a defender is right there, he PICKS IT OFF (els
 const FUMBLE_CHANCE      = 0.12; // this often, a tackle pops the ball out
 const OFF_RECOVER_CHANCE = 0.5;  // ...and your team dives on its own fumble half the time
 
+// ---- Kicking — on 4th down you can try a field goal or punt ----
+// A field goal is worth 3 points. How far is the kick? From where the ball
+// is, plus 17 yards (the snap is ~7 yards back and the posts are 10 yards
+// deep in the endzone). If that's 55 yards or less, you're "in range".
+const FG_MAX_DIST = 55;                     // longest field goal you're allowed to try
+function fieldGoalDistance() { return (100 - G.losYards) + 17; }
+function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
+
 const config = {
   type: Phaser.AUTO,
   width: 540,
@@ -61,7 +69,7 @@ const config = {
 // ---- Game state (one object so it's easy to read) ----
 const G = {
   scene: null,
-  state: 'presnap',     // presnap | live | pass | dead
+  state: 'presnap',     // presnap | live | pass | dead | fumble | decision | kick
   score: 0,
   down: 1,
   losYards: 20,         // line of scrimmage, yards from own goal
@@ -169,17 +177,35 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance };
 }
 
 // ============================================================
 // UPDATE — the heartbeat, ~60x per second
 // ============================================================
-function update(time) {
+function update(time, delta) {
   if (G.state === 'dead') {
     freezeEveryone();
     if (time >= G.deadUntil) startNextPlay();
     updateBall();
+    return;
+  }
+
+  // KICKING: the kick mini-game is drawn on top of the field. Let it run;
+  // it calls back to onKickDone() when the kick is finished.
+  if (G.state === 'kick') {
+    freezeEveryone();
+    KickGame.update(delta);
+    return;
+  }
+
+  // 4TH DOWN CHOICE: pick to play the down, or kick (field goal / punt).
+  if (G.state === 'decision') {
+    freezeEveryone();
+    if (Phaser.Input.Keyboard.JustDown(keys.one)) chooseFourthDown('play');
+    else if (Phaser.Input.Keyboard.JustDown(keys.two)) chooseFourthDown('kick');
+    updateBall();
+    updateHUD();
     return;
   }
 
@@ -533,6 +559,72 @@ function endPlay(result, customMsg) {
 }
 
 // ============================================================
+// 4TH DOWN — go for it, or kick (field goal / punt)
+// ------------------------------------------------------------
+// When it's 4th down we pause and show two buttons. Button ① plays the
+// down like normal. Button ② is a FIELD GOAL when you're close enough,
+// or a PUNT when you're too far. The kick itself is the KickGame screen.
+// ============================================================
+function showFourthDownChoice() {
+  const panel  = document.getElementById('fourth-down');
+  const goBtn   = document.getElementById('btn-go');
+  const kickBtn = document.getElementById('btn-kick');
+  if (goBtn)   goBtn.textContent = '① PLAY 4TH DOWN';
+  if (kickBtn) {
+    kickBtn.textContent = inFieldGoalRange()
+      ? '② FIELD GOAL · ' + Math.round(fieldGoalDistance()) + ' yd'
+      : '② PUNT';
+  }
+  if (panel) panel.style.display = 'flex';
+}
+
+function hideFourthDownChoice() {
+  const panel = document.getElementById('fourth-down');
+  if (panel) panel.style.display = 'none';
+}
+
+// The player picked an option ('play' or 'kick').
+function chooseFourthDown(which) {
+  if (G.state !== 'decision') return;   // ignore stray taps
+  hideFourthDownChoice();
+  if (which === 'play') { G.state = 'presnap'; return; }
+  startKick(inFieldGoalRange() ? 'fg' : 'punt');
+}
+
+// Hand off to the KickGame screen (drawn on top of the field).
+function startKick(mode) {
+  G.state = 'kick';
+  document.body.classList.add('kicking');   // hide the football buttons
+  G.scene.cameras.main.stopFollow();
+  KickGame.enter(G.scene, {
+    mode,
+    distance: fieldGoalDistance(),
+    onDone: onKickDone,
+  });
+}
+
+// The kick finished — score it, then start a fresh drive.
+function onKickDone(result) {
+  document.body.classList.remove('kicking');  // bring the football buttons back
+  let msg;
+  if (result.mode === 'fg' && result.made) {
+    G.score += 3;
+    msg = 'FIELD GOAL!  +3';
+  } else if (result.mode === 'fg') {
+    msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
+  } else {
+    msg = 'PUNT — ' + result.puntYards + ' YDS';
+  }
+  // There's no opponent yet, so every kick just hands the ball back and
+  // you start again at your own 20 (like a touchback). Field position and
+  // pinning the other team deep will matter once we add an opponent team.
+  G.next = { los: 20, down: 1, fd: 30, fresh: true };
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1600;
+  showBanner(msg, true);
+}
+
+// ============================================================
 // SETTING UP A PLAY — line all 14 players up at the LOS
 // ============================================================
 function startDrive() {
@@ -577,9 +669,17 @@ function setupPlay(next) {
   // Referee stands in the offensive backfield, off to the side (out of the way)
   referee.setPosition(410, L + 90);
 
-  G.state = 'presnap';
   G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
   updateBall();
+
+  // On 4th down, don't snap right away — first offer the choice:
+  // go for it, or kick (a field goal if you're close, otherwise a punt).
+  if (G.down === 4) {
+    G.state = 'decision';
+    showFourthDownChoice();
+  } else {
+    G.state = 'presnap';
+  }
 }
 
 // ============================================================
@@ -617,6 +717,10 @@ function setupTouchButtons() {
   // The 1P / 2P switch and the Fullscreen button
   bindTapEl('btn-mode', toggleTwoPlayer);
   bindTapEl('btn-fs', toggleFullscreen);
+
+  // The 4th-down choice buttons (① play the down, ② kick)
+  bindTapEl('btn-go', () => chooseFourthDown('play'));
+  bindTapEl('btn-kick', () => chooseFourthDown('kick'));
 
   // Stop iOS Safari from pinch-zooming or double-tap-zooming the game
   const stop = e => e.preventDefault();

@@ -31,6 +31,12 @@ on a keyboard) and tries to tackle you. Player 1 runs the offense as usual.
 7-on-7. You're on offense (blue, **MAX FC**). Get 10 yards in 4 downs for a first
 down; reach the endzone for a **touchdown = 7 points**.
 
+**🦵 Kicking (4th down):** on 4th down you get a choice — **① play the down**, or
+**② kick**. If you're close enough it's a **FIELD GOAL** (worth **3 points**);
+too far and it's a **PUNT**. Kicking flips to a behind-the-kicker view: **tap to
+AIM** between the posts, **tap to set POWER**, and it flies. Longer kicks are
+harder. Want to just practice kicks? Open **[`kick.html`](kick.html)**.
+
 **Passing isn't automatic:** receivers can drop the ball or miss it, and if you
 throw into coverage the defense can **intercept** it — that's a turnover, so your
 drive restarts. The key players are labeled: **QB**, receivers **1 / 2 / 3**, and
@@ -50,7 +56,9 @@ the two **RUSH** defenders coming after your quarterback.
 - [x] **v0.2.4 — Fumbles!** A hard tackle can knock the ball loose — then either
       team can recover it. Lose it and it's a turnover.
 - [ ] **v0.3 — Better defense & routes.** Smarter coverage, more pass routes.
-- [ ] **v0.4 — Kicking game.** Field goals, punts, kickoffs.
+- [x] **v0.4 — Kicking game (part 1).** On 4th down, choose to go for it, kick a
+      **field goal** (worth 3 — a behind-the-kicker aim + power mini-game, harder the
+      farther out you are), or **punt** if you're out of range. Still to come: kickoffs.
 - [ ] **v0.5 — Bigger two-player.** Player 2 controls the whole defense / swaps players.
 - [ ] **v1.0 — Ship it!** Sounds, polish, and live on GitHub Pages.
 - [ ] **Someday:** field goals, punts, kickoffs, playbooks, seasons,

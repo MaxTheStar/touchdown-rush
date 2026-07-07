@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Same "feels like an app" settings as the main game -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Kick It!" />
+  <title>Touchdown Rush — Kicking 🦵</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      overflow: hidden; background: #0b1020;
+      font-family: "Helvetica Neue", Arial, sans-serif; color: #eee;
+      touch-action: none; -webkit-user-select: none; user-select: none;
+    }
+    body { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; }
+    h1 { margin: 8px 0 2px; font-size: 20px; letter-spacing: 1px; }
+    .controls { font-size: 12px; color: #aaa; margin: 2px 0 6px; text-align: center; }
+    .controls kbd { background: #333; border-radius: 4px; padding: 1px 6px; border: 1px solid #555; font-size: 11px; }
+    /* On a phone/iPad, hide the title so the field uses the whole screen */
+    @media (max-width: 820px) { .controls, h1 { display: none; } }
+
+    #game-container { flex: 1; width: 100%; min-height: 0; touch-action: none; }
+    #game-container canvas { display: block; margin: 0 auto; touch-action: none; }
+
+    /* Little "back to the game" link, top-left */
+    #back {
+      position: fixed; z-index: 12;
+      top: max(12px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
+      color: #fff; text-decoration: none; font: 800 15px "Arial Black", Arial;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.45);
+      border-radius: 12px; padding: 6px 12px;
+    }
+    #back:active { background: rgba(255,255,255,0.42); }
+  </style>
+</head>
+<body>
+  <h1>🦵 KICK IT!</h1>
+  <div class="controls">
+    <kbd>SPACE</kbd> or tap the screen to aim, set power, and kick
+  </div>
+
+  <a id="back" href="index.html">← Game</a>
+  <div id="game-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
+  <script src="src/kick.js"></script>
+  <script>
+    // The practice page: a tiny game whose only job is to run KickGame
+    // over and over so Max can practice field goals at random distances.
+    new Phaser.Game({
+      type: Phaser.AUTO,
+      width: 540, height: 720,
+      parent: 'game-container',
+      backgroundColor: '#0b1020',
+      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+      scene: {
+        create() {
+          KickGame.enter(this, { mode: 'fg', distance: 34, standalone: true });
+          // Debug handle: try  __kick.tap()  in the console.
+          window.__kick = KickGame;
+        },
+        update(time, delta) { KickGame.update(delta); }
+      }
+    });
+  </script>
+</body>
+</html>
