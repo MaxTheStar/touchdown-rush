@@ -614,8 +614,41 @@ function setupTouchButtons() {
   bindHold('btn2-left', 'left', touch2);
   bindHold('btn2-right', 'right', touch2);
 
-  // The 1P / 2P switch
+  // The 1P / 2P switch and the Fullscreen button
   bindTapEl('btn-mode', toggleTwoPlayer);
+  bindTapEl('btn-fs', toggleFullscreen);
+
+  // Stop iOS Safari from pinch-zooming or double-tap-zooming the game
+  const stop = e => e.preventDefault();
+  document.addEventListener('gesturestart', stop);
+  document.addEventListener('gesturechange', stop);
+  let lastTap = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTap < 350) e.preventDefault();  // two quick taps = no zoom
+    lastTap = now;
+  }, { passive: false });
+
+  // Re-fit the field to the screen after rotating or entering/leaving fullscreen
+  const refit = () => { if (window.game && game.scale) game.scale.refresh(); };
+  window.addEventListener('resize', refit);
+  window.addEventListener('orientationchange', () => setTimeout(refit, 250));
+}
+
+// Fill the whole screen (works in Safari on iPad, and elsewhere). We fullscreen
+// the WHOLE page so the touch buttons stay visible on top of the field.
+function toggleFullscreen() {
+  const doc = document;
+  const el = doc.documentElement;
+  const isFull = doc.fullscreenElement || doc.webkitFullscreenElement;
+  if (!isFull) {
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } else {
+    if (doc.exitFullscreen) doc.exitFullscreen();
+    else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+  }
+  setTimeout(() => { if (window.game && game.scale) game.scale.refresh(); }, 300);
 }
 
 // A "hold" button: down = start moving, up/leave = stop.
