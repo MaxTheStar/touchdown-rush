@@ -722,14 +722,25 @@ function setupTouchButtons() {
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
 
-  // Stop iOS Safari from pinch-zooming or double-tap-zooming the game
-  const stop = e => e.preventDefault();
-  document.addEventListener('gesturestart', stop);
-  document.addEventListener('gesturechange', stop);
+  // ---- Stop iOS Safari from zooming (the "stuck zoomed-in" bug) ----
+  // Three holes were letting zoom through, so we plug all three:
+  //  1) Block the pinch gesture events — and pass { passive: false }, or
+  //     Safari quietly ignores our preventDefault and zooms anyway.
+  //  2) Also block any TWO-finger touchmove — the surest pinch stopper,
+  //     and it was missing before. (One finger still moves freely, so the
+  //     D-pad and 2-player controls keep working.)
+  //  3) Block the quick double-tap that zooms in.
+  const noZoom = e => e.preventDefault();
+  document.addEventListener('gesturestart',  noZoom, { passive: false });
+  document.addEventListener('gesturechange', noZoom, { passive: false });
+  document.addEventListener('gestureend',    noZoom, { passive: false });
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) e.preventDefault();   // two fingers = a pinch
+  }, { passive: false });
   let lastTap = 0;
   document.addEventListener('touchend', e => {
     const now = Date.now();
-    if (now - lastTap < 350) e.preventDefault();  // two quick taps = no zoom
+    if (now - lastTap <= 400) e.preventDefault();   // two quick taps = zoom
     lastTap = now;
   }, { passive: false });
 

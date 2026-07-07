@@ -67,6 +67,20 @@
         update(time, delta) { KickGame.update(delta); }
       }
     });
+
+    // Same zoom-blocking as the main game, so fast tapping on an iPad can't
+    // pinch- or double-tap-zoom and get stuck. (Mirrors main.js.)
+    const noZoom = e => e.preventDefault();
+    document.addEventListener('gesturestart',  noZoom, { passive: false });
+    document.addEventListener('gesturechange', noZoom, { passive: false });
+    document.addEventListener('gestureend',    noZoom, { passive: false });
+    document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    let lastTap = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTap <= 400) e.preventDefault();
+      lastTap = now;
+    }, { passive: false });
   </script>
 </body>
 </html>
