@@ -41,12 +41,19 @@ const CATCH_CHANCE = 0.85; // an OPEN receiver hauls it in...
 const DROP_CHANCE  = 0.12; // ...but might catch it and then drop it
 const INT_CHANCE   = 0.40; // if a defender is right there, he PICKS IT OFF (else knocks it down)
 
+// ---- Fumbles — a big tackle can knock the ball loose ----
+const FUMBLE_CHANCE      = 0.12; // this often, a tackle pops the ball out
+const OFF_RECOVER_CHANCE = 0.5;  // ...and your team dives on its own fumble half the time
+
 const config = {
   type: Phaser.AUTO,
   width: 540,
   height: 720,
   parent: 'game-container',
   backgroundColor: '#2d7a2d',
+  // Scale.FIT = keep the field's shape but shrink/grow it to fill the screen,
+  // so it looks right on a computer, an iPad, or a phone. CENTER_BOTH keeps it centered.
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   physics: { default: 'arcade', arcade: { debug: false } },
   scene: { create, update }
 };
@@ -66,6 +73,9 @@ const G = {
   deadUntil: 0,
   next: null,           // where the next play starts, decided when a play ends
   banner: null,
+  twoPlayer: false,     // false = vs computer, true = a friend controls one defender
+  p2Defender: null,     // the single red player Player 2 drives in 2-player mode
+  p2Label: null,        // the "P2" tag floating over that defender
 };
 
 let offense = [];  // 7 blue players (objects, see makePlayer)
@@ -74,6 +84,18 @@ let ball;          // the football sprite
 let ballFollow = true;
 let referee;       // the striped official (flavor only, no physics)
 let keys;          // keyboard
+
+// ---- Touch controls (the on-screen buttons for iPad) ----
+// The four arrows are "held": true while your finger is on them.
+// The action buttons are "taps": we set the flag, then use it up once
+// (just like pressing a key one time). See setupTouchButtons() below.
+const touch = {
+  left: false, right: false, up: false, down: false,   // held arrows
+  snap: false, one: false, two: false, three: false, hand: false  // one-shot taps
+};
+
+// Player 2's arrows (the defense player in 2-player mode)
+const touch2 = { left: false, right: false, up: false, down: false };
 
 window.game = new Phaser.Game(config);
 
@@ -121,8 +143,20 @@ function create() {
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H'
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H',
+    // Player 2 uses W A S D to drive the defender (handy for testing on a computer)
+    w: 'W', a: 'A', s: 'S', d: 'D'
   });
+
+  // Touch: hook the on-screen buttons up so taps work just like keys
+  setupTouchButtons();
+
+  // Player 2 drives a linebacker (defense[2]); float a "P2" tag over him
+  G.p2Defender = defense[2];
+  G.p2Label = this.add.text(0, 0, 'P2', {
+    fontFamily: 'Arial Black, Arial', fontSize: '12px',
+    color: '#ffe066', stroke: '#000', strokeThickness: 4
+  }).setOrigin(0.5).setDepth(8).setVisible(false);
 
   // Camera & world
   this.physics.world.setBounds(0, 0, FIELD_WIDTH, FIELD_LENGTH);
@@ -135,7 +169,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, snap, throwTo, handOff, endPlay, setupPlay };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble };
 }
 
 // ============================================================
@@ -149,9 +183,16 @@ function update(time) {
     return;
   }
 
+  // FUMBLE suspense: everyone's frozen while the loose ball bounces and we
+  // wait to see who recovers (resolveFumble runs on a timer).
+  if (G.state === 'fumble') {
+    freezeEveryone();
+    return;
+  }
+
   if (G.state === 'presnap') {
     freezeEveryone();
-    if (Phaser.Input.Keyboard.JustDown(keys.snap)) snap(time);
+    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) snap(time);
     updateBall();
     updateHUD();
     return;
@@ -188,10 +229,11 @@ function snap(time) {
 function controlBallCarrier() {
   const p = G.ballCarrier.s;
   let vx = 0, vy = 0;
-  if (keys.left.isDown) vx = -PLAYER_SPEED;
-  else if (keys.right.isDown) vx = PLAYER_SPEED;
-  if (keys.up.isDown) vy = -PLAYER_SPEED;
-  else if (keys.down.isDown) vy = PLAYER_SPEED;
+  // Move if EITHER the arrow key OR the on-screen arrow button is held
+  if (keys.left.isDown || touch.left) vx = -PLAYER_SPEED;
+  else if (keys.right.isDown || touch.right) vx = PLAYER_SPEED;
+  if (keys.up.isDown || touch.up) vy = -PLAYER_SPEED;
+  else if (keys.down.isDown || touch.down) vy = PLAYER_SPEED;
   if (vx && vy) { vx *= 0.707; vy *= 0.707; }
   p.setVelocity(vx, vy);
   if (vx || vy) p.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
@@ -200,11 +242,24 @@ function controlBallCarrier() {
   const qb = offense[0];
   const behindLine = qb.s.y >= G.losY - 2;
   if (G.ballCarrier === qb && behindLine && !G.hasPassed) {
-    if (Phaser.Input.Keyboard.JustDown(keys.one))   throwTo(1);
-    else if (Phaser.Input.Keyboard.JustDown(keys.two))   throwTo(2);
-    else if (Phaser.Input.Keyboard.JustDown(keys.three)) throwTo(3);
-    else if (Phaser.Input.Keyboard.JustDown(keys.hand))  handOff();
+    if (consume('one')   || Phaser.Input.Keyboard.JustDown(keys.one))   throwTo(1);
+    else if (consume('two')   || Phaser.Input.Keyboard.JustDown(keys.two))   throwTo(2);
+    else if (consume('three') || Phaser.Input.Keyboard.JustDown(keys.three)) throwTo(3);
+    else if (consume('hand')  || Phaser.Input.Keyboard.JustDown(keys.hand))  handOff();
   }
+}
+
+// Player 2 drives their defender with WASD keys or the top D-pad.
+// Tackles/sacks/pass break-ups still happen automatically on contact.
+function controlP2Defender(d) {
+  let vx = 0, vy = 0;
+  if (keys.a.isDown || touch2.left) vx = -PLAYER_SPEED;
+  else if (keys.d.isDown || touch2.right) vx = PLAYER_SPEED;
+  if (keys.w.isDown || touch2.up) vy = -PLAYER_SPEED;
+  else if (keys.s.isDown || touch2.down) vy = PLAYER_SPEED;
+  if (vx && vy) { vx *= 0.707; vy *= 0.707; }
+  d.s.setVelocity(vx, vy);
+  if (vx || vy) d.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
 }
 
 // Hand the ball to the running back — now you control him.
@@ -343,6 +398,13 @@ function updateDefense(elapsed) {
   const qbHasBall = G.ballCarrier === offense[0] && !G.hasPassed;
 
   for (const d of defense) {
+    // In 2-player mode, one defender is driven by Player 2's fingers (or WASD),
+    // so we skip the computer's brain for him.
+    if (G.twoPlayer && d === G.p2Defender) {
+      controlP2Defender(d);
+      continue;
+    }
+
     let tx, ty, speed = DEF_SPEED;
 
     if (!qbHasBall && G.state !== 'pass') {
@@ -384,9 +446,39 @@ function checkTackle() {
   const c = G.ballCarrier.s;
   for (const d of defense) {
     if (Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y) < TACKLE_DIST) {
-      endPlay('tackle');
+      // A hard tackle sometimes knocks the ball loose = FUMBLE!
+      if (Math.random() < FUMBLE_CHANCE) fumble();
+      else endPlay('tackle');
       return;
     }
+  }
+}
+
+// The ball pops loose! Show a big "FUMBLE!!!" for suspense, make the ball
+// bounce free, then a moment later decide who dives on it.
+function fumble() {
+  freezeEveryone();
+  G.state = 'fumble';          // a special pause so the next play doesn't start yet
+  showBanner('FUMBLE!!!', true);
+
+  // Bounce the loose ball a short random distance from the carrier
+  ballFollow = false;
+  const c = G.ballCarrier.s;
+  const bx = Phaser.Math.Clamp(c.x + Phaser.Math.Between(-40, 40), 12, FIELD_WIDTH - 12);
+  const by = c.y + Phaser.Math.Between(-30, 30);
+  G.scene.tweens.add({ targets: ball, x: bx, y: by, duration: 500, ease: 'Bounce.Out' });
+
+  // After the suspense, decide the recovery
+  G.scene.time.delayedCall(1100, resolveFumble);
+}
+
+function resolveFumble() {
+  if (Math.random() < OFF_RECOVER_CHANCE) {
+    // Your team dives on it — you keep the ball right where it came loose.
+    endPlay('tackle', 'YOU RECOVERED IT!');
+  } else {
+    // The defense recovers — turnover! (Fresh drive at your own 20, like a pick.)
+    endPlay('interception', 'FUMBLE LOST!');
   }
 }
 
@@ -460,6 +552,7 @@ function setupPlay(next) {
   G.hasPassed = false;
   G.ballCarrier = offense[0];
   ballFollow = true;
+  touch.snap = touch.one = touch.two = touch.three = touch.hand = false; // clear old taps
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
@@ -501,6 +594,71 @@ function updateBall() {
 // ============================================================
 // HELPERS
 // ============================================================
+// ---- Touch button wiring ----
+// Connect each on-screen button (by its id in index.html) to the touch state.
+function setupTouchButtons() {
+  // Player 1 (offense) — arrows move, actions do things
+  bindHold('btn-up', 'up');       // arrows: true while held, false when let go
+  bindHold('btn-down', 'down');
+  bindHold('btn-left', 'left');
+  bindHold('btn-right', 'right');
+  bindTap('btn-snap', 'snap');    // actions: one tap = one action
+  bindTap('btn-1', 'one');
+  bindTap('btn-2', 'two');
+  bindTap('btn-3', 'three');
+  bindTap('btn-hand', 'hand');
+
+  // Player 2 (defense) — just four arrows, moving the "P2" red player
+  bindHold('btn2-up', 'up', touch2);
+  bindHold('btn2-down', 'down', touch2);
+  bindHold('btn2-left', 'left', touch2);
+  bindHold('btn2-right', 'right', touch2);
+
+  // The 1P / 2P switch
+  bindTapEl('btn-mode', toggleTwoPlayer);
+}
+
+// A "hold" button: down = start moving, up/leave = stop.
+// `target` is which player's switches to flip (defaults to Player 1's).
+function bindHold(id, action, target = touch) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const press   = e => { e.preventDefault(); target[action] = true; };
+  const release = e => { e.preventDefault(); target[action] = false; };
+  el.addEventListener('pointerdown', press);
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointerleave', release);
+  el.addEventListener('pointercancel', release);
+}
+
+// Run a function once each time a button is tapped.
+function bindTapEl(id, fn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); });
+}
+
+// A "tap" button: each tap raises a flag the game uses up once (see consume()).
+function bindTap(id, action) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('pointerdown', e => { e.preventDefault(); touch[action] = true; });
+}
+
+// Read a tap flag and clear it, so one tap causes exactly one action.
+function consume(action) {
+  if (touch[action]) { touch[action] = false; return true; }
+  return false;
+}
+
+// Flip between "vs computer" (1P) and "friend plays defense" (2P).
+function toggleTwoPlayer() {
+  G.twoPlayer = !G.twoPlayer;
+  document.body.classList.toggle('two-player', G.twoPlayer);   // shows/hides P2's D-pad
+  const btn = document.getElementById('btn-mode');
+  if (btn) btn.textContent = G.twoPlayer ? '2P' : '1P';
+}
+
 function steer(sprite, tx, ty, speed) {
   const a = Math.atan2(ty - sprite.y, tx - sprite.x);
   sprite.setVelocity(Math.cos(a) * speed, Math.sin(a) * speed);
@@ -555,6 +713,15 @@ function updateHUD() {
   // Keep number labels glued to their players
   for (const o of offense) if (o.label) o.label.setPosition(o.s.x, o.s.y);
   for (const d of defense) if (d.label) d.label.setPosition(d.s.x, d.s.y);
+
+  // Float the "P2" tag over Player 2's defender (only in 2-player mode)
+  if (G.p2Label) {
+    if (G.twoPlayer && G.p2Defender) {
+      G.p2Label.setVisible(true).setPosition(G.p2Defender.s.x, G.p2Defender.s.y - 22);
+    } else {
+      G.p2Label.setVisible(false);
+    }
+  }
 
   hud.score.setText('SCORE: ' + G.score);
 

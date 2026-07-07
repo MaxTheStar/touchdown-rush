@@ -2,27 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport-fit + no user zoom = feels like a real iPad app, not a web page you can pinch -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Touchdown Rush 🏈</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
+      overflow: hidden;                 /* no page scrolling/bouncing on the iPad */
       background: #1a1a2e;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: #eee;
+      touch-action: none;               /* our buttons handle the touches, not the browser */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
-      font-family: "Helvetica Neue", Arial, sans-serif;
-      color: #eee;
     }
-    h1 { margin: 12px 0 4px; font-size: 22px; letter-spacing: 1px; }
-    #game-container { margin-top: 8px; box-shadow: 0 0 24px rgba(0,0,0,.6); }
-    .controls { font-size: 13px; color: #aaa; margin: 8px 0 16px; }
+    h1 { margin: 8px 0 2px; font-size: 20px; letter-spacing: 1px; }
+
+    /* keyboard hints — handy on a computer, hidden on a phone/iPad screen */
+    .controls { font-size: 12px; color: #aaa; margin: 2px 0 6px; text-align: center; }
     .controls kbd {
       background: #333; border-radius: 4px; padding: 1px 6px;
-      border: 1px solid #555; font-size: 12px;
+      border: 1px solid #555; font-size: 11px;
     }
+    @media (max-width: 820px) { .controls { display: none; } }
+
+    /* the game fills whatever space is left; Phaser scales the field to fit it */
+    #game-container { flex: 1; width: 100%; min-height: 0; }
+    #game-container canvas { display: block; margin: 0 auto; }
+
+    /* ---- On-screen touch controls (the iPad buttons) ---- */
+    .btn {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.16);
+      border: 2px solid rgba(255,255,255,0.45);
+      border-radius: 14px;
+      color: #fff;
+      font: 800 20px/1 "Arial Black", Arial, sans-serif;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .btn:active { background: rgba(255,255,255,0.42); transform: scale(0.94); }
+
+    /* D-pad, bottom-left, in a plus shape */
+    #dpad {
+      position: fixed; left: 14px; bottom: 20px; z-index: 10;
+      display: grid; grid-template-columns: repeat(3, 62px);
+      grid-template-rows: repeat(3, 62px); gap: 6px;
+    }
+    #btn-up    { grid-column: 2; grid-row: 1; }
+    #btn-left  { grid-column: 1; grid-row: 2; }
+    #btn-right { grid-column: 3; grid-row: 2; }
+    #btn-down  { grid-column: 2; grid-row: 3; }
+    #dpad .btn { font-size: 26px; }
+
+    /* action buttons, bottom-right */
+    #actions {
+      position: fixed; right: 14px; bottom: 20px; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    #pass-grid { display: grid; grid-template-columns: repeat(2, 62px); gap: 6px; }
+    #pass-grid .btn { width: 62px; height: 52px; font-size: 18px; }
+    #btn-snap {
+      width: 130px; height: 56px; font-size: 22px;
+      background: rgba(255,214,10,0.28);
+      border-color: rgba(255,214,10,0.7);
+    }
+    #btn-snap:active { background: rgba(255,214,10,0.55); }
+
+    /* 1P / 2P switch, top-right corner */
+    #btn-mode {
+      position: fixed; top: 12px; right: 14px; z-index: 12;
+      width: 58px; height: 40px; font-size: 17px;
+    }
+
+    /* Player 2's D-pad, top-center — hidden until 2-player mode is on */
+    #dpad2 {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10;
+      display: none;                         /* shown when body has .two-player */
+      grid-template-columns: repeat(3, 54px);
+      grid-template-rows: repeat(3, 54px); gap: 5px;
+    }
+    #btn2-up    { grid-column: 2; grid-row: 1; }
+    #btn2-left  { grid-column: 1; grid-row: 2; }
+    #btn2-right { grid-column: 3; grid-row: 2; }
+    #btn2-down  { grid-column: 2; grid-row: 3; }
+    #dpad2 .btn {
+      font-size: 22px;
+      background: rgba(216,58,58,0.30);       /* red-ish = the defense player */
+      border-color: rgba(255,120,120,0.75);
+    }
+    body.two-player #dpad2 { display: grid; }
   </style>
 </head>
 <body>
@@ -30,9 +107,37 @@
   <div class="controls">
     <kbd>SPACE</kbd> hike &nbsp;·&nbsp; <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> run &nbsp;·&nbsp;
     <kbd>1</kbd> <kbd>2</kbd> pass to WR &nbsp;·&nbsp; <kbd>3</kbd> pass to RB &nbsp;·&nbsp;
-    <kbd>H</kbd> hand off to RB &nbsp;·&nbsp; 4 downs to go 10 yards!
+    <kbd>H</kbd> hand off &nbsp;·&nbsp; or use the buttons on screen!
   </div>
   <div id="game-container"></div>
+
+  <!-- 1P / 2P switch (top-right) -->
+  <div class="btn" id="btn-mode">1P</div>
+
+  <!-- Player 2's D-pad (top) — only shows in 2-player mode -->
+  <div id="dpad2">
+    <div class="btn" id="btn2-up">▲</div>
+    <div class="btn" id="btn2-left">◀</div>
+    <div class="btn" id="btn2-right">▶</div>
+    <div class="btn" id="btn2-down">▼</div>
+  </div>
+
+  <!-- The finger buttons. main.js wires each one to the game. -->
+  <div id="dpad">
+    <div class="btn" id="btn-up">▲</div>
+    <div class="btn" id="btn-left">◀</div>
+    <div class="btn" id="btn-right">▶</div>
+    <div class="btn" id="btn-down">▼</div>
+  </div>
+  <div id="actions">
+    <div id="pass-grid">
+      <div class="btn" id="btn-1">1</div>
+      <div class="btn" id="btn-2">2</div>
+      <div class="btn" id="btn-3">3</div>
+      <div class="btn" id="btn-hand">HAND</div>
+    </div>
+    <div class="btn" id="btn-snap">HIKE</div>
+  </div>
 
   <!-- Phaser 3: the open-source game engine doing the heavy lifting -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
