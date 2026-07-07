@@ -67,7 +67,7 @@ window.KickGame = (function () {
     flight: null,       // the ball-flight tween (so we can stop it)
 
     // input handlers (kept so we can unhook them)
-    onPointer: null, onSpace: null,
+    onPointer: null, onSpace: null, canvas: null,
   };
 
   // ---- tiny helpers ----
@@ -103,10 +103,16 @@ window.KickGame = (function () {
     K.power = 0; K.powerDir = 1;
     K.state = (K.mode === 'punt') ? 'power' : 'aim';
 
-    // One tap (or SPACE) does the next step.
+    // One tap (or SPACE) does the next step. We listen for a plain DOM tap
+    // right on the game canvas — the SAME dependable way the on-screen D-pad
+    // buttons work on the iPad. (Phaser's own canvas input was missing taps
+    // in this overlay, so the kick screen felt frozen when you tapped.)
+    // Tapping the FIELD GOAL / PUNT button doesn't reach the canvas (it's a
+    // separate element), so entering a kick never counts as your first tap.
     K.onPointer = () => tap();
     K.onSpace = () => tap();
-    scene.input.on('pointerdown', K.onPointer);
+    K.canvas = scene.sys.game.canvas;
+    if (K.canvas) K.canvas.addEventListener('pointerdown', K.onPointer);
     scene.input.keyboard.on('keydown-SPACE', K.onSpace);
 
     updateHUD();
@@ -117,8 +123,8 @@ window.KickGame = (function () {
   // ==========================================================
   function exit() {
     if (K.flight) { K.flight.stop(); K.flight = null; }
+    if (K.canvas) K.canvas.removeEventListener('pointerdown', K.onPointer);
     if (K.scene) {
-      K.scene.input.off('pointerdown', K.onPointer);
       K.scene.input.keyboard.off('keydown-SPACE', K.onSpace);
     }
     for (const o of K.objs) o.destroy();
