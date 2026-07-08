@@ -240,7 +240,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld };
 }
 
 // ============================================================
@@ -351,10 +351,9 @@ function controlBallCarrier() {
   p.setVelocity(vx, vy);
   if (vx || vy) p.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
 
-  // Passing: only the QB, only behind the line, only once per play
-  const qb = offense[0];
-  const behindLine = qb.s.y >= G.losY - 2;
-  if (G.ballCarrier === qb && behindLine && !G.hasPassed) {
+  // Passing / handoff: only the QB, behind the line, once per play (canQBPass).
+  // You can also just TAP a receiver — see the canvas listener in setupTouchButtons.
+  if (canQBPass()) {
     if (consume('one')   || Phaser.Input.Keyboard.JustDown(keys.one))   throwTo(1);
     else if (consume('two')   || Phaser.Input.Keyboard.JustDown(keys.two))   throwTo(2);
     else if (consume('three') || Phaser.Input.Keyboard.JustDown(keys.three)) throwTo(3);
@@ -437,6 +436,46 @@ function resolvePass(wr, x, y) {
   G.state = 'live';
   ballFollow = true;
   G.scene.cameras.main.startFollow(wr.s, true, 0.12, 0.12);
+}
+
+// ============================================================
+// TAP-TO-PASS + SCRAMBLE — tap a receiver to throw, on the run
+// ------------------------------------------------------------
+// While the QB has the ball behind the line, a tap on the field throws to the
+// receiver nearest your finger — you don't have to remember 1/2/3. You can do
+// it ON THE RUN: scramble around to dodge the rush, then tap the open guy (or
+// cross the line and run it yourself).
+// ============================================================
+
+// Can the QB throw right now? He has the ball, is behind the line, and hasn't
+// thrown yet this play. Shared by the tap AND the number buttons/keys.
+function canQBPass() {
+  return G.state === 'live'
+    && G.ballCarrier === offense[0]
+    && !G.hasPassed
+    && offense[0].s.y >= G.losY - 2;   // still behind the line of scrimmage
+}
+
+// Turn a screen tap (client x/y) into a spot on the field (world x/y). The
+// field is drawn at 540x720 then scaled to fit the screen, so we undo that
+// scaling and add the camera's scroll to get the real field position.
+function canvasTapToWorld(clientX, clientY) {
+  const cam = G.scene.cameras.main;
+  const rect = G.scene.sys.game.canvas.getBoundingClientRect();
+  const fx = (clientX - rect.left) / rect.width  * 540;   // 540 = game width
+  const fy = (clientY - rect.top)  / rect.height * 720;   // 720 = game height
+  return { x: fx / cam.zoom + cam.scrollX, y: fy / cam.zoom + cam.scrollY };
+}
+
+// Throw to whichever eligible receiver is closest to the tapped spot.
+function passToNearest(worldX, worldY) {
+  let best = null, bestD = Infinity;
+  for (const o of offense) {
+    if (o.role !== 'WR' && o.role !== 'RB') continue;
+    const d = Phaser.Math.Distance.Between(worldX, worldY, o.s.x, o.s.y);
+    if (d < bestD) { bestD = d; best = o; }
+  }
+  if (best) throwTo(best.num);
 }
 
 // ============================================================
@@ -1047,6 +1086,20 @@ function setupTouchButtons() {
   bindTapEl('tm-next', () => menuNav(1));
   bindTapEl('tm-play', startGameWithTeam);
 
+  // Tap-to-pass: a tap on the field (not on a button) throws to the receiver
+  // nearest your finger — but only when the QB can pass. We listen for a DOM
+  // pointerdown on the game canvas, the same dependable way the kick screen
+  // reads taps on the iPad. Taps on the D-pad / action buttons hit those
+  // elements instead, so they never trigger a throw.
+  const gameCanvas = window.game && window.game.canvas;
+  if (gameCanvas) {
+    gameCanvas.addEventListener('pointerdown', e => {
+      if (!canQBPass()) return;
+      const w = canvasTapToWorld(e.clientX, e.clientY);
+      passToNearest(w.x, w.y);
+    });
+  }
+
   // ---- Stop iOS Safari from zooming (the "stuck zoomed-in" bug) ----
   // Three holes were letting zoom through, so we plug all three:
   //  1) Block the pinch gesture events — and pass { passive: false }, or
@@ -1222,7 +1275,7 @@ function updateHUD() {
   if (G.state === 'presnap') {
     hud.help.setText('Press SPACE to hike the ball');
   } else if (G.state === 'live' && G.ballCarrier === offense[0] && !G.hasPassed) {
-    hud.help.setText('1 / 2 pass to WR   ·   3 pass to RB   ·   H hand off   ·   arrows run');
+    hud.help.setText('TAP a receiver to throw (or 1/2/3)   ·   H hand off   ·   arrows = scramble');
   } else if (G.state === 'live') {
     hud.help.setText('Arrows = run to the endzone!');
   } else {
