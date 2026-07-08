@@ -163,6 +163,8 @@ const G = {
   kickKind: 'fg',       // what kind of kick is on screen: 'fg' | 'punt' | 'xp' (extra point)
   pendingXP: false,     // just scored a TD? then an extra-point kick comes next
   banner: null,
+  comment: null,        // the "announcer" line for quick play-by-play call-outs
+  commentTween: null,
   carrierRing: null,    // the bright ring under whoever currently has the ball
   twoPlayer: false,     // false = vs computer, true = a friend controls one defender
   p2Defender: null,     // the single red player Player 2 drives in 2-player mode
@@ -251,6 +253,12 @@ function create() {
   G.carrierRing.fillStyle(0x2ee6ff, 0.14);
   G.carrierRing.fillCircle(0, 0, 20);
 
+  // A little "announcer" line that pops quick play-by-play call-outs.
+  G.comment = this.add.text(270, 235, '', {
+    fontFamily: 'Arial Black, Arial', fontSize: '26px',
+    color: '#ffffff', stroke: '#0a1a3a', strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(26).setVisible(false);
+
   // The referee — a plain sprite (no physics body), so he's on the field
   // for realism but never blocks, tackles, or gets in the way.
   referee = this.add.sprite(0, 0, 'ref').setDepth(4);
@@ -286,7 +294,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment };
 }
 
 // ============================================================
@@ -398,6 +406,7 @@ function snap(time) {
   G.replay = [];              // start a fresh film reel for this play
   G.ballCarrier = offense[0]; // QB
   G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
+  if (Math.random() < 0.6) sayComment(pick(['Hut, hut!', 'Here we go!', 'The snap!']));
 }
 
 // ---- Move the player you control ----
@@ -452,6 +461,7 @@ function handOff() {
   G.ballCarrier = rb;
   G.hasPassed = true; // no passing after a handoff; defense now chases the RB
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
+  sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
 }
 
 // ============================================================
@@ -520,6 +530,8 @@ function resolvePass(wr, x, y) {
   G.state = 'live';
   ballFollow = true;
   G.scene.cameras.main.startFollow(wr.s, true, 0.12, 0.12);
+  sayComment(nearestDef > 120 ? pick(['WIDE OPEN!', 'ALL ALONE!', 'Nobody there!'])
+                              : pick(['Nice grab!', 'Caught it!', 'Reception!', 'What a catch!']));
 }
 
 // ============================================================
@@ -813,6 +825,14 @@ function endPlay(result, customMsg) {
     const spot = (result === 'incomplete')
       ? G.losYards
       : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99);
+
+    // Announcer call-outs for how the run/tackle ended.
+    if (result === 'tackle') {
+      const gain = spot - G.losYards;
+      if (G.ballCarrier === offense[0] && gain < 0) sayComment(pick(['SACKED!', 'Got him!', 'Down he goes!']));
+      else if (gain >= 15) sayComment(pick(['WHAT A RUN!', "He's rolling!", 'Big gain!', 'Huge play!']));
+      else if (Math.random() < 0.35) sayComment(pick(['Big hit!', 'Tackled!', 'Wrapped up!']));
+    }
 
     if (spot >= G.firstDownYards) {
       msg = 'FIRST DOWN!';
@@ -1602,6 +1622,21 @@ function showBanner(text, big) {
 function hudStyle(size, color = '#ffffff') {
   return { fontFamily: 'Arial Black, Arial', fontSize: size + 'px', color,
            stroke: '#000', strokeThickness: 4 };
+}
+
+// Pick a random item from a list (used for the announcer's lines).
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// The "announcer": pop a quick play-by-play call-out, then fade it out.
+function sayComment(text) {
+  if (!G.comment) return;
+  if (G.commentTween) G.commentTween.stop();
+  G.comment.setText(text).setVisible(true).setAlpha(0).setScale(0.7);
+  G.commentTween = G.scene.tweens.add({
+    targets: G.comment, alpha: 1, scale: 1, duration: 180, ease: 'Back.Out',
+    yoyo: true, hold: 850,
+    onComplete: () => { if (G.comment) G.comment.setVisible(false); }
+  });
 }
 
 // ============================================================
