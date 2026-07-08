@@ -47,6 +47,7 @@ window.KickGame = (function () {
     active: false,
     mode: 'fg',        // 'fg' = field goal, 'punt' = punt
     distance: 40,      // how far the kick is, in yards
+    points: 3,         // what a MADE kick is worth (field goal 3, extra point 1)
     standalone: false, // true on the practice page (loops forever)
     onDone: null,      // the function to call when the kick is over
     powerToReach: 0.55,// how much power you need for THIS distance
@@ -87,6 +88,7 @@ window.KickGame = (function () {
     K.scene = scene;
     K.mode = opts.mode || 'fg';
     K.distance = opts.distance || 40;
+    K.points = (opts.points != null) ? opts.points : 3;  // 3 for a field goal, 1 for an extra point
     K.standalone = !!opts.standalone;
     K.onDone = opts.onDone || null;
     K.active = true;
@@ -223,7 +225,7 @@ window.KickGame = (function () {
     K.state = 'result';
     if (result === 'good') {
       K.made++; K.streak++; K.best = Math.max(K.best, K.streak);
-      showBanner("IT'S GOOD!  +3", '#ffe066');
+      showBanner("IT'S GOOD!  +" + K.points, '#ffe066');
     } else if (result === 'punt') {
       const yds = Math.round(20 + K.lockedPower * MAX_PUNT);
       showBanner('NICE PUNT!  ' + yds + ' YDS', '#ffe066');
@@ -252,6 +254,7 @@ window.KickGame = (function () {
       made: (result === 'good'),
       outcome: result,
       distance: K.distance,
+      points: K.points,
       puntYards: Math.round(20 + K.lockedPower * MAX_PUNT),
     };
     exit();

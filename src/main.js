@@ -8,7 +8,8 @@
 // A "play" goes: line up -> SNAP (space) -> run with arrows,
 // or throw to receiver 1/2/3 while the QB is behind the line.
 // Get tackled, score, or throw incomplete -> next down.
-// 4 downs to gain 10 yards = a first down. Reach the endzone = 7.
+// 4 downs to gain 10 yards = a first down. Reach the endzone = 6,
+// then kick the extra point for +1 (7 total).
 // ============================================================
 
 // ---- Field dimensions ----
@@ -53,6 +54,10 @@ const FG_MAX_DIST = 55;                     // longest field goal you're allowed
 function fieldGoalDistance() { return (100 - G.losYards) + 17; }
 function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
 
+// After a touchdown you get one EXTRA-POINT kick, worth +1. It's a short,
+// easy chip shot from a fixed spot — same tap-to-aim, tap-to-power kick.
+const XP_DISTANCE = 20;   // how far the extra point is, in yards (short = easy)
+
 const config = {
   type: Phaser.AUTO,
   width: 540,
@@ -80,6 +85,8 @@ const G = {
   snapTime: 0,
   deadUntil: 0,
   next: null,           // where the next play starts, decided when a play ends
+  kickKind: 'fg',       // what kind of kick is on screen: 'fg' | 'punt' | 'xp' (extra point)
+  pendingXP: false,     // just scored a TD? then an extra-point kick comes next
   banner: null,
   twoPlayer: false,     // false = vs computer, true = a friend controls one defender
   p2Defender: null,     // the single red player Player 2 drives in 2-player mode
@@ -177,7 +184,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance };
 }
 
 // ============================================================
@@ -186,7 +193,10 @@ function create() {
 function update(time, delta) {
   if (G.state === 'dead') {
     freezeEveryone();
-    if (time >= G.deadUntil) startNextPlay();
+    if (time >= G.deadUntil) {
+      if (G.pendingXP) startExtraPoint();   // just scored? kick the extra point first
+      else startNextPlay();
+    }
     updateBall();
     return;
   }
@@ -522,9 +532,10 @@ function endPlay(result, customMsg) {
   let msg, next, big = false;
 
   if (result === 'touchdown') {
-    G.score += 7;
-    msg = 'TOUCHDOWN!  +7';
+    G.score += 6;
+    msg = 'TOUCHDOWN!  +6';
     big = true;
+    G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     next = { los: 20, down: 1, fd: 30, fresh: true };
   } else if (result === 'interception') {
     // The other team caught it! You don't play defense yet, so the ball
@@ -594,6 +605,7 @@ function chooseFourthDown(which) {
 // Hand off to the KickGame screen (drawn on top of the field).
 function startKick(mode) {
   G.state = 'kick';
+  G.kickKind = mode;   // 'fg' or 'punt' — an extra point comes through startExtraPoint()
   document.body.classList.add('kicking');   // hide the football buttons
   G.scene.cameras.main.stopFollow();
   KickGame.enter(G.scene, {
@@ -603,11 +615,32 @@ function startKick(mode) {
   });
 }
 
+// After a touchdown: a short, easy extra-point kick worth +1. It's just a
+// field goal from a fixed close spot — same KickGame, so nothing new to learn.
+function startExtraPoint() {
+  G.pendingXP = false;
+  G.state = 'kick';
+  G.kickKind = 'xp';
+  document.body.classList.add('kicking');   // hide the football buttons
+  G.scene.cameras.main.stopFollow();
+  KickGame.enter(G.scene, {
+    mode: 'fg',
+    distance: XP_DISTANCE,
+    points: 1,            // a made extra point is worth 1, not 3
+    onDone: onKickDone,
+  });
+}
+
 // The kick finished — score it, then start a fresh drive.
 function onKickDone(result) {
   document.body.classList.remove('kicking');  // bring the football buttons back
   let msg;
-  if (result.mode === 'fg' && result.made) {
+  if (G.kickKind === 'xp' && result.made) {
+    G.score += 1;
+    msg = 'EXTRA POINT!  +1';
+  } else if (G.kickKind === 'xp') {
+    msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
+  } else if (result.mode === 'fg' && result.made) {
     G.score += 3;
     msg = 'FIELD GOAL!  +3';
   } else if (result.mode === 'fg') {
