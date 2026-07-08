@@ -336,7 +336,7 @@ window.KickGame = (function () {
     keep(bg).setDepth(100);
 
     const goal = scene.add.graphics();
-    drawGoalposts(goal);
+    if (K.mode !== 'punt') drawGoalposts(goal);   // a punt doesn't kick through the uprights, so hide them
     keep(goal).setDepth(102);
 
     // The kicker (a chibi guy) stands just below the ball, closest to us.

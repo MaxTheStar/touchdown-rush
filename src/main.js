@@ -67,10 +67,13 @@ function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
 // On purpose, difficulty ONLY changes the KICKOFF (faster coverage = harder to
 // return) and the EXTRA POINT (longer kick). The normal in-game defense is NOT
 // touched by difficulty, so regular downs stay fair at every level.
+// koCover  = kickoff coverage speed (higher = harder to return)
+// xpDist   = extra-point distance in yards (farther = harder kick)
+// rushSlow = how slow a BLOCKED rusher gets (lower = stronger pocket = more time for the QB)
 const DIFFICULTY = {
-  easy:   { label: 'EASY',   koCover: 180, xpDist: 22 },  // (you return the kick at 215)
-  medium: { label: 'MEDIUM', koCover: 198, xpDist: 30 },
-  hard:   { label: 'HARD',   koCover: 214, xpDist: 38 },  // coverage nearly as fast as you = tough return
+  easy:   { label: 'EASY',   koCover: 180, xpDist: 22, rushSlow: 0.18 },  // strong pocket, lots of time
+  medium: { label: 'MEDIUM', koCover: 198, xpDist: 30, rushSlow: 0.32 },
+  hard:   { label: 'HARD',   koCover: 214, xpDist: 38, rushSlow: 0.50 },  // weak pocket, real pressure
 };
 function diff() { return DIFFICULTY[G.difficulty] || DIFFICULTY.medium; }
 
@@ -283,7 +286,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview };
 }
 
 // ============================================================
@@ -621,6 +624,39 @@ function routeColor(o) {
   return o.num === 1 ? 0xffa23a : 0xff6ea5;
 }
 
+// Before the snap, draw each receiver's PLANNED route as a colored line (with a
+// dot at the end) so you can see where everyone's going and pick who to throw
+// to. Once the ball is snapped, updateRouteTrails takes over with the real path.
+function drawRoutePreview() {
+  if (!routeGfx) return;
+  routeGfx.clear();
+  for (const o of offense) {
+    if (o.role !== 'WR' && o.role !== 'RB') continue;
+    const pts = routePath(o);
+    routeGfx.lineStyle(4, routeColor(o), 0.55);
+    routeGfx.beginPath();
+    routeGfx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) routeGfx.lineTo(pts[i].x, pts[i].y);
+    routeGfx.strokePath();
+    routeGfx.fillStyle(routeColor(o), 0.75);
+    routeGfx.fillCircle(pts[pts.length - 1].x, pts[pts.length - 1].y, 5);   // the target spot
+  }
+}
+
+// A simple sketch of where each route goes, from the receiver's pre-snap spot.
+function routePath(o) {
+  const sx = o.s.x, sy = o.s.y, top = ENDZONE + 20;
+  const clampX = x => Phaser.Math.Clamp(x, 12, FIELD_WIDTH - 12);
+  if (o.route === 'slant') {          // up a bit, then cut inside
+    return [{ x: sx, y: sy }, { x: sx, y: sy - 70 }, { x: clampX(sx + 120), y: sy - 170 }];
+  }
+  if (o.route === 'swing') {          // out to the flat, then turn upfield
+    const ox = clampX(sx + 90);
+    return [{ x: sx, y: sy }, { x: ox, y: sy - 20 }, { x: clampX(ox + 35), y: Math.max(top, sy - 210) }];
+  }
+  return [{ x: sx, y: sy }, { x: sx, y: Math.max(top, sy - 300) }];   // 'streak' = straight up
+}
+
 // ============================================================
 // OFFENSIVE LINE — actively block the rushers to protect the QB
 // ------------------------------------------------------------
@@ -676,8 +712,9 @@ function updateDefense(elapsed) {
     } else if (d.role === 'DL') {
       // Linemen rush the quarterback...
       tx = offense[0].s.x; ty = offense[0].s.y;
-      // ...unless an offensive lineman is blocking them (0.25 = really slowed = more time to throw).
-      if (nearBlocker(d)) speed = DEF_SPEED * 0.25;
+      // ...unless an offensive lineman is blocking them. How slowed depends on
+      // difficulty (easy = a strong pocket, hard = rushers push through faster).
+      if (nearBlocker(d)) speed = DEF_SPEED * diff().rushSlow;
     } else if (d.role === 'LB') {
       // Linebackers spy the QB in a short zone — they don't blitz, so the
       // pocket holds; they pursue once the ball is thrown or handed off.
@@ -1277,6 +1314,7 @@ function setupPlay(next) {
 
   G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
   updateBall();
+  drawRoutePreview();   // show where the receivers will run, BEFORE the snap
 
   // On 4th down, don't snap right away — first offer the choice:
   // go for it, or kick (a field goal if you're close, otherwise a punt).
