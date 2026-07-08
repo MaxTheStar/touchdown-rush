@@ -18,10 +18,8 @@ const FIELD_WIDTH = 533;                  // 53.3 yards wide
 const FIELD_LENGTH = 120 * PX_PER_YARD;   // 120 yards (100 + two endzones)
 const ENDZONE = 10 * PX_PER_YARD;         // 10-yard endzones
 
-// ---- Team colors ----
-const HOME_COLOR = 0x1f4fd8;   // MAX FC — blue (Max's team)
-const AWAY_COLOR = 0xd83a3a;   // defense — red
-const ENDZONE_COLOR = 0x14337a;
+// ---- Field colors (team colors live in NFL_TEAMS, chosen at the menu) ----
+const ENDZONE_COLOR = 0x14337a;   // the painted endzones at each end
 const GRASS_DARK = 0x2d7a2d;
 const GRASS_LIGHT = 0x379437;
 
@@ -58,6 +56,47 @@ function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
 // easy chip shot from a fixed spot — same tap-to-aim, tap-to-power kick.
 const XP_DISTANCE = 20;   // how far the extra point is, in yards (short = easy)
 
+// ---- The teams! ----------------------------------------------------------
+// Every real NFL team, with its own two colors: a JERSEY color (the body) and
+// a HELMET color (the head). We use the real 3-letter codes (SEA, PIT, ...)
+// instead of the real logos, because the logos belong to the NFL and this game
+// is public. Codes are exactly what real scoreboards and helmets use anyway.
+// At the main menu you pick YOUR team; the computer gets a random other one.
+const NFL_TEAMS = [
+  { abbr: 'SEA', name: 'SEAHAWKS',   jersey: 0x002244, helmet: 0x69BE28 },  // Seattle — navy + action green
+  { abbr: 'PIT', name: 'STEELERS',   jersey: 0x101820, helmet: 0xFFB612 },  // Pittsburgh — black + gold
+  { abbr: 'BUF', name: 'BILLS',      jersey: 0x00338D, helmet: 0xC60C30 },
+  { abbr: 'MIA', name: 'DOLPHINS',   jersey: 0x008E97, helmet: 0xFC4C02 },
+  { abbr: 'NE',  name: 'PATRIOTS',   jersey: 0x002244, helmet: 0xC60C30 },
+  { abbr: 'NYJ', name: 'JETS',       jersey: 0x125740, helmet: 0xFFFFFF },
+  { abbr: 'BAL', name: 'RAVENS',     jersey: 0x241773, helmet: 0x000000 },
+  { abbr: 'CIN', name: 'BENGALS',    jersey: 0xFB4F14, helmet: 0x000000 },
+  { abbr: 'CLE', name: 'BROWNS',     jersey: 0xFF3C00, helmet: 0x311D00 },
+  { abbr: 'HOU', name: 'TEXANS',     jersey: 0x03202F, helmet: 0xA71930 },
+  { abbr: 'IND', name: 'COLTS',      jersey: 0x002C5F, helmet: 0xFFFFFF },
+  { abbr: 'JAX', name: 'JAGUARS',    jersey: 0x006778, helmet: 0xD7A22A },
+  { abbr: 'TEN', name: 'TITANS',     jersey: 0x0C2340, helmet: 0x4B92DB },
+  { abbr: 'DEN', name: 'BRONCOS',    jersey: 0xFB4F14, helmet: 0x002244 },
+  { abbr: 'KC',  name: 'CHIEFS',     jersey: 0xE31837, helmet: 0xFFB81C },
+  { abbr: 'LV',  name: 'RAIDERS',    jersey: 0x000000, helmet: 0xA5ACAF },
+  { abbr: 'LAC', name: 'CHARGERS',   jersey: 0x0080C6, helmet: 0xFFC20E },
+  { abbr: 'DAL', name: 'COWBOYS',    jersey: 0x041E42, helmet: 0x869397 },
+  { abbr: 'NYG', name: 'GIANTS',     jersey: 0x0B2265, helmet: 0xA71930 },
+  { abbr: 'PHI', name: 'EAGLES',     jersey: 0x004C54, helmet: 0xA5ACAF },
+  { abbr: 'WAS', name: 'COMMANDERS', jersey: 0x5A1414, helmet: 0xFFB612 },
+  { abbr: 'CHI', name: 'BEARS',      jersey: 0x0B162A, helmet: 0xC83803 },
+  { abbr: 'DET', name: 'LIONS',      jersey: 0x0076B6, helmet: 0xB0B7BC },
+  { abbr: 'GB',  name: 'PACKERS',    jersey: 0x203731, helmet: 0xFFB612 },
+  { abbr: 'MIN', name: 'VIKINGS',    jersey: 0x4F2683, helmet: 0xFFC62F },
+  { abbr: 'ATL', name: 'FALCONS',    jersey: 0xA71930, helmet: 0x000000 },
+  { abbr: 'CAR', name: 'PANTHERS',   jersey: 0x0085CA, helmet: 0x101820 },
+  { abbr: 'NO',  name: 'SAINTS',     jersey: 0x101820, helmet: 0xD3BC8D },
+  { abbr: 'TB',  name: 'BUCCANEERS', jersey: 0xD50A0A, helmet: 0x34302B },
+  { abbr: 'ARI', name: 'CARDINALS',  jersey: 0x97233F, helmet: 0x000000 },
+  { abbr: 'LAR', name: 'RAMS',       jersey: 0x003594, helmet: 0xFFA300 },
+  { abbr: 'SF',  name: '49ERS',      jersey: 0xAA0000, helmet: 0xB3995D },
+];
+
 const config = {
   type: Phaser.AUTO,
   width: 540,
@@ -74,8 +113,13 @@ const config = {
 // ---- Game state (one object so it's easy to read) ----
 const G = {
   scene: null,
-  state: 'presnap',     // presnap | live | pass | dead | fumble | decision | kick
+  state: 'menu',        // menu | presnap | live | pass | dead | fumble | decision | kick
   score: 0,
+  team: null,           // YOUR team (picked at the menu) — an entry from NFL_TEAMS
+  oppTeam: null,        // the computer's team (a random other one)
+  menuIndex: 0,         // which team the menu is showing right now
+  menu: null,           // the menu's on-screen pieces (preview player, name, code)
+  endzoneLabel: null,   // the team-name text painted in your home endzone
   down: 1,
   losYards: 20,         // line of scrimmage, yards from own goal
   firstDownYards: 30,   // yards-from-own-goal needed for a first down
@@ -121,8 +165,10 @@ function create() {
   G.scene = this;
   drawField(this);
 
-  makeChibiTexture(this, 'blue', HOME_COLOR);
-  makeChibiTexture(this, 'red', AWAY_COLOR);
+  // Build starter uniforms so the players have something to wear. The real
+  // colors get painted on when you pick your team at the menu (see renderMenu).
+  makeChibiTexture(this, 'blue', NFL_TEAMS[0].jersey, NFL_TEAMS[0].helmet);
+  makeChibiTexture(this, 'red',  NFL_TEAMS[1].jersey, NFL_TEAMS[1].helmet);
   makeBallTexture(this);
   makeRefTexture(this);
 
@@ -179,18 +225,29 @@ function create() {
 
   buildHUD(this);
 
-  // Start the first drive at Max's own 20
-  startDrive();
+  // Show the CHOOSE YOUR TEAM menu first. When you tap PLAY (startGameWithTeam)
+  // it paints your colors on and kicks off the first drive at your own 20.
+  buildTeamMenu(this);
+  enterMenu();
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam };
 }
 
 // ============================================================
 // UPDATE — the heartbeat, ~60x per second
 // ============================================================
 function update(time, delta) {
+  // MAIN MENU: pick your team. On a computer, ← → flip teams and SPACE starts;
+  // on the iPad the on-screen ◀ ▶ PLAY buttons do the same (see setupTouchButtons).
+  if (G.state === 'menu') {
+    if (Phaser.Input.Keyboard.JustDown(keys.left))       menuNav(-1);
+    else if (Phaser.Input.Keyboard.JustDown(keys.right)) menuNav(1);
+    else if (Phaser.Input.Keyboard.JustDown(keys.snap))  startGameWithTeam();
+    return;
+  }
+
   if (G.state === 'dead') {
     freezeEveryone();
     if (time >= G.deadUntil) {
@@ -658,6 +715,120 @@ function onKickDone(result) {
 }
 
 // ============================================================
+// CHOOSE YOUR TEAM — the main menu you see first
+// ------------------------------------------------------------
+// A big preview player wears the team you're looking at. Flip through the
+// teams with ◀ ▶ (or the arrow keys), then tap PLAY to start. The computer
+// gets a random OTHER team. It's drawn on the game canvas; the ◀ ▶ PLAY
+// buttons are real on-screen buttons (see index.html) so taps never miss.
+// ============================================================
+function buildTeamMenu(scene) {
+  const M = {};
+  const mid = 270;
+
+  // A solid dark cover so the football field is fully hidden behind the menu.
+  M.bg = scene.add.graphics().setScrollFactor(0).setDepth(90);
+  M.bg.fillStyle(0x0a1020, 1); M.bg.fillRect(0, 0, 540, 720);
+
+  M.title = scene.add.text(mid, 70, 'CHOOSE YOUR TEAM',
+    { fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#ffe066',
+      stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
+
+  // The huge 3-letter team code (SEA, PIT, ...).
+  M.abbr = scene.add.text(mid, 150, '', { fontFamily: 'Arial Black, Arial',
+    fontSize: '70px', color: '#ffffff', stroke: '#000', strokeThickness: 8 })
+    .setOrigin(0.5).setScrollFactor(0).setDepth(94);
+
+  // Two little color bars = a peek at the uniform (jersey color + helmet color).
+  M.swatch = scene.add.graphics().setScrollFactor(0).setDepth(93);
+
+  // The preview player, wearing the team you're looking at (texture 'blue').
+  M.preview = scene.add.sprite(mid, 340, 'blue').setScale(5)
+    .setScrollFactor(0).setDepth(94);
+
+  // The team's name under the player.
+  M.name = scene.add.text(mid, 470, '', { fontFamily: 'Arial Black, Arial',
+    fontSize: '40px', color: '#ffffff', stroke: '#000', strokeThickness: 6 })
+    .setOrigin(0.5).setScrollFactor(0).setDepth(94);
+
+  M.note = scene.add.text(mid, 520, 'You’ll play a random team', {
+    fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#aab4c8',
+    stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
+
+  G.menu = M;
+  setMenuVisible(false);
+}
+
+// Show or hide all the menu pieces at once.
+function setMenuVisible(v) {
+  const M = G.menu; if (!M) return;
+  for (const o of [M.bg, M.title, M.abbr, M.swatch, M.preview, M.name, M.note]) o.setVisible(v);
+}
+
+// Open the menu (start it on the Seahawks — team #0).
+function enterMenu() {
+  G.state = 'menu';
+  document.body.classList.add('menu');   // hide the football buttons, show ◀ ▶ PLAY
+  G.menuIndex = 0;
+  setMenuVisible(true);
+  renderMenu();
+}
+
+// Paint the menu for whichever team you're currently looking at.
+function renderMenu() {
+  const t = NFL_TEAMS[G.menuIndex];
+  // Repaint the preview player's uniform, then refresh anything using it.
+  makeChibiTexture(G.scene, 'blue', t.jersey, t.helmet);
+  G.menu.preview.setTexture('blue');
+  for (const o of offense) o.s.setTexture('blue');
+
+  G.menu.abbr.setText(t.abbr);
+  G.menu.name.setText(t.name);
+
+  // Two color bars: jersey on top, helmet under it.
+  const g = G.menu.swatch; g.clear();
+  g.fillStyle(t.jersey, 1); g.fillRoundedRect(180, 210, 180, 12, 4);
+  g.fillStyle(t.helmet, 1); g.fillRoundedRect(180, 226, 180, 12, 4);
+  g.lineStyle(2, 0xffffff, 0.5); g.strokeRoundedRect(180, 210, 180, 28, 4);
+}
+
+// Flip to the next/previous team (wraps around the list).
+function menuNav(dir) {
+  if (G.state !== 'menu') return;
+  const n = NFL_TEAMS.length;
+  G.menuIndex = (G.menuIndex + dir + n) % n;
+  renderMenu();
+}
+
+// Tap PLAY: lock in your team, give the computer a random other team, paint
+// both uniforms for real, then start the game.
+function startGameWithTeam() {
+  if (G.state !== 'menu') return;
+  G.team = NFL_TEAMS[G.menuIndex];
+
+  // Pick a random OTHER team for the computer.
+  let oi;
+  do { oi = Phaser.Math.Between(0, NFL_TEAMS.length - 1); } while (oi === G.menuIndex);
+  G.oppTeam = NFL_TEAMS[oi];
+
+  // Paint both teams onto their players.
+  makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);
+  makeChibiTexture(G.scene, 'red',  G.oppTeam.jersey, G.oppTeam.helmet);
+  for (const o of offense) o.s.setTexture('blue');
+  for (const d of defense) d.s.setTexture('red');
+
+  // Tell the kicking screen your colors, so its kicker matches your team.
+  window.TEAM = { jersey: G.team.jersey, helmet: G.team.helmet };
+
+  // Put your team's name in your home endzone.
+  if (G.endzoneLabel) G.endzoneLabel.setText(G.team.name);
+
+  setMenuVisible(false);
+  document.body.classList.remove('menu');
+  startDrive();
+}
+
+// ============================================================
 // SETTING UP A PLAY — line all 14 players up at the LOS
 // ============================================================
 function startDrive() {
@@ -755,6 +926,11 @@ function setupTouchButtons() {
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
 
+  // The main-menu buttons: ◀ ▶ flip teams, PLAY starts the game
+  bindTapEl('tm-prev', () => menuNav(-1));
+  bindTapEl('tm-next', () => menuNav(1));
+  bindTapEl('tm-play', startGameWithTeam);
+
   // ---- Stop iOS Safari from zooming (the "stuck zoomed-in" bug) ----
   // Three holes were letting zoom through, so we plug all three:
   //  1) Block the pinch gesture events — and pass { passive: false }, or
@@ -781,6 +957,11 @@ function setupTouchButtons() {
   const refit = () => { if (window.game && game.scale) game.scale.refresh(); };
   window.addEventListener('resize', refit);
   window.addEventListener('orientationchange', () => setTimeout(refit, 250));
+  // On some first loads the game area is measured before the layout is ready and
+  // comes out 0-sized (blank screen). Watch it and re-fit the moment it gets a
+  // real size — this fixes the blank-on-load without guessing a delay.
+  const gc = document.getElementById('game-container');
+  if (gc && window.ResizeObserver) new ResizeObserver(refit).observe(gc);
 }
 
 // Fill the whole screen (works in Safari on iPad, and elsewhere). We fullscreen
@@ -904,7 +1085,10 @@ function updateHUD() {
     }
   }
 
-  hud.score.setText('SCORE: ' + G.score);
+  // Scoreboard shows your team code, your score, and who you're playing.
+  hud.score.setText(G.team
+    ? `${G.team.abbr} ${G.score}   vs ${G.oppTeam.abbr}`
+    : 'SCORE: ' + G.score);
 
   const toGo = G.firstDownYards - G.losYards;
   const distTxt = (G.firstDownYards >= 100) ? 'GOAL' : String(Math.max(0, Math.round(toGo)));
@@ -985,20 +1169,27 @@ function drawField(scene) {
   scene.add.text(FIELD_WIDTH / 2, ENDZONE / 2, 'TOUCHDOWN', {
     fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#ffe066'
   }).setOrigin(0.5).setAlpha(0.9);
-  scene.add.text(FIELD_WIDTH / 2, FIELD_LENGTH - ENDZONE / 2, 'MAX FC', {
+  // Your home endzone shows your team's name once you've picked it (see
+  // startGameWithTeam). Until then it just says MAX FC.
+  G.endzoneLabel = scene.add.text(FIELD_WIDTH / 2, FIELD_LENGTH - ENDZONE / 2, 'MAX FC', {
     fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#ffffff'
   }).setOrigin(0.5).setAlpha(0.7);
 }
 
-function makeChibiTexture(scene, key, color) {
+// Draw one chibi player in a team's two colors: JERSEY (body/shoulder pads)
+// and HELMET (head). We can call this again with the same `key` to REPAINT a
+// team — handy when you flip teams in the menu — so we clear the old picture
+// first (Phaser won't overwrite a texture that's still hanging around).
+function makeChibiTexture(scene, key, jersey, helmet) {
+  if (scene.textures.exists(key)) scene.textures.remove(key);
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(color);           g.fillEllipse(20, 26, 30, 16);   // shoulder pads
+  g.fillStyle(jersey);          g.fillEllipse(20, 26, 30, 16);   // shoulder pads (jersey)
   g.fillStyle(0xd9a066);        g.fillCircle(5, 26, 4);          // arms
   g.fillCircle(35, 26, 4);
-  g.fillStyle(color);           g.fillCircle(20, 16, 13);        // BIG helmet
-  g.fillStyle(0xffffff);        g.fillCircle(20, 16, 10);
-  g.fillStyle(color);           g.fillCircle(20, 16, 9);
-  g.fillStyle(0xffffff);        g.fillRect(18, 3, 4, 13);        // helmet stripe
+  g.fillStyle(helmet);          g.fillCircle(20, 16, 13);        // BIG helmet
+  g.fillStyle(0xffffff);        g.fillCircle(20, 16, 10);        // facemask ring
+  g.fillStyle(helmet);          g.fillCircle(20, 16, 9);
+  g.fillStyle(jersey);          g.fillRect(18, 3, 4, 13);        // helmet stripe (jersey, so it shows)
   g.generateTexture(key, 40, 36);
   g.destroy();
 }

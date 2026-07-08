@@ -408,13 +408,18 @@ window.KickGame = (function () {
       g.generateTexture('k_ball', 22, 16); g.destroy();
     }
     if (!scene.textures.exists('k_kicker')) {
+      // Dress the kicker in your team's colors if the main game set them
+      // (window.TEAM); otherwise fall back to the old blue (e.g. practice page).
+      const T = window.TEAM || {};
+      const jersey = (T.jersey != null) ? T.jersey : 0x1f4fd8;
+      const helmet = (T.helmet != null) ? T.helmet : 0x1f4fd8;
       const g = scene.make.graphics({ x: 0, y: 0, add: false });
-      g.fillStyle(0x1f4fd8); g.fillEllipse(20, 30, 32, 18);
-      g.fillStyle(0xd9a066); g.fillCircle(5, 30, 4); g.fillCircle(35, 30, 4);
-      g.fillStyle(0x1f4fd8); g.fillCircle(20, 16, 14);
+      g.fillStyle(jersey);   g.fillEllipse(20, 30, 32, 18);   // body (jersey)
+      g.fillStyle(0xd9a066); g.fillCircle(5, 30, 4); g.fillCircle(35, 30, 4);  // arms
+      g.fillStyle(helmet);   g.fillCircle(20, 16, 14);        // helmet
       g.fillStyle(0xffffff); g.fillCircle(20, 16, 10);
-      g.fillStyle(0x1f4fd8); g.fillCircle(20, 16, 9);
-      g.fillStyle(0xffffff); g.fillRect(18, 2, 4, 14);
+      g.fillStyle(helmet);   g.fillCircle(20, 16, 9);
+      g.fillStyle(0xffffff); g.fillRect(18, 2, 4, 14);        // stripe
       g.generateTexture('k_kicker', 40, 40); g.destroy();
     }
   }

@@ -147,6 +147,37 @@
     body.kicking #dpad2,
     body.kicking #btn-mode,
     body.kicking #btn-fs { display: none !important; }
+
+    /* ---- Choose-Your-Team menu buttons (◀ ▶ flip teams, PLAY starts) ----
+       The team preview itself is drawn on the game canvas by main.js; these
+       are real on-screen buttons so taps never miss on the iPad. Shown only
+       while the body has the .menu class (main.js adds/removes it). */
+    #team-menu { display: none; }
+    body.menu #team-menu { display: block; }
+    body.menu #dpad,
+    body.menu #actions,
+    body.menu #dpad2,
+    body.menu #btn-mode,
+    body.menu #btn-fs { display: none !important; }
+    .tm-btn {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      position: fixed; z-index: 40;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font: 800 30px "Arial Black", Arial;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 16px; box-shadow: 0 3px 10px rgba(0,0,0,.4);
+    }
+    .tm-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
+    #tm-prev, #tm-next { top: 46%; width: 66px; height: 66px; }
+    #tm-prev { left: max(16px, env(safe-area-inset-left)); }
+    #tm-next { right: max(16px, env(safe-area-inset-right)); }
+    #tm-play {
+      left: 50%; transform: translateX(-50%);
+      bottom: max(34px, env(safe-area-inset-bottom));
+      width: min(72vw, 280px); height: 62px; font-size: 26px; letter-spacing: 1px;
+      background: rgba(255,214,10,0.30); border-color: rgba(255,214,10,0.75);
+    }
+    #tm-play:active { transform: translateX(-50%) scale(0.96); background: rgba(255,214,10,0.6); }
   </style>
 </head>
 <body>
@@ -157,6 +188,14 @@
     <kbd>H</kbd> hand off &nbsp;·&nbsp; or use the buttons on screen!
   </div>
   <div id="game-container"></div>
+
+  <!-- Choose-Your-Team menu buttons. The team preview is drawn on the canvas
+       by main.js; these flip teams (◀ ▶) and start the game (PLAY). -->
+  <div id="team-menu">
+    <div class="tm-btn" id="tm-prev">◀</div>
+    <div class="tm-btn" id="tm-next">▶</div>
+    <div class="tm-btn" id="tm-play">PLAY ▶</div>
+  </div>
 
   <!-- Fullscreen + 1P/2P switch (top-right) -->
   <div class="btn" id="btn-fs">⛶</div>
