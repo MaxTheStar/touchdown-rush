@@ -148,6 +148,11 @@
     body.kicking #btn-mode,
     body.kicking #btn-fs { display: none !important; }
 
+    /* While returning a kickoff you only RUN — hide the pass/handoff/HIKE
+       buttons so they don't confuse you. The D-pad (and P2's D-pad in
+       2-player) stay, since you drive the returner. (.returning class) */
+    body.returning #actions { display: none !important; }
+
     /* ---- Choose-Your-Team menu buttons (◀ ▶ flip teams, PLAY starts) ----
        The team preview itself is drawn on the game canvas by main.js; these
        are real on-screen buttons so taps never miss on the iPad. Shown only

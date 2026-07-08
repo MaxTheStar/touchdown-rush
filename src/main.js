@@ -899,6 +899,7 @@ function startKickoff() {
   G.state = 'kickoff';
   G.koLive = false;                          // the ball is in the air first
   document.body.classList.remove('kicking'); // make sure the run buttons are showing
+  document.body.classList.add('returning');  // hide the pass/HIKE buttons — you only run a return
 
   // Only the returner is on the field — hide the other offense players + the ref.
   for (let i = 1; i < offense.length; i++) {
@@ -995,6 +996,7 @@ function setupPlay(next) {
   for (const o of offense) { o.s.setVisible(true); if (o.label) o.label.setVisible(true); }
   for (const d of defense) { d.s.setVisible(true); if (d.label) d.label.setVisible(true); }
   if (referee) referee.setVisible(true);
+  document.body.classList.remove('returning');  // the return is over — bring the pass/HIKE buttons back
 
   G.down = next.down;
   G.losYards = next.los;
