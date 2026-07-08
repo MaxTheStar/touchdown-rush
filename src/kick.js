@@ -23,17 +23,17 @@
 window.KickGame = (function () {
   // ---- Where things sit on the 540x720 screen ----
   const W = 540, H = 720;
-  const GOAL_Y      = 210;   // the crossbar height on screen
+  const GOAL_Y      = 250;   // the crossbar height on screen (lower + nearer = a bigger goal)
   const GOAL_CENTER = 270;   // middle of the goal (screen x)
-  const POST_LEFT   = 224;   // inside edge of the left upright
-  const POST_RIGHT  = 316;   // inside edge of the right upright
-  const POST_TOP    = 150;   // how high the uprights reach
+  const POST_LEFT   = 210;   // inside edge of the left upright (wider gate)
+  const POST_RIGHT  = 330;   // inside edge of the right upright
+  const POST_TOP    = 120;   // how high the uprights reach (taller uprights)
   const BALL_X = 270, BALL_Y = 636;  // the ball's spot on the tee
 
   // ---- How the meters move (tune to taste) ----
   const AIM_SPEED   = 190;   // base speed the aim crosshair slides (px/sec)
-  const AIM_LEFT    = 200;   // crosshair swings between these x's
-  const AIM_RIGHT   = 340;
+  const AIM_LEFT    = 186;   // crosshair swings between these x's (24px outside the left post)
+  const AIM_RIGHT   = 354;   //                                   (24px outside the right post)
   const POWER_SPEED = 1.6;   // how fast the power bar fills (per sec)
   const MAX_PUNT    = 55;    // a full-power punt goes this many yards
 
@@ -148,7 +148,7 @@ window.KickGame = (function () {
       K.aimX += K.aimDir * K.aimSpeed * dt;
       if (K.aimX > AIM_RIGHT) { K.aimX = AIM_RIGHT; K.aimDir = -1; }
       if (K.aimX < AIM_LEFT)  { K.aimX = AIM_LEFT;  K.aimDir = 1; }
-      K.crosshair.setPosition(K.aimX, GOAL_Y + 6).setVisible(true);
+      K.crosshair.setPosition(K.aimX, GOAL_Y - 30).setVisible(true);
     }
 
     if (K.state === 'power') {
@@ -191,10 +191,16 @@ window.KickGame = (function () {
 
     // A punt always goes straight ahead; a field goal goes where you aimed.
     const endX = (K.mode === 'punt') ? GOAL_CENTER : K.lockedAim;
-    const short = (result === 'short');
-    const endY = short ? 430 : GOAL_Y;
-    const endScale = short ? 0.55 : 0.34;   // farther away = smaller
-    const arcPeak = short ? 60 : 120;       // how high it hops
+    // Where the ball ends up depends on the outcome:
+    //   good  -> sail UP through the uprights and rest BETWEEN them, above the crossbar (a clear make!)
+    //   wide  -> arc to about crossbar height but off to the SIDE of a post (missed)
+    //   short -> die low, well below the bar
+    //   punt  -> boom high up the middle and away (a big kick, NOT a made field goal)
+    let endY, endScale, arcPeak;
+    if (result === 'short')     { endY = 430;    endScale = 0.55; arcPeak = 60;  }
+    else if (result === 'wide') { endY = GOAL_Y; endScale = 0.34; arcPeak = 110; }
+    else if (result === 'punt') { endY = 96;     endScale = 0.30; arcPeak = 70;  }
+    else                        { endY = 205;    endScale = 0.42; arcPeak = 95;  }  // GOOD: through & between the posts
 
     const p = { t: 0 };
     K.flight = K.scene.tweens.add({
@@ -339,7 +345,7 @@ window.KickGame = (function () {
     K.ball = keep(scene.add.sprite(BALL_X, BALL_Y, 'k_ball')).setDepth(106);
 
     // The aim crosshair (hidden until we're aiming).
-    K.crosshair = keep(scene.add.sprite(GOAL_CENTER, GOAL_Y + 6, 'k_cross'))
+    K.crosshair = keep(scene.add.sprite(GOAL_CENTER, GOAL_Y - 30, 'k_cross'))
       .setDepth(108).setVisible(false);
 
     // The power meter graphics (redrawn every frame).
@@ -347,7 +353,7 @@ window.KickGame = (function () {
 
     // Text: top line, a distance badge, and the "what to do" hint.
     K.hud   = keep(scene.add.text(W / 2, 26, '', bigStyle(18, '#ffe066')).setOrigin(0.5));
-    K.distLabel = keep(scene.add.text(GOAL_CENTER, GOAL_Y + 40, '', bigStyle(14, '#ffffff')).setOrigin(0.5));
+    K.distLabel = keep(scene.add.text(GOAL_CENTER, GOAL_Y + 56, '', bigStyle(14, '#ffffff')).setOrigin(0.5));
     K.hint  = keep(scene.add.text(W / 2, 486, '', bigStyle(20, '#ffffff')).setOrigin(0.5));
   }
 
