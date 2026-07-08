@@ -56,6 +56,13 @@ function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
 // easy chip shot from a fixed spot — same tap-to-aim, tap-to-power kick.
 const XP_DISTANCE = 20;   // how far the extra point is, in yards (short = easy)
 
+// ---- Kickoffs — YOU return the kick: catch it deep and run it back ----
+// A new possession (start of game, after a score, after a turnover) begins with
+// a kickoff return: the ball is booted to your returner near his own goal, you
+// run it back through the coverage team, and where you're tackled is where your
+// drive starts. Break all the way through = a return touchdown!
+const KO_COVER_SPEED = 190;   // how fast the coverage team chases you (you run 215, so it's beatable)
+
 // ---- The teams! ----------------------------------------------------------
 // Every real NFL team, with its own two colors: a JERSEY color (the body) and
 // a HELMET color (the head). We use the real 3-letter codes (SEA, PIT, ...)
@@ -113,7 +120,8 @@ const config = {
 // ---- Game state (one object so it's easy to read) ----
 const G = {
   scene: null,
-  state: 'menu',        // menu | presnap | live | pass | dead | fumble | decision | kick
+  state: 'menu',        // menu | kickoff | presnap | live | pass | dead | fumble | decision | kick
+  koLive: false,        // during a kickoff: false = ball still in the air, true = run it back!
   score: 0,
   team: null,           // YOUR team (picked at the menu) — an entry from NFL_TEAMS
   oppTeam: null,        // the computer's team (a random other one)
@@ -232,7 +240,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage };
 }
 
 // ============================================================
@@ -287,6 +295,18 @@ function update(time, delta) {
     freezeEveryone();
     if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) snap(time);
     updateBall();
+    updateHUD();
+    return;
+  }
+
+  // KICKOFF RETURN: catch the kick, then run it back through the coverage team.
+  if (G.state === 'kickoff') {
+    if (!G.koLive) { freezeEveryone(); updateHUD(); return; }  // ball still in the air
+    controlReturner();          // you drive the returner with arrows / the D-pad
+    updateKickoffCoverage();    // the coverage team chases you
+    updateBall();
+    if (checkTouchdown()) return;   // took it all the way = return TD!
+    checkKickoffTackle();
     updateHUD();
     return;
   }
@@ -825,22 +845,118 @@ function startGameWithTeam() {
 
   setMenuVisible(false);
   document.body.classList.remove('menu');
-  startDrive();
+  startKickoff();   // the game opens with a kickoff for you to return
+}
+
+// ============================================================
+// KICKOFF RETURN — catch the kick deep and run it back
+// ------------------------------------------------------------
+// Every brand-new possession starts here: the ball is booted to your returner
+// near his own goal, the coverage team spreads downfield, and you run it back.
+// Get tackled → your drive starts at that spot. Reach the endzone → return TD!
+// (Only the returner is your guy on the field; the rest wait for the drive.)
+// ============================================================
+function startKickoff() {
+  G.state = 'kickoff';
+  G.koLive = false;                          // the ball is in the air first
+  document.body.classList.remove('kicking'); // make sure the run buttons are showing
+
+  // Only the returner is on the field — hide the other offense players + the ref.
+  for (let i = 1; i < offense.length; i++) {
+    offense[i].s.setVisible(false);
+    if (offense[i].label) offense[i].label.setVisible(false);
+  }
+  if (offense[0].label) offense[0].label.setVisible(false);
+  if (referee) referee.setVisible(false);
+  // Hide the scrimmage labels (QB/RUSH/1/2) — they don't apply on a kickoff.
+  for (const d of defense) if (d.label) d.label.setVisible(false);
+
+  // The returner waits deep, near his own 8-yard line.
+  G.ballCarrier = offense[0];
+  place(offense[0], 266, 1020);
+  offense[0].s.setVisible(true);
+
+  // The coverage team: a spread wall downfield that converges on the returner.
+  const cov = [
+    [70, 720], [190, 720], [345, 720], [465, 720],  // front wall
+    [130, 600], [270, 600], [410, 600],             // back row
+  ];
+  for (let i = 0; i < defense.length; i++) {
+    place(defense[i], cov[i][0], cov[i][1]);
+    defense[i].s.setVisible(true);
+  }
+
+  // Boot the ball down into the returner's hands, THEN let you run.
+  ballFollow = false;
+  ball.setPosition(266, 680).setVisible(true);
+  G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
+  G.scene.tweens.add({
+    targets: ball, x: 266, y: 1014, duration: 650, ease: 'Sine.In',
+    onComplete: () => { ballFollow = true; G.koLive = true; showBanner('RETURN IT!', false); }
+  });
+  updateHUD();
+}
+
+// Drive the returner (movement only — no passing on a kickoff).
+function controlReturner() {
+  const p = G.ballCarrier.s;
+  let vx = 0, vy = 0;
+  if (keys.left.isDown || touch.left) vx = -PLAYER_SPEED;
+  else if (keys.right.isDown || touch.right) vx = PLAYER_SPEED;
+  if (keys.up.isDown || touch.up) vy = -PLAYER_SPEED;
+  else if (keys.down.isDown || touch.down) vy = PLAYER_SPEED;
+  if (vx && vy) { vx *= 0.707; vy *= 0.707; }
+  p.setVelocity(vx, vy);
+  if (vx || vy) p.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+}
+
+// The whole coverage team runs straight at the returner.
+function updateKickoffCoverage() {
+  const c = G.ballCarrier.s;
+  for (const d of defense) {
+    // In 2-player mode, a friend drives one coverage player to hunt you down.
+    if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
+    steer(d.s, c.x, c.y, KO_COVER_SPEED);
+  }
+}
+
+// Any coverage player close enough = tackle, and the return is over.
+function checkKickoffTackle() {
+  const c = G.ballCarrier.s;
+  for (const d of defense) {
+    if (Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y) < TACKLE_DIST) {
+      endKickoffReturn();
+      return;
+    }
+  }
+}
+
+// Tackled! Start a normal 1st-&-10 drive from wherever you were brought down.
+function endKickoffReturn() {
+  freezeEveryone();
+  const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(G.ballCarrier.s.y)), 1, 99);
+  G.next = { los: spot, down: 1, fd: Math.min(spot + 10, 100) };  // no 'fresh' → a normal drive next
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1400;
+  showBanner('NICE RETURN!', false);
 }
 
 // ============================================================
 // SETTING UP A PLAY — line all 14 players up at the LOS
 // ============================================================
-function startDrive() {
-  G.score = G.score; // keep score across drives
-  setupPlay({ los: 20, down: 1, fd: 30 });
-}
-
 function startNextPlay() {
-  setupPlay(G.next);
+  // A brand-new possession is fielded as a kickoff return; otherwise it's a
+  // normal down from wherever the last play ended.
+  if (G.next && G.next.fresh) startKickoff();
+  else setupPlay(G.next);
 }
 
 function setupPlay(next) {
+  // Bring everyone back onto the field (a kickoff return hides all but the returner).
+  for (const o of offense) { o.s.setVisible(true); if (o.label) o.label.setVisible(true); }
+  for (const d of defense) { d.s.setVisible(true); if (d.label) d.label.setVisible(true); }
+  if (referee) referee.setVisible(true);
+
   G.down = next.down;
   G.losYards = next.los;
   G.firstDownYards = next.fd;
@@ -1089,6 +1205,14 @@ function updateHUD() {
   hud.score.setText(G.team
     ? `${G.team.abbr} ${G.score}   vs ${G.oppTeam.abbr}`
     : 'SCORE: ' + G.score);
+
+  // On a kickoff there's no down & distance yet — show return info instead.
+  if (G.state === 'kickoff') {
+    hud.down.setText('KICKOFF');
+    hud.spot.setText('Catch it and run it back!');
+    hud.help.setText(G.koLive ? 'RUN IT BACK — head up the field! ⬆' : 'Here comes the kick…');
+    return;
+  }
 
   const toGo = G.firstDownYards - G.losYards;
   const distTxt = (G.firstDownYards >= 100) ? 'GOAL' : String(Math.max(0, Math.round(toGo)));
