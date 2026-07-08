@@ -26,14 +26,17 @@ const GRASS_LIGHT = 0x379437;
 // ---- Speeds (pixels/sec) — tune these to make it easier/harder ----
 const PLAYER_SPEED = 215;   // the player you control
 const WR_SPEED     = 195;   // receivers running routes
-const DEF_SPEED    = 196;   // defenders (a touch slower than you = still beatable)
+const DEF_SPEED    = 196;   // defenders covering & rushing (near WR speed = coverage works)
+const PURSUE_SPEED = 180;   // defenders CHASING the ball carrier on a run (slower = you can run!)
 const OL_SPEED     = 182;   // your linemen mirroring the rush to protect the QB
 const BALL_SPEED   = 520;   // how fast a pass flies
 
 // ---- Distances ----
 const TACKLE_DIST = 15;   // defender this close to the ball = tackle
-const BLOCK_DIST  = 22;   // lineman this close to a rusher = blocks him
+const BLOCK_DIST  = 27;   // lineman this close to a rusher = blocks him (bigger = stronger pocket)
 const CATCH_CONTEST = 15; // defender this close to the catch = contested
+const OVERTHROW_DIST = 55; // if the ball lands farther than this from the receiver, it's overthrown
+const HANDOFF_DIST = 60;  // QB must be this close to the RB to hand off (else the HAND button is disabled)
 
 // ---- Pass outcome chances (0..1) — tune for more/fewer drops & picks ----
 const CATCH_CHANCE = 0.85; // an OPEN receiver hauls it in...
@@ -52,16 +55,32 @@ const FG_MAX_DIST = 55;                     // longest field goal you're allowed
 function fieldGoalDistance() { return (100 - G.losYards) + 17; }
 function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
 
-// After a touchdown you get one EXTRA-POINT kick, worth +1. It's a short,
-// easy chip shot from a fixed spot — same tap-to-aim, tap-to-power kick.
-const XP_DISTANCE = 20;   // how far the extra point is, in yards (short = easy)
+// After a touchdown you get one EXTRA-POINT kick, worth +1. How far it is now
+// depends on the difficulty you picked (see DIFFICULTY above) — farther = harder.
 
 // ---- Kickoffs — YOU return the kick: catch it deep and run it back ----
 // A new possession (start of game, after a score, after a turnover) begins with
 // a kickoff return: the ball is booted to your returner near his own goal, you
 // run it back through the coverage team, and where you're tackled is where your
 // drive starts. Break all the way through = a return touchdown!
-const KO_COVER_SPEED = 190;   // how fast the coverage team chases you (you run 215, so it's beatable)
+// ---- Difficulty (picked on the team menu): EASY / MEDIUM / HARD ----
+// On purpose, difficulty ONLY changes the KICKOFF (faster coverage = harder to
+// return) and the EXTRA POINT (longer kick). The normal in-game defense is NOT
+// touched by difficulty, so regular downs stay fair at every level.
+const DIFFICULTY = {
+  easy:   { label: 'EASY',   koCover: 180, xpDist: 22 },  // (you return the kick at 215)
+  medium: { label: 'MEDIUM', koCover: 198, xpDist: 30 },
+  hard:   { label: 'HARD',   koCover: 214, xpDist: 38 },  // coverage nearly as fast as you = tough return
+};
+function diff() { return DIFFICULTY[G.difficulty] || DIFFICULTY.medium; }
+
+// ---- Instant replay — after you score, watch it again in slow motion! -----
+// While a play is running we quietly remember where everyone was for the last
+// couple of seconds (a "film reel"). When you score a touchdown we play that
+// film back slowly, with a spotlight on the ball carrier, before the kick.
+const REPLAY_FRAMES     = 150;   // how many recent moments we keep (~2.5 seconds of film)
+const REPLAY_PLAY_SPEED = 0.45;  // film speed on playback (< 1 = slow motion)
+const REPLAY_MIN        = 25;    // need at least this much film, or skip the replay
 
 // ---- The teams! ----------------------------------------------------------
 // Every real NFL team, with its own two colors: a JERSEY color (the body) and
@@ -120,8 +139,9 @@ const config = {
 // ---- Game state (one object so it's easy to read) ----
 const G = {
   scene: null,
-  state: 'menu',        // menu | kickoff | presnap | live | pass | dead | fumble | decision | kick
+  state: 'menu',        // menu | kickoff | presnap | live | pass | dead | fumble | decision | kick | replay
   koLive: false,        // during a kickoff: false = ball still in the air, true = run it back!
+  difficulty: 'medium', // 'easy' | 'medium' | 'hard' — picked on the team menu
   score: 0,
   team: null,           // YOUR team (picked at the menu) — an entry from NFL_TEAMS
   oppTeam: null,        // the computer's team (a random other one)
@@ -140,15 +160,27 @@ const G = {
   kickKind: 'fg',       // what kind of kick is on screen: 'fg' | 'punt' | 'xp' (extra point)
   pendingXP: false,     // just scored a TD? then an extra-point kick comes next
   banner: null,
+  carrierRing: null,    // the bright ring under whoever currently has the ball
   twoPlayer: false,     // false = vs computer, true = a friend controls one defender
   p2Defender: null,     // the single red player Player 2 drives in 2-player mode
   p2Label: null,        // the "P2" tag floating over that defender
+
+  // ---- Instant replay ----
+  replay: [],           // the "film reel": recent frames of where everyone was
+  replayPending: false, // just scored — show the replay before the extra point
+  replayIdx: 0,         // which film frame we're showing right now (a float, for slo-mo)
+  replayHoldUntil: 0,   // freeze on the last frame until this time, then finish
+  replayBars: null,     // the cinematic black bars (top & bottom of the screen)
+  replayText: null,     // the blinking "📺 INSTANT REPLAY" title
+  replayHint: null,     // the little "tap to skip" hint
+  replayRing: null,     // the glowing spotlight under the ball carrier
 };
 
 let offense = [];  // 7 blue players (objects, see makePlayer)
 let defense = [];  // 7 red players
 let ball;          // the football sprite
 let ballFollow = true;
+let routeGfx;      // the colored "route lines" drawn behind each receiver
 let referee;       // the striped official (flavor only, no physics)
 let keys;          // keyboard
 
@@ -205,6 +237,17 @@ function create() {
 
   ball = this.physics.add.sprite(0, 0, 'ball').setDepth(6);
 
+  // The colored route lines drawn behind the receivers (under the players).
+  routeGfx = this.add.graphics().setDepth(3);
+
+  // A bright ring that sits under WHOEVER has the ball, so you always know
+  // which player to drive (especially right after a catch or a handoff).
+  G.carrierRing = this.add.graphics().setDepth(4).setVisible(false);
+  G.carrierRing.lineStyle(4, 0x2ee6ff, 0.95);
+  G.carrierRing.strokeCircle(0, 0, 20);
+  G.carrierRing.fillStyle(0x2ee6ff, 0.14);
+  G.carrierRing.fillCircle(0, 0, 20);
+
   // The referee — a plain sprite (no physics body), so he's on the field
   // for realism but never blocks, tackles, or gets in the way.
   referee = this.add.sprite(0, 0, 'ref').setDepth(4);
@@ -240,7 +283,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails };
 }
 
 // ============================================================
@@ -256,15 +299,27 @@ function update(time, delta) {
     return;
   }
 
+  // Keep the "who has the ball" ring glued under the ball carrier while a play
+  // is live (hidden during dead time, kicks, replays — the replay has its own ring).
+  if (G.carrierRing) {
+    const showRing = (G.state === 'live' || G.state === 'pass' || (G.state === 'kickoff' && G.koLive));
+    G.carrierRing.setVisible(showRing);
+    if (showRing && G.ballCarrier) G.carrierRing.setPosition(G.ballCarrier.s.x, G.ballCarrier.s.y);
+  }
+
   if (G.state === 'dead') {
     freezeEveryone();
     if (time >= G.deadUntil) {
-      if (G.pendingXP) startExtraPoint();   // just scored? kick the extra point first
+      if (G.replayPending) { G.replayPending = false; startReplay(); }  // watch the score again!
+      else if (G.pendingXP) startExtraPoint();   // just scored? kick the extra point first
       else startNextPlay();
     }
     updateBall();
     return;
   }
+
+  // INSTANT REPLAY: play back the film of the touchdown in slow motion.
+  if (G.state === 'replay') { updateReplay(); return; }
 
   // KICKING: the kick mini-game is drawn on top of the field. Let it run;
   // it calls back to onKickDone() when the kick is finished.
@@ -305,6 +360,7 @@ function update(time, delta) {
     controlReturner();          // you drive the returner with arrows / the D-pad
     updateKickoffCoverage();    // the coverage team chases you
     updateBall();
+    recordReplayFrame();        // remember this moment, in case it's a return TD
     if (checkTouchdown()) return;   // took it all the way = return TD!
     checkKickoffTackle();
     updateHUD();
@@ -319,6 +375,8 @@ function update(time, delta) {
   updateLine();
   updateDefense(elapsed);
   updateBall();
+  recordReplayFrame();        // remember this moment, in case the play ends in a TD
+  updateRouteTrails();        // draw the colored route line trailing each receiver
 
   if (G.state === 'live') {
     if (checkTouchdown()) return;
@@ -334,6 +392,7 @@ function snap(time) {
   G.state = 'live';
   G.snapTime = time;
   G.hasPassed = false;
+  G.replay = [];              // start a fresh film reel for this play
   G.ballCarrier = offense[0]; // QB
   G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
 }
@@ -374,8 +433,18 @@ function controlP2Defender(d) {
   if (vx || vy) d.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
 }
 
+// Can the QB actually hand off right now? He must have the ball, not have
+// thrown, AND be close enough to the running back (you can't hand off from
+// across the field). Shared by the HAND button and the H key.
+function canHandOff() {
+  if (G.state !== 'live' || G.ballCarrier !== offense[0] || G.hasPassed) return false;
+  return Phaser.Math.Distance.Between(
+    offense[0].s.x, offense[0].s.y, offense[1].s.x, offense[1].s.y) <= HANDOFF_DIST;
+}
+
 // Hand the ball to the running back — now you control him.
 function handOff() {
+  if (!canHandOff()) return;          // too far away? no handoff.
   const rb = offense[1];
   G.ballCarrier = rb;
   G.hasPassed = true; // no passing after a handoff; defense now chases the RB
@@ -413,10 +482,21 @@ function throwTo(num) {
 }
 
 function resolvePass(wr, x, y) {
-  // Who is closest to the ball when it arrives?
+  // Where the receiver ACTUALLY is when the ball arrives (he kept running).
+  const wx = wr.s.x, wy = wr.s.y;
+
+  // If the ball landed nowhere near him, it was overthrown — INCOMPLETE.
+  // (This is the fix for the "ball sails way past him but it's still a catch,
+  //  and somehow a first down" bug — now a bad throw is just incomplete.)
+  if (Phaser.Math.Distance.Between(x, y, wx, wy) > OVERTHROW_DIST) {
+    endPlay('incomplete', 'OVERTHROWN!');
+    return;
+  }
+
+  // Who is closest to the RECEIVER when the ball arrives?
   let nearestDef = Infinity;
   for (const d of defense) {
-    nearestDef = Math.min(nearestDef, Phaser.Math.Distance.Between(d.s.x, d.s.y, x, y));
+    nearestDef = Math.min(nearestDef, Phaser.Math.Distance.Between(d.s.x, d.s.y, wx, wy));
   }
 
   // A defender is right there — he either intercepts it or knocks it away.
@@ -431,7 +511,8 @@ function resolvePass(wr, x, y) {
   // ...or catch it and drop it.
   if (Math.random() < DROP_CHANCE)  { endPlay('incomplete', 'DROPPED IT!'); return; }
 
-  // Clean catch! You now control this receiver.
+  // Clean catch! Put the ball in his hands and you now control this receiver.
+  ball.setPosition(wx, wy);
   G.ballCarrier = wr;
   G.state = 'live';
   ballFollow = true;
@@ -512,6 +593,35 @@ function updateReceivers(elapsed) {
 }
 
 // ============================================================
+// ROUTE LINES — a colored trail showing where each receiver runs
+// ------------------------------------------------------------
+// Every frame we drop a breadcrumb at each receiver's feet and draw the whole
+// trail as a line in his own color, so you can see the routes develop and pick
+// who to throw to. Reset each play (in setupPlay) and cleared when a play ends.
+// ============================================================
+function updateRouteTrails() {
+  if (!routeGfx) return;
+  routeGfx.clear();
+  for (const o of offense) {
+    if (o.role !== 'WR' && o.role !== 'RB') continue;
+    o.trail.push({ x: o.s.x, y: o.s.y });
+    if (o.trail.length > 140) o.trail.shift();     // keep the line a sensible length
+    if (o.trail.length < 2) continue;
+    routeGfx.lineStyle(4, routeColor(o), 0.7);
+    routeGfx.beginPath();
+    routeGfx.moveTo(o.trail[0].x, o.trail[0].y);
+    for (let i = 1; i < o.trail.length; i++) routeGfx.lineTo(o.trail[i].x, o.trail[i].y);
+    routeGfx.strokePath();
+  }
+}
+
+// Each receiver gets his own line color (RB yellow, WR #1 orange, WR #2 pink).
+function routeColor(o) {
+  if (o.role === 'RB') return 0xffe066;
+  return o.num === 1 ? 0xffa23a : 0xff6ea5;
+}
+
+// ============================================================
 // OFFENSIVE LINE — actively block the rushers to protect the QB
 // ------------------------------------------------------------
 // Each lineman slides in FRONT of a rusher (between him and the QB)
@@ -560,13 +670,14 @@ function updateDefense(elapsed) {
     let tx, ty, speed = DEF_SPEED;
 
     if (!qbHasBall && G.state !== 'pass') {
-      // Someone caught it (or QB is scrambling with intent) — everyone hunts the ball.
-      tx = carrier.x; ty = carrier.y;
+      // Someone caught it (or is running it) — everyone hunts the ball, but at the
+      // slower PURSUE_SPEED so a good runner can actually break away.
+      tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED;
     } else if (d.role === 'DL') {
       // Linemen rush the quarterback...
       tx = offense[0].s.x; ty = offense[0].s.y;
-      // ...unless an offensive lineman is blocking them.
-      if (nearBlocker(d)) speed = DEF_SPEED * 0.4;
+      // ...unless an offensive lineman is blocking them (0.25 = really slowed = more time to throw).
+      if (nearBlocker(d)) speed = DEF_SPEED * 0.25;
     } else if (d.role === 'LB') {
       // Linebackers spy the QB in a short zone — they don't blitz, so the
       // pocket holds; they pursue once the ball is thrown or handed off.
@@ -645,6 +756,7 @@ function checkTouchdown() {
 // Decide what the next play is, show a banner, and pause briefly.
 function endPlay(result, customMsg) {
   freezeEveryone();
+  if (routeGfx) routeGfx.clear();   // the route lines vanish when the play ends
   let msg, next, big = false;
 
   if (result === 'touchdown') {
@@ -652,6 +764,7 @@ function endPlay(result, customMsg) {
     msg = 'TOUCHDOWN!  +6';
     big = true;
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
+    G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
   } else if (result === 'interception') {
     // The other team caught it! You don't play defense yet, so the ball
@@ -741,7 +854,7 @@ function startExtraPoint() {
   G.scene.cameras.main.stopFollow();
   KickGame.enter(G.scene, {
     mode: 'fg',
-    distance: XP_DISTANCE,
+    distance: diff().xpDist,   // farther on higher difficulty
     points: 1,            // a made extra point is worth 1, not 3
     onDone: onKickDone,
   });
@@ -831,6 +944,7 @@ function enterMenu() {
   G.menuIndex = 0;
   setMenuVisible(true);
   renderMenu();
+  syncDiffButtons();   // highlight the current difficulty
 }
 
 // Paint the menu for whichever team you're currently looking at.
@@ -857,6 +971,17 @@ function menuNav(dir) {
   const n = NFL_TEAMS.length;
   G.menuIndex = (G.menuIndex + dir + n) % n;
   renderMenu();
+}
+
+// Pick a difficulty (Easy/Medium/Hard) on the menu; highlight the chosen button.
+function setDifficulty(level) {
+  if (!DIFFICULTY[level]) return;
+  G.difficulty = level;
+  syncDiffButtons();
+}
+function syncDiffButtons() {
+  document.querySelectorAll('.diff-btn').forEach(b =>
+    b.classList.toggle('sel', b.dataset.diff === G.difficulty));
 }
 
 // Tap PLAY: lock in your team, give the computer a random other team, paint
@@ -898,6 +1023,7 @@ function startGameWithTeam() {
 function startKickoff() {
   G.state = 'kickoff';
   G.koLive = false;                          // the ball is in the air first
+  G.replay = [];                             // start a fresh film reel for the return
   document.body.classList.remove('kicking'); // make sure the run buttons are showing
   document.body.classList.add('returning');  // hide the pass/HIKE buttons — you only run a return
 
@@ -956,7 +1082,7 @@ function updateKickoffCoverage() {
   for (const d of defense) {
     // In 2-player mode, a friend drives one coverage player to hunt you down.
     if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
-    steer(d.s, c.x, c.y, KO_COVER_SPEED);
+    steer(d.s, c.x, c.y, diff().koCover);   // coverage speed depends on difficulty
   }
 }
 
@@ -982,6 +1108,124 @@ function endKickoffReturn() {
 }
 
 // ============================================================
+// INSTANT REPLAY — watch the touchdown again in slow motion
+// ------------------------------------------------------------
+// During a play we snap a "photo" of the whole field every frame and keep the
+// last ~2.5 seconds of them (a little film reel, G.replay). When you score, we
+// roll that film back slowly with black movie bars and a spotlight on the ball
+// carrier — then the game continues to the extra-point kick.
+// ============================================================
+
+// Snap one photo of the field: where every player + the ball is right now,
+// and which offense player is carrying it (so the spotlight follows him).
+function recordReplayFrame() {
+  G.replay.push({
+    o: offense.map(p => ({ x: p.s.x, y: p.s.y, r: p.s.rotation, vis: p.s.visible })),
+    d: defense.map(p => ({ x: p.s.x, y: p.s.y, r: p.s.rotation, vis: p.s.visible })),
+    bx: ball.x, by: ball.y,
+    ci: offense.indexOf(G.ballCarrier),   // carrier's index in offense (-1 if none)
+  });
+  if (G.replay.length > REPLAY_FRAMES) G.replay.shift();   // only keep the recent film
+}
+
+// Start rolling the film. Freeze the game, add the movie bars + spotlight,
+// and let updateReplay() play it out frame by frame.
+function startReplay() {
+  G.state = 'replay';
+  G.replayIdx = 0;
+  G.replayHoldUntil = 0;
+  if (G.banner) { G.banner.destroy(); G.banner = null; }   // clear the "TOUCHDOWN!" banner first
+  freezeEveryone();
+  ballFollow = false;                       // we place the ball by hand during the film
+  G.scene.cameras.main.stopFollow();
+  touch.snap = false;                       // clear any stray tap so it doesn't skip instantly
+  buildReplayOverlay();
+}
+
+// Build the on-screen replay decorations (bars, title, hint, spotlight ring).
+function buildReplayOverlay() {
+  const s = G.scene;
+  // Cinematic black bars pinned to the top & bottom of the screen (540x720).
+  const bars = s.add.graphics().setScrollFactor(0).setDepth(40);
+  bars.fillStyle(0x000000, 0.82);
+  bars.fillRect(0, 0, 540, 64);
+  bars.fillRect(0, 720 - 64, 540, 64);
+  G.replayBars = bars;
+
+  G.replayText = s.add.text(270, 32, '📺  INSTANT REPLAY', {
+    fontFamily: 'Arial Black, Arial', fontSize: '26px',
+    color: '#ffe066', stroke: '#000', strokeThickness: 5
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(42);
+  s.tweens.add({ targets: G.replayText, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
+
+  G.replayHint = s.add.text(270, 720 - 32, 'tap ▶ to skip', {
+    fontFamily: 'Arial Black, Arial', fontSize: '14px',
+    color: '#ffffff', stroke: '#000', strokeThickness: 3
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(42);
+
+  // A glowing ring that sits UNDER the ball carrier (depth 4 = below players).
+  const ring = s.add.graphics().setDepth(4);
+  ring.lineStyle(4, 0xffe066, 0.9);
+  ring.strokeCircle(0, 0, 26);
+  ring.fillStyle(0xffe066, 0.15);
+  ring.fillCircle(0, 0, 26);
+  G.replayRing = ring;
+}
+
+// Play the film: advance slowly, move everyone to their filmed spots, and
+// follow the action. A tap / SPACE skips to the end.
+function updateReplay() {
+  const frames = G.replay;
+  if (!frames.length) { endReplay(); return; }
+
+  // Let the player skip the replay.
+  if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) G.replayIdx = frames.length;
+
+  if (G.replayIdx >= frames.length - 1) {
+    // Reached the end — hold on the final frame a beat, then finish.
+    applyReplayFrame(frames[frames.length - 1]);
+    if (!G.replayHoldUntil) G.replayHoldUntil = G.scene.time.now + 700;
+    else if (G.scene.time.now >= G.replayHoldUntil) endReplay();
+    return;
+  }
+
+  applyReplayFrame(frames[Math.floor(G.replayIdx)]);
+  G.replayIdx += REPLAY_PLAY_SPEED;         // < 1 frame per tick = slow motion
+}
+
+// Move every player + the ball to where they were in this filmed frame.
+function applyReplayFrame(f) {
+  for (let i = 0; i < offense.length; i++) {
+    const p = offense[i], fo = f.o[i];
+    p.s.setPosition(fo.x, fo.y).setRotation(fo.r).setVisible(fo.vis);
+    if (p.label) p.label.setPosition(fo.x, fo.y);
+  }
+  for (let i = 0; i < defense.length; i++) {
+    const p = defense[i], fd = f.d[i];
+    p.s.setPosition(fd.x, fd.y).setRotation(fd.r).setVisible(fd.vis);
+    if (p.label) p.label.setPosition(fd.x, fd.y);
+  }
+  ball.setPosition(f.bx, f.by);
+
+  // Spotlight the ball carrier (fall back to the ball if there isn't one).
+  const c = (f.ci >= 0 && f.o[f.ci]) ? f.o[f.ci] : { x: f.bx, y: f.by };
+  G.replayRing.setPosition(c.x, c.y);
+
+  G.scene.cameras.main.centerOn(f.bx, f.by);
+}
+
+// The film is over — clean up the decorations and go on to the extra point.
+function endReplay() {
+  for (const k of ['replayBars', 'replayText', 'replayHint', 'replayRing']) {
+    if (G[k]) { G[k].destroy(); G[k] = null; }
+  }
+  G.replayHoldUntil = 0;
+  // Pick up exactly where the touchdown left off: kick the extra point.
+  if (G.pendingXP) startExtraPoint();
+  else startNextPlay();
+}
+
+// ============================================================
 // SETTING UP A PLAY — line all 14 players up at the LOS
 // ============================================================
 function startNextPlay() {
@@ -993,8 +1237,9 @@ function startNextPlay() {
 
 function setupPlay(next) {
   // Bring everyone back onto the field (a kickoff return hides all but the returner).
-  for (const o of offense) { o.s.setVisible(true); if (o.label) o.label.setVisible(true); }
+  for (const o of offense) { o.s.setVisible(true); if (o.label) o.label.setVisible(true); o.trail = []; }
   for (const d of defense) { d.s.setVisible(true); if (d.label) d.label.setVisible(true); }
+  if (routeGfx) routeGfx.clear();   // wipe last play's route lines
   if (referee) referee.setVisible(true);
   document.body.classList.remove('returning');  // the return is over — bring the pass/HIKE buttons back
 
@@ -1087,6 +1332,11 @@ function setupTouchButtons() {
   bindTapEl('tm-prev', () => menuNav(-1));
   bindTapEl('tm-next', () => menuNav(1));
   bindTapEl('tm-play', startGameWithTeam);
+
+  // Difficulty picker on the menu (Easy / Medium / Hard)
+  bindTapEl('diff-easy',   () => setDifficulty('easy'));
+  bindTapEl('diff-medium', () => setDifficulty('medium'));
+  bindTapEl('diff-hard',   () => setDifficulty('hard'));
 
   // Tap-to-pass: a tap on the field (not on a button) throws to the receiver
   // nearest your finger — but only when the QB can pass. We listen for a DOM
@@ -1214,7 +1464,7 @@ function makePlayer(scene, color, role, opts) {
   const s = scene.physics.add.sprite(0, 0, color);
   s.setCollideWorldBounds(true);
   s.setDepth(5);
-  const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, label: null };
+  const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, label: null, trail: [] };
   // Labels so the key players are obvious: QB, RB, receivers 1/2,
   // and the two rushers ("the defense on the quarterback").
   if (role === 'QB' || role === 'WR' || role === 'DL' || role === 'RB') {
@@ -1246,6 +1496,10 @@ function updateHUD() {
   // Keep number labels glued to their players
   for (const o of offense) if (o.label) o.label.setPosition(o.s.x, o.s.y);
   for (const d of defense) if (d.label) d.label.setPosition(d.s.x, d.s.y);
+
+  // Gray out the HAND button when you're too far from the RB to hand off.
+  const handBtn = document.getElementById('btn-hand');
+  if (handBtn) handBtn.classList.toggle('off', !canHandOff());
 
   // Float the "P2" tag over Player 2's defender (only in 2-player mode)
   if (G.p2Label) {

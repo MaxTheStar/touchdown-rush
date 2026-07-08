@@ -183,6 +183,28 @@
       background: rgba(255,214,10,0.30); border-color: rgba(255,214,10,0.75);
     }
     #tm-play:active { transform: translateX(-50%) scale(0.96); background: rgba(255,214,10,0.6); }
+
+    /* Difficulty picker on the menu (Easy / Medium / Hard), sitting above PLAY */
+    #tm-diff { display: none; }
+    body.menu #tm-diff {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      position: fixed; z-index: 41; left: 50%; transform: translateX(-50%);
+      bottom: max(108px, calc(env(safe-area-inset-bottom) + 78px));
+    }
+    .tm-diff-lab { color: #ffe066; font: 800 13px "Arial Black", Arial;
+      letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,.7); }
+    .tm-diff-row { display: flex; gap: 8px; }
+    .diff-btn {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      color: #fff; font: 800 16px "Arial Black", Arial;
+      padding: 8px 15px; border-radius: 12px;
+      background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.45);
+    }
+    .diff-btn.sel { background: rgba(255,214,10,0.5); border-color: #ffd60a; }
+    .diff-btn:active { transform: scale(0.94); }
+
+    /* The HAND button dims + goes dead when you're too far from the RB to hand off */
+    #btn-hand.off { opacity: 0.3; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -200,6 +222,16 @@
     <div class="tm-btn" id="tm-prev">◀</div>
     <div class="tm-btn" id="tm-next">▶</div>
     <div class="tm-btn" id="tm-play">PLAY ▶</div>
+  </div>
+
+  <!-- Difficulty picker (Easy / Medium / Hard) — shown on the menu, above PLAY -->
+  <div id="tm-diff">
+    <div class="tm-diff-lab">DIFFICULTY</div>
+    <div class="tm-diff-row">
+      <div class="diff-btn" id="diff-easy" data-diff="easy">EASY</div>
+      <div class="diff-btn sel" id="diff-medium" data-diff="medium">MEDIUM</div>
+      <div class="diff-btn" id="diff-hard" data-diff="hard">HARD</div>
+    </div>
   </div>
 
   <!-- Fullscreen + 1P/2P switch (top-right) -->
@@ -241,8 +273,10 @@
 
   <!-- Phaser 3: the open-source game engine doing the heavy lifting -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
-  <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses -->
-  <script src="src/kick.js"></script>
-  <script src="src/main.js"></script>
+  <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
+       The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
+       change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
+  <script src="src/kick.js?v=10"></script>
+  <script src="src/main.js?v=10"></script>
 </body>
 </html>
