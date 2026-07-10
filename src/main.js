@@ -25,10 +25,21 @@ const GRASS_LIGHT = 0x379437;
 
 // ---- Speeds (pixels/sec) — tune these to make it easier/harder ----
 const PLAYER_SPEED = 215;   // the player you control
-const WR_SPEED     = 195;   // receivers running routes
-const DEF_SPEED    = 196;   // defenders covering & rushing (near WR speed = coverage works)
-const PURSUE_SPEED = 180;   // defenders CHASING the ball carrier on a run (slower = you can run!)
-const OL_SPEED     = 182;   // your linemen mirroring the rush to protect the QB
+const WR_SPEED     = 195;   // receivers running routes (now a bit faster than coverage = they get open)
+const DEF_SPEED    = 186;   // defenders covering & rushing (slower than WRs = more space + more time to throw)
+const PURSUE_SPEED = 190;   // defenders CHASING the ball carrier on a run (faster now = running isn't a track meet)
+const OL_SPEED     = 188;   // your linemen mirroring the rush to protect the QB (better = the pocket holds longer)
+
+// ---- Swipe controls (touch): while RUNNING, swipe the field to dash or cut ----
+// A LONG swipe = a burst of speed (dash) in the swipe direction; a SHORT swipe =
+// a quick change of direction. The D-pad still works normally. (Swiping only does
+// this while you're running the ball, so it never clashes with tap-to-pass.)
+const SWIPE_MIN_FRAC  = 0.05;   // ignore tiny drags (< 5% of the screen height = a tap, not a swipe)
+const SWIPE_LONG_FRAC = 0.17;   // a long swipe (>= 17% of screen height) = a DASH; shorter = a quick cut
+const DASH_SPEED    = 360;      // dash burst speed (you normally run at PLAYER_SPEED 215)
+const DASH_TIME     = 320;      // how long the dash burst lasts (ms)
+const DASH_COOLDOWN = 700;      // wait this long after a dash before you can dash again (ms)
+const JUKE_TIME     = 200;      // how long a short-swipe direction change lasts (ms)
 const BALL_SPEED   = 520;   // how fast a pass flies
 
 // ---- Distances ----
@@ -170,6 +181,11 @@ const G = {
   p2Defender: null,     // the single red player Player 2 drives in 2-player mode
   p2Label: null,        // the "P2" tag floating over that defender
 
+  // ---- Swipe dash / juke (touch) ----
+  dashVX: 0, dashVY: 0, // the velocity of an active dash/cut
+  dashUntil: 0,         // the dash/cut overrides the D-pad until this time
+  dashReadyAt: 0,       // can't dash again until this time (cooldown)
+
   // ---- Instant replay ----
   replay: [],           // the "film reel": recent frames of where everyone was
   replayPending: false, // just scored — show the replay before the extra point
@@ -294,7 +310,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity };
 }
 
 // ============================================================
@@ -404,6 +420,7 @@ function snap(time) {
   G.snapTime = time;
   G.hasPassed = false;
   G.replay = [];              // start a fresh film reel for this play
+  G.dashUntil = 0;            // no leftover dash from the last play
   G.ballCarrier = offense[0]; // QB
   G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
   if (Math.random() < 0.6) sayComment(pick(['Hut, hut!', 'Here we go!', 'The snap!']));
@@ -412,15 +429,22 @@ function snap(time) {
 // ---- Move the player you control ----
 function controlBallCarrier() {
   const p = G.ballCarrier.s;
-  let vx = 0, vy = 0;
-  // Move if EITHER the arrow key OR the on-screen arrow button is held
-  if (keys.left.isDown || touch.left) vx = -PLAYER_SPEED;
-  else if (keys.right.isDown || touch.right) vx = PLAYER_SPEED;
-  if (keys.up.isDown || touch.up) vy = -PLAYER_SPEED;
-  else if (keys.down.isDown || touch.down) vy = PLAYER_SPEED;
-  if (vx && vy) { vx *= 0.707; vy *= 0.707; }
-  p.setVelocity(vx, vy);
-  if (vx || vy) p.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+  const dash = dashVelocity();
+  if (dash) {
+    // A swipe dash/cut is driving him — it overrides the D-pad for its moment.
+    p.setVelocity(dash.vx, dash.vy);
+    p.setRotation(Math.atan2(dash.vy, dash.vx) + Math.PI / 2);
+  } else {
+    let vx = 0, vy = 0;
+    // Move if EITHER the arrow key OR the on-screen arrow button is held
+    if (keys.left.isDown || touch.left) vx = -PLAYER_SPEED;
+    else if (keys.right.isDown || touch.right) vx = PLAYER_SPEED;
+    if (keys.up.isDown || touch.up) vy = -PLAYER_SPEED;
+    else if (keys.down.isDown || touch.down) vy = PLAYER_SPEED;
+    if (vx && vy) { vx *= 0.707; vy *= 0.707; }
+    p.setVelocity(vx, vy);
+    if (vx || vy) p.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+  }
 
   // Passing / handoff: only the QB, behind the line, once per play (canQBPass).
   // You can also just TAP a receiver — see the canvas listener in setupTouchButtons.
@@ -572,6 +596,41 @@ function passToNearest(worldX, worldY) {
     if (d < bestD) { bestD = d; best = o; }
   }
   if (best) throwTo(best.num);
+}
+
+// ============================================================
+// SWIPE DASH / CUT — swipe the field while running for a burst or a quick cut
+// ------------------------------------------------------------
+// You're "running the ball" when a play is live and you can no longer pass (past
+// the line, after a catch, on a handoff), or during a kickoff return. A long
+// swipe = a speed burst (dash); a short swipe = a quick change of direction.
+// The D-pad keeps working; swiping only kicks in while running, so it never
+// clashes with tap-to-pass (which only fires while you CAN pass).
+// ============================================================
+function isRunning() {
+  return (G.state === 'live' && !canQBPass()) || (G.state === 'kickoff' && G.koLive);
+}
+
+// Turn a finished swipe into a dash (long) or a quick cut (short). dx/dy are the
+// screen drag; the field is drawn upright so screen direction = field direction.
+function applySwipeRun(dx, dy, frac) {
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;              // unit direction
+  const now = G.scene.time.now;
+  if (frac >= SWIPE_LONG_FRAC && now >= G.dashReadyAt) {
+    G.dashVX = ux * DASH_SPEED; G.dashVY = uy * DASH_SPEED;   // long swipe = DASH
+    G.dashUntil = now + DASH_TIME;
+    G.dashReadyAt = now + DASH_TIME + DASH_COOLDOWN;          // then a short cooldown
+    sayComment(pick(['DASH!', 'He hits the gas!', 'Burst of speed!']));
+  } else {
+    G.dashVX = ux * PLAYER_SPEED; G.dashVY = uy * PLAYER_SPEED; // short swipe = a quick cut
+    G.dashUntil = now + JUKE_TIME;
+  }
+}
+
+// While a dash/cut is active it drives the ball carrier instead of the D-pad.
+function dashVelocity() {
+  return (G.scene.time.now < G.dashUntil) ? { vx: G.dashVX, vy: G.dashVY } : null;
 }
 
 // ============================================================
@@ -1081,6 +1140,7 @@ function startKickoff() {
   G.state = 'kickoff';
   G.koLive = false;                          // the ball is in the air first
   G.replay = [];                             // start a fresh film reel for the return
+  G.dashUntil = 0;                           // no leftover dash
   document.body.classList.remove('kicking'); // make sure the run buttons are showing
   document.body.classList.add('returning');  // hide the pass/HIKE buttons — you only run a return
 
@@ -1120,9 +1180,15 @@ function startKickoff() {
   updateHUD();
 }
 
-// Drive the returner (movement only — no passing on a kickoff).
+// Drive the returner (movement only — no passing on a kickoff). Swipe-dash works here too.
 function controlReturner() {
   const p = G.ballCarrier.s;
+  const dash = dashVelocity();
+  if (dash) {
+    p.setVelocity(dash.vx, dash.vy);
+    p.setRotation(Math.atan2(dash.vy, dash.vx) + Math.PI / 2);
+    return;
+  }
   let vx = 0, vy = 0;
   if (keys.left.isDown || touch.left) vx = -PLAYER_SPEED;
   else if (keys.right.isDown || touch.right) vx = PLAYER_SPEED;
@@ -1235,8 +1301,8 @@ function updateReplay() {
   const frames = G.replay;
   if (!frames.length) { endReplay(); return; }
 
-  // Let the player skip the replay.
-  if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) G.replayIdx = frames.length;
+  // Let the player skip the replay (HIKE button or SPACE — a field tap is handled separately).
+  if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) { skipReplay(); return; }
 
   if (G.replayIdx >= frames.length - 1) {
     // Reached the end — hold on the final frame a beat, then finish.
@@ -1269,6 +1335,11 @@ function applyReplayFrame(f) {
   G.replayRing.setPosition(c.x, c.y);
 
   G.scene.cameras.main.centerOn(f.bx, f.by);
+}
+
+// Skip the replay right now (a tap anywhere, the HIKE button, or SPACE).
+function skipReplay() {
+  if (G.state === 'replay') endReplay();
 }
 
 // The film is over — clean up the decorations and go on to the extra point.
@@ -1403,10 +1474,24 @@ function setupTouchButtons() {
   // elements instead, so they never trigger a throw.
   const gameCanvas = window.game && window.game.canvas;
   if (gameCanvas) {
+    let swipeStart = null;
     gameCanvas.addEventListener('pointerdown', e => {
-      if (!canQBPass()) return;
-      const w = canvasTapToWorld(e.clientX, e.clientY);
-      passToNearest(w.x, w.y);
+      if (G.state === 'replay') { skipReplay(); return; }   // tap the field to skip the instant replay
+      if (canQBPass()) {                                     // behind the line: a tap throws to a receiver
+        const w = canvasTapToWorld(e.clientX, e.clientY);
+        passToNearest(w.x, w.y);
+        return;
+      }
+      swipeStart = { x: e.clientX, y: e.clientY };           // else start tracking a swipe (dash / cut)
+    });
+    gameCanvas.addEventListener('pointerup', e => {
+      if (!swipeStart) return;
+      const dx = e.clientX - swipeStart.x, dy = e.clientY - swipeStart.y;
+      swipeStart = null;
+      if (!isRunning()) return;                              // swiping only dashes while you're running the ball
+      const frac = Math.hypot(dx, dy) / (gameCanvas.getBoundingClientRect().height || 720);
+      if (frac < SWIPE_MIN_FRAC) return;                     // too small = just a tap, not a swipe
+      applySwipeRun(dx, dy, frac);
     });
   }
 
@@ -1577,7 +1662,7 @@ function updateHUD() {
   if (G.state === 'kickoff') {
     hud.down.setText('KICKOFF');
     hud.spot.setText('Catch it and run it back!');
-    hud.help.setText(G.koLive ? 'RUN IT BACK — head up the field! ⬆' : 'Here comes the kick…');
+    hud.help.setText(G.koLive ? 'RUN IT BACK! ⬆  ·  swipe = DASH' : 'Here comes the kick…');
     return;
   }
 
@@ -1591,7 +1676,7 @@ function updateHUD() {
   } else if (G.state === 'live' && G.ballCarrier === offense[0] && !G.hasPassed) {
     hud.help.setText('TAP a receiver to throw (or 1/2/3)   ·   H hand off   ·   arrows = scramble');
   } else if (G.state === 'live') {
-    hud.help.setText('Arrows = run to the endzone!');
+    hud.help.setText('Run to the endzone!  ·  swipe the field = DASH / cut');
   } else {
     hud.help.setText('');
   }
