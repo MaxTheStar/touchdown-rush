@@ -41,6 +41,24 @@ tries to tackle you. Player 1 runs the offense as usual.
 7-on-7. You're on offense. Get 10 yards in 4 downs for a first down; reach the endzone for
 a **touchdown = 6 points**, then kick the **extra point** for **+1** (7 total!).
 
+**🏆 It's a real game now — the other team scores too!** When your drive ends (a punt, a
+turnover, or after you score), the **computer gets the ball** and you watch its drive play
+out — the announcer calls each play, a bar shows them marching down the field, and it ends
+in a **touchdown, field goal, punt, or turnover**. A **game clock** counts down through
+**4 quick quarters of 2:30 each**; when time runs out, **whoever has more points WINS**.
+Tied at the end? **Sudden-death overtime** — the next score wins it. The scoreboard up top
+shows **both** teams (`SEA 14 — CHI 7`) and the clock (`Q2 · 1:45`). Lose or win, tap the
+final screen to **play again**.
+
+**📺 TV breaks!** When a quarter ends, the game stops for a little break: the score so far
+and *a quick word from our sponsors* — every sponsor is 100% made-up and very silly
+(CHIBI COLA: the official drink of BIG HEADS!). Tap to continue.
+
+**🏈 Real NFL rules at the half:** you fielded the opening kickoff, so the **other team
+gets the ball to start the second half**, and a drive can't carry across halftime — but
+between Q1/Q2 and Q3/Q4 your drive **does** carry over, exactly like on TV. And a
+touchdown as time expires still earns its extra point (the try is **untimed**, real rule).
+
 **🦵 Kickoff returns:** every new drive starts with a **kickoff you return** — catch it deep,
 run it back through the coverage team, and where you're tackled is where your drive starts.
 Break all the way through for a **return touchdown!**
@@ -75,9 +93,17 @@ tackle can also knock the ball loose (a **fumble**) — then either team can gra
 - [x] **v0.7 — Choose your team.** Pick from all 32 NFL teams (real colors); play a random one.
 - [x] **v0.8 — Kickoff returns.** Catch the kick deep and run it back for good field position.
 - [x] **v0.9 — Tap-to-pass + a better field goal** (it now sails through the uprights).
-- [ ] **v1.0 — Better defense & routes.** Smarter coverage, more pass routes, touchdown replays.
-- [ ] **⭐ The big one — an opponent that scores.** A real other team that gets the ball and
-      can score too, so games have a real winner. (Then: seasons, a "Max Bowl," and drafting players.)
+- [x] **⭐ v1.0 — The other team scores!** A real opponent that gets the ball and can score,
+      a game clock with **4 quarters**, sudden-death **overtime**, and a real **winner** at
+      the end. When you give up the ball, you watch the computer's drive play out with
+      play-by-play — touchdown, field goal, punt, or turnover.
+- [x] **v1.0.1 — TV time!** Quick **2:30 quarters**, a **break screen** between quarters
+      (score + a very silly made-up ad 📺), and **real NFL halftime rules**: the other team
+      gets the second-half kickoff, drives don't cross the half, and the extra point is
+      untimed.
+- [ ] **v1.1 — Better defense & routes.** Smarter coverage, more pass routes, touchdown replays.
+- [ ] **The next big one — play defense!** Instead of *watching* the computer's drive, control
+      a defender and try to stop them yourself. (Then: seasons, a "Max Bowl," and drafting players.)
 
 ## The team
 

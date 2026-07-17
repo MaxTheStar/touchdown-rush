@@ -88,6 +88,51 @@ const DIFFICULTY = {
 };
 function diff() { return DIFFICULTY[G.difficulty] || DIFFICULTY.medium; }
 
+// ============================================================
+// A REAL GAME: a game clock, 4 quarters, and an opponent that SCORES
+// ------------------------------------------------------------
+// The other team really plays now. When your possession ends (a punt, a
+// turnover, or after you score), the computer gets the ball and its drive
+// plays out as a quick "watch it happen" sim with play-by-play — and it can
+// SCORE. A game clock counts down through 4 quarters; when time is up, whoever
+// has more points WINS. Tie? Sudden-death overtime (next score wins).
+//
+// The clock only moves at the END of each play (never mid-scramble), so it
+// never surprises you — just like the clock flipping to the next down on TV.
+// ============================================================
+const QUARTER_SECONDS = 150;   // game-clock seconds in a quarter (2:30 arcade quarters)
+const NUM_QUARTERS    = 4;
+const OT_SECONDS      = 120;   // a sudden-death overtime period (2:00)
+
+// How much game-clock each kind of play burns (in game-seconds).
+const TIME_RUN_PLAY   = 32;    // a run / a catch tackled in bounds (clock keeps running)
+const TIME_INCOMPLETE = 12;    // an incomplete pass (the clock stops → less time comes off)
+const TIME_SCORE_PLAY = 15;    // the play that scored (or a turnover)
+const TIME_KICK_PLAY  = 12;    // a field goal / punt / extra point snap
+const TIME_KICKOFF    = 8;     // the kickoff + your return
+
+// The computer's simulated drive: each "play" shows briefly, burns some clock,
+// and gains yards. These tune how fast it plays and how long a drive runs.
+const CPU_PLAY_MS        = 900; // how long each sim play stays on screen (ms) — watchable but quick
+const CPU_TIME_PER_PLAY  = 20;  // game-clock seconds each sim play burns (2:30 quarters = keep it snappy)
+const CPU_MAX_PLAYS      = 8;   // a drive wraps up after this many plays (kick or punt)
+const CPU_TURNOVER_CHANCE = 0.06; // chance any single sim play is a turnover (pick/fumble)
+
+// ---- Quarter breaks, halftime… and the AD BREAK 📺 -------------------------
+// When a quarter ends, the game stops for a little TV-style break: the score
+// so far, a word from our sponsors (every "sponsor" is 100% made up and very
+// silly), and "tap to continue". HALFTIME follows real NFL rules — see the
+// notes on startBreak() below.
+const BREAK_MIN_MS = 1200;      // the break can't be tapped away for this long (so it registers)
+const FAKE_ADS = [
+  { brand: 'CHIBI COLA',              line: 'The official drink of BIG HEADS!',            color: 0xd22b2b },
+  { brand: 'BIG HELMET PIZZA',        line: 'Slices as big as your helmet!',               color: 0xe07b00 },
+  { brand: 'TURBO CLEATS 3000',       line: 'Run 3000% faster!*  (*not really)',           color: 0x0077cc },
+  { brand: "GRANDMA'S STICKY GLOVES", line: "You'll NEVER drop the ball again!",           color: 0x7a4dbc },
+  { brand: 'INVISIBLE DEFENSE SPRAY', line: "They can't tackle what they can't see!",      color: 0x11862f },
+  { brand: 'THE MAX BOWL',            line: 'The biggest game of the season… coming soon!', color: 0xbf9b00 },
+];
+
 // ---- Instant replay — after you score, watch it again in slow motion! -----
 // While a play is running we quietly remember where everyone was for the last
 // couple of seconds (a "film reel"). When you score a touchdown we play that
@@ -153,10 +198,19 @@ const config = {
 // ---- Game state (one object so it's easy to read) ----
 const G = {
   scene: null,
-  state: 'menu',        // menu | kickoff | presnap | live | pass | dead | fumble | decision | kick | replay
+  state: 'menu',        // menu | kickoff | presnap | live | pass | dead | fumble | decision | kick | replay | cpudrive | qbreak | gameover
   koLive: false,        // during a kickoff: false = ball still in the air, true = run it back!
   difficulty: 'medium', // 'easy' | 'medium' | 'hard' — picked on the team menu
-  score: 0,
+  score: 0,             // YOUR points
+  oppScore: 0,          // the COMPUTER team's points
+  quarter: 1,           // 1..4 (then overtime); see the game clock below
+  clock: QUARTER_SECONDS, // game-clock seconds left in this quarter
+  overtime: false,      // true once a tie game goes to sudden-death OT
+  gameOver: false,      // true when the final whistle has blown
+  cpu: null,            // scratch data + overlay for the computer's simulated drive
+  breakResume: null,    // what happens after the quarter-break screen is tapped away
+  breakReadyAt: 0,      // the break screen can't be skipped before this time
+  breakOverlay: null,   // the break screen's on-screen pieces
   team: null,           // YOUR team (picked at the menu) — an entry from NFL_TEAMS
   oppTeam: null,        // the computer's team (a random other one)
   menuIndex: 0,         // which team the menu is showing right now
@@ -310,7 +364,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canQBPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, cpuDrivePlay, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, cpuClockExpires };
 }
 
 // ============================================================
@@ -323,6 +377,23 @@ function update(time, delta) {
     if (Phaser.Input.Keyboard.JustDown(keys.left))       menuNav(-1);
     else if (Phaser.Input.Keyboard.JustDown(keys.right)) menuNav(1);
     else if (Phaser.Input.Keyboard.JustDown(keys.snap))  startGameWithTeam();
+    return;
+  }
+
+  // QUARTER BREAK / HALFTIME: the whole game waits for a tap (or SPACE).
+  if (G.state === 'qbreak') {
+    freezeEveryone();
+    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) endBreak();
+    return;
+  }
+
+  // THE COMPUTER'S DRIVE: a quick sim runs on timers (see startCpuDrive). We
+  // just keep the scoreboard/clock fresh while you watch it play out.
+  if (G.state === 'cpudrive') { updateHUD(); return; }
+
+  // GAME OVER: the final screen is up. Tap / SPACE goes back to the team menu.
+  if (G.state === 'gameover') {
+    if (Phaser.Input.Keyboard.JustDown(keys.snap)) returnToMenuFromGameOver();
     return;
   }
 
@@ -908,6 +979,12 @@ function endPlay(result, customMsg) {
     }
   }
 
+  // Run some game-clock off for this play (an incomplete stops the clock, so
+  // less time comes off; a score/turnover is a quick whistle).
+  advanceClock(result === 'incomplete' ? TIME_INCOMPLETE
+             : (result === 'touchdown' || result === 'interception') ? TIME_SCORE_PLAY
+             : TIME_RUN_PLAY);
+
   G.next = next;
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1600;
@@ -993,13 +1070,427 @@ function onKickDone(result) {
   } else {
     msg = 'PUNT — ' + result.puntYards + ' YDS';
   }
-  // There's no opponent yet, so every kick just hands the ball back and
-  // you start again at your own 20 (like a touchback). Field position and
-  // pinning the other team deep will matter once we add an opponent team.
+  // A kick (or missed kick) ends your possession — the ball goes to the OTHER
+  // team next (startNextPlay sees fresh:true and runs their drive). Run a little
+  // clock off for the kick play — EXCEPT an extra point: in real football the
+  // try after a touchdown is UNTIMED, so it never burns clock (a TD as time
+  // expires still gets its extra point, just like on TV).
+  if (G.kickKind !== 'xp') advanceClock(TIME_KICK_PLAY);
   G.next = { los: 20, down: 1, fd: 30, fresh: true };
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1600;
   showBanner(msg, true);
+}
+
+// ============================================================
+// THE GAME CLOCK — 4 quarters, then a winner
+// ============================================================
+// Take some game-clock off the current quarter. We DON'T end the quarter here
+// mid-flow; the dead-ball boundary handlers (startNextPlay + the CPU drive)
+// notice the clock hit 0 and roll it over cleanly.
+function advanceClock(sec) {
+  if (G.gameOver) return;
+  G.clock = Math.max(0, G.clock - sec);
+}
+
+// Called at a dead-ball boundary AFTER the clock's been charged. Rolls into
+// the next quarter and reports what kind of stop is due:
+//   'continue' — clock still running (or overtime just began), play on
+//   'qbreak'   — a quarter just ended (Q1 or Q3) → show the break screen
+//   'halftime' — the 2nd quarter ended → show the HALFTIME screen
+//   'gameover' — time's up and someone is ahead → final whistle
+function tickPeriodAtBoundary() {
+  if (G.clock > 0) return 'continue';
+  // Time expired in this period.
+  if (!G.overtime && G.quarter < NUM_QUARTERS) {         // Q1→Q2→Q3→Q4
+    G.quarter++;
+    G.clock = QUARTER_SECONDS;
+    return (G.quarter === 3) ? 'halftime' : 'qbreak';    // Q2 just ended = halftime
+  }
+  // End of the 4th quarter (or an overtime period).
+  if (G.score !== G.oppScore) return 'gameover';         // somebody's ahead → final
+  // Still tied → (keep playing) sudden-death overtime: the next score wins.
+  G.overtime = true;
+  G.clock = OT_SECONDS;
+  showBanner('OVERTIME!', true);
+  sayComment('Next score wins!');
+  return 'continue';
+}
+
+function quarterLabel() { return G.overtime ? 'OT' : 'Q' + G.quarter; }
+function formatClock(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+// ============================================================
+// THE COMPUTER'S DRIVE — watch the other team try to score
+// ------------------------------------------------------------
+// When your possession ends, the computer gets the ball. Rather than making you
+// play defense, we SIMULATE their drive and let you watch it: a little field
+// bar shows them marching, the announcer calls each play, and it ends in a
+// touchdown, a field goal, a punt, or a turnover. Then you get the ball back.
+// ============================================================
+function startCpuDrive() {
+  // A safety net: if somehow there's no opponent, just kick off to the player.
+  if (!G.oppTeam) { startKickoff(); return; }
+  G.state = 'cpudrive';
+  freezeEveryone();
+  G.scene.cameras.main.stopFollow();
+  document.body.classList.remove('returning');
+  document.body.classList.add('kicking');   // hide the football buttons while we watch
+
+  // Clean up any leftover drive (belt-and-suspenders: never run two at once).
+  if (G.cpu && G.cpu.timer) G.cpu.timer.remove();
+  destroyCpuOverlay();
+
+  // Fresh drive: the computer starts at its own 25.
+  G.cpu = { spot: 25, down: 1, togo: 10, plays: 0, timer: null };
+  buildCpuOverlay();
+  drawCpuDrive('takes over at their own 25');
+
+  // Run one sim play every CPU_PLAY_MS until the drive ends.
+  G.cpu.timer = G.scene.time.addEvent({
+    delay: CPU_PLAY_MS, startAt: CPU_PLAY_MS * 0.5, loop: true, callback: cpuDrivePlay
+  });
+}
+
+// One simulated play: burn clock, gain (or lose) yards, then check the result.
+function cpuDrivePlay() {
+  if (G.state !== 'cpudrive' || !G.cpu) return;
+  advanceClock(CPU_TIME_PER_PLAY);
+
+  // Did the clock hit 0:00 on this play? Real football rules:
+  //  • end of Q1/Q3 → a break, then the SAME drive keeps going
+  //  • end of Q2 (the half) or Q4 → the whistle ends the drive right here
+  if (G.clock <= 0) {
+    if (G.overtime) {
+      G.clock = OT_SECONDS;                 // OT is sudden death — just keep playing
+      sayComment('Another overtime!');
+    } else if (G.quarter === 1 || G.quarter === 3) {
+      G.quarter++;
+      G.clock = QUARTER_SECONDS;
+      if (G.cpu.timer) G.cpu.timer.paused = true;   // hold the drive during the break
+      startBreak('q', () => {
+        G.state = 'cpudrive';
+        if (G.cpu && G.cpu.timer) G.cpu.timer.paused = false;
+      });
+      return;
+    } else {
+      cpuClockExpires();                    // the half (or the game) ends the drive
+      return;
+    }
+  }
+
+  G.cpu.plays++;
+
+  // A small chance the play is a turnover (pick or fumble) — drive over, no points.
+  if (Math.random() < CPU_TURNOVER_CHANCE) { cpuDriveEnd('turnover'); return; }
+
+  const gain = weightedGain();
+  G.cpu.spot = Phaser.Math.Clamp(G.cpu.spot + gain, 1, 100);
+  G.cpu.togo -= gain;
+
+  // Reached your endzone = touchdown!
+  if (G.cpu.spot >= 100) { drawCpuDrive(cpuPlayCall(gain)); cpuDriveEnd('touchdown'); return; }
+
+  // First down? reset the sticks. Otherwise it's the next down.
+  if (G.cpu.togo <= 0) { G.cpu.down = 1; G.cpu.togo = 10; }
+  else G.cpu.down++;
+
+  // Out of downs, or the drive's gone long enough — kick or punt.
+  const fgDist = (100 - G.cpu.spot) + 17;
+  if (G.cpu.down > 4 || G.cpu.plays >= CPU_MAX_PLAYS) {
+    drawCpuDrive(cpuPlayCall(gain));
+    if (fgDist <= FG_MAX_DIST && Math.random() < 0.85) cpuDriveEnd('fieldgoal');
+    else cpuDriveEnd('punt');
+    return;
+  }
+
+  drawCpuDrive(cpuPlayCall(gain));
+}
+
+// How many yards a sim play gains: mostly short, sometimes a chunk or a big one.
+function weightedGain() {
+  const r = Math.random();
+  if (r < 0.11) return Phaser.Math.Between(-4, -1);   // stuffed for a loss
+  if (r < 0.72) return Phaser.Math.Between(2, 10);    // routine gain
+  if (r < 0.91) return Phaser.Math.Between(10, 21);   // a chunk play
+  return Phaser.Math.Between(22, 42);                 // a BIG play
+}
+
+// A quick announcer call for a sim play, based on how many yards it gained.
+function cpuPlayCall(gain) {
+  if (gain < 0)   return pick(['Stuffed for a loss!', 'Tackled behind the line!', 'No gain — a loss!']);
+  if (gain < 4)   return pick(['A short gain.', 'Run up the middle.', 'A quick pass — a few yards.']);
+  if (gain < 10)  return pick(['A nice gain of ' + gain + '.', 'Complete for ' + gain + '.', 'Picks up ' + gain + '.']);
+  if (gain < 22)  return pick(['A chunk play — ' + gain + ' yards!', 'Big pickup of ' + gain + '!', 'Rumbles for ' + gain + '!']);
+  return pick(['A HUGE play — ' + gain + ' yards!', 'Breaks free for ' + gain + '!', 'Downfield for ' + gain + '!']);
+}
+
+// The drive is over — tally the result, show a banner, then hand the ball back.
+function cpuDriveEnd(kind) {
+  if (!G.cpu) return;
+  if (G.cpu.timer) { G.cpu.timer.remove(); G.cpu.timer = null; }
+  const abbr = G.oppTeam.abbr;
+  let msg, pts = 0, big = false;
+  if (kind === 'touchdown')      { pts = 7; big = true; msg = abbr + ' TOUCHDOWN!'; }
+  else if (kind === 'fieldgoal') { pts = 3; big = true; msg = abbr + ' FIELD GOAL'; }
+  else if (kind === 'punt')      { msg = abbr + ' PUNTS IT AWAY'; }
+  else                           { msg = 'TURNOVER — YOUR BALL!'; }
+  G.oppScore += pts;   // a simulated TD includes the extra point (7)
+  drawCpuDrive(kind === 'punt' ? 'punts it away' :
+               kind === 'turnover' ? 'turns it over!' :
+               kind === 'fieldgoal' ? 'lines up the field goal…' : 'in for the score!');
+  updateHUD();
+  showBanner(msg, big);
+  // Let the banner land, then clear the overlay and give you the ball back.
+  G.scene.time.delayedCall(1600, () => { destroyCpuOverlay(); finishCpuDrive(); });
+}
+
+// Ball back to you: settle the clock/quarter at this possession boundary, then
+// you field a kickoff (unless the game is over, or it's time for a break).
+function finishCpuDrive() {
+  G.cpu = null;
+  if (G.overtime && G.score !== G.oppScore) { endGame(); return; }  // sudden death
+  const t = tickPeriodAtBoundary();
+  if (t === 'gameover') { endGame(); return; }
+  if (t === 'halftime') { startBreak('half', startCpuDrive); return; }  // they get the 2nd-half kick (real rules)
+  if (t === 'qbreak')   { startBreak('q', startKickoff); return; }
+  startKickoff();
+}
+
+// The clock hit 0:00 in the middle of the computer's drive, in Q2 or Q4 —
+// the whistle blows and the drive is OVER (no points). At the half, real NFL
+// rules still hand THEM the second-half kickoff (you took the opening kick).
+// At the end of the game it's the final whistle — or overtime if it's tied.
+function cpuClockExpires() {
+  if (G.cpu && G.cpu.timer) { G.cpu.timer.remove(); G.cpu.timer = null; }
+  const half = (G.quarter === 2);
+  drawCpuDrive(half ? '…and the HALF ends the drive!' : '…and TIME EXPIRES!');
+  showBanner(half ? 'END OF THE HALF' : 'TIME EXPIRES!', true);
+  G.scene.time.delayedCall(1500, () => {
+    destroyCpuOverlay();
+    G.cpu = null;
+    if (half) {
+      G.quarter = 3;
+      G.clock = QUARTER_SECONDS;
+      startBreak('half', startCpuDrive);
+    } else if (G.score !== G.oppScore) {
+      endGame();
+    } else {
+      const t = tickPeriodAtBoundary();       // tied at 0:00 → this starts overtime
+      if (t === 'gameover') endGame(); else startKickoff();
+    }
+  });
+}
+
+// ============================================================
+// QUARTER BREAKS & HALFTIME — the score, a breather… and an AD 📺
+// ------------------------------------------------------------
+// A little TV-style break between quarters: the score so far, a word from our
+// sponsors (all sponsors are 100% imaginary and extremely silly), and "tap to
+// continue". Halftime adds a note about the real NFL rule for who gets the
+// ball next. The break can't be tapped away for the first BREAK_MIN_MS, so a
+// stray tap doesn't blow right through it.
+// ============================================================
+function startBreak(kind, resume) {
+  G.state = 'qbreak';
+  G.breakResume = resume;
+  G.breakReadyAt = G.scene.time.now + BREAK_MIN_MS;
+  freezeEveryone();
+  G.scene.cameras.main.stopFollow();
+  if (routeGfx) routeGfx.clear();
+  if (G.banner) { G.banner.destroy(); G.banner = null; }
+  document.body.classList.add('kicking');       // hide the football buttons
+  buildBreakOverlay(kind);
+}
+
+// Tap / SPACE ends the break and the game picks up where it left off.
+function endBreak() {
+  if (G.state !== 'qbreak') return;
+  if (G.scene.time.now < G.breakReadyAt) return;   // too soon — let the break land
+  destroyBreakOverlay();
+  const resume = G.breakResume;
+  G.breakResume = null;
+  if (resume) resume(); else startKickoff();
+}
+
+function buildBreakOverlay(kind) {
+  const s = G.scene, O = {};
+  // Small helper: centered text pinned to the screen, above everything else.
+  const mk = (y, str, size, color, opts = {}) => s.add.text(270, y, str, Object.assign({
+    fontFamily: 'Arial Black, Arial', fontSize: size + 'px', color,
+    stroke: '#000', strokeThickness: Math.max(3, Math.round(size / 6)), align: 'center'
+  }, opts)).setOrigin(0.5).setScrollFactor(0).setDepth(62);
+
+  O.bg = s.add.graphics().setScrollFactor(0).setDepth(60);
+  O.bg.fillStyle(0x0a1020, 1); O.bg.fillRect(0, 0, 540, 720);
+
+  O.title = mk(100, kind === 'half' ? '🏈 HALFTIME 🏈'
+                                    : 'END OF THE ' + ordinal(G.quarter - 1) + ' QUARTER',
+               28, '#ffe066');
+  O.score = mk(172, `${G.team.abbr} ${G.score}   —   ${G.oppTeam.abbr} ${G.oppScore}`, 40, '#ffffff');
+
+  // ---- the "commercial break" (every sponsor is made up) ----
+  const ad = pick(FAKE_ADS);
+  O.adLabel = mk(250, 'a quick word from our sponsors…', 14, '#aab4c8');
+  O.card = s.add.graphics().setScrollFactor(0).setDepth(61);
+  O.card.fillStyle(0xfff6e0, 1);  O.card.fillRoundedRect(70, 278, 400, 186, 18);
+  O.card.lineStyle(3, 0xffd60a, 0.9); O.card.strokeRoundedRect(70, 278, 400, 186, 18);
+  O.adTag = s.add.text(452, 292, ' AD ', {
+    fontFamily: 'Arial Black, Arial', fontSize: '12px',
+    color: '#5b4300', backgroundColor: '#ffd60a'
+  }).setOrigin(1, 0).setScrollFactor(0).setDepth(62);
+  O.brand = mk(350, ad.brand, 28, hexColor(ad.color),
+               { strokeThickness: 0, wordWrap: { width: 360 } });
+  O.line  = mk(414, ad.line, 17, '#333f52',
+               { strokeThickness: 0, wordWrap: { width: 350 } });
+
+  // Halftime: teach the real-football rule for who gets the ball next.
+  if (kind === 'half') {
+    O.rule = mk(530, 'Real NFL rules: you took the opening kickoff,\nso the ' +
+                     G.oppTeam.name + ' get the ball\nto start the second half.',
+                14, '#8fd0ff');
+  }
+
+  O.hint = mk(kind === 'half' ? 632 : 560, 'tap to continue', 18, '#ffffff');
+  s.tweens.add({ targets: O.hint, alpha: 0.25, duration: 550, yoyo: true, repeat: -1 });
+  G.breakOverlay = O;
+}
+
+function destroyBreakOverlay() {
+  const O = G.breakOverlay; if (!O) return;
+  for (const k in O) if (O[k] && O[k].destroy) O[k].destroy();
+  G.breakOverlay = null;
+}
+
+// ---- The CPU-drive overlay (opponent colors, a field bar, play-by-play) ----
+function buildCpuOverlay() {
+  const s = G.scene;
+  const O = {};
+  O.bg = s.add.graphics().setScrollFactor(0).setDepth(18);
+  O.bg.fillStyle(0x0a1020, 0.86); O.bg.fillRect(0, 0, 540, 720);
+
+  O.title = s.add.text(270, 150, G.oppTeam.name + ' BALL', {
+    fontFamily: 'Arial Black, Arial', fontSize: '30px',
+    color: hexColor(brighten(G.oppTeam.helmet)), stroke: '#000', strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(24);
+
+  O.sub = s.add.text(270, 190, 'The other team has the ball', {
+    fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#aab4c8',
+    stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(24);
+
+  O.bar = s.add.graphics().setScrollFactor(0).setDepth(24);   // the drive bar
+
+  O.dd = s.add.text(270, 372, '', {
+    fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#ffe066',
+    stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(24);
+
+  O.pbp = s.add.text(270, 430, '', {
+    fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ffffff',
+    stroke: '#0a1a3a', strokeThickness: 6, align: 'center', wordWrap: { width: 460 }
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(24);
+
+  G.cpu.overlay = O;
+}
+
+// Redraw the drive bar + down/distance, and set the play-by-play line.
+function drawCpuDrive(line) {
+  const O = G.cpu && G.cpu.overlay; if (!O) return;
+  const x0 = 60, x1 = 480, y = 300, w = x1 - x0, h = 20;
+  const g = O.bar; g.clear();
+  g.fillStyle(0x22314f, 1); g.fillRoundedRect(x0, y, w, h, 7);              // the field track
+  g.fillStyle(brighten(G.oppTeam.helmet), 0.6); g.fillRect(x1 - 26, y, 26, h); // their target endzone
+  const f = Phaser.Math.Clamp(G.cpu.spot / 100, 0, 1);
+  // Brighten the fill so even dark team colors read against the dark track.
+  g.fillStyle(brighten(G.oppTeam.jersey), 0.95); g.fillRect(x0, y, w * f, h);  // how far they've driven
+  g.lineStyle(2, 0xffffff, 0.5); g.strokeRoundedRect(x0, y, w, h, 7);
+  const mx = x0 + w * f;                                                   // the ball marker
+  g.fillStyle(0x8B4513, 1); g.fillCircle(mx, y + h / 2, 8);
+  g.lineStyle(1.5, 0xffffff, 0.9); g.strokeCircle(mx, y + h / 2, 8);
+
+  const yl = G.cpu.spot <= 50 ? 'own ' + Math.round(G.cpu.spot) : 'opp ' + Math.round(100 - G.cpu.spot);
+  const toGo = (G.cpu.spot + G.cpu.togo >= 100) ? 'Goal' : Math.max(1, Math.round(G.cpu.togo));
+  O.dd.setText(ordinal(G.cpu.down) + ' & ' + toGo + '   ·   ball on the ' + yl);
+  if (line) O.pbp.setText(line);
+}
+
+function destroyCpuOverlay() {
+  const O = G.cpu && G.cpu.overlay; if (!O) return;
+  for (const k of ['bg', 'title', 'sub', 'bar', 'dd', 'pbp']) if (O[k]) O[k].destroy();
+  G.cpu.overlay = null;
+}
+
+// ============================================================
+// GAME OVER — the final score, and who won
+// ============================================================
+function endGame() {
+  G.gameOver = true;
+  G.state = 'gameover';
+  freezeEveryone();
+  if (G.cpu && G.cpu.timer) { G.cpu.timer.remove(); G.cpu.timer = null; }
+  destroyCpuOverlay();
+  G.cpu = null;
+  document.body.classList.add('kicking');   // hide the football buttons
+  G.scene.cameras.main.stopFollow();
+  buildGameOverOverlay();
+}
+
+function buildGameOverOverlay() {
+  const s = G.scene;
+  const O = {};
+  O.bg = s.add.graphics().setScrollFactor(0).setDepth(50);
+  O.bg.fillStyle(0x06080f, 1); O.bg.fillRect(0, 0, 540, 720);   // solid — a clean FINAL screen
+
+  const youWon  = G.score > G.oppScore;
+  const headline = youWon ? 'YOU WIN!' : 'YOU LOSE';
+  O.head = s.add.text(270, 170, 'FINAL', {
+    fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#aab4c8',
+    stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
+
+  O.score = s.add.text(270, 300,
+    `${G.team.abbr} ${G.score}\n${G.oppTeam.abbr} ${G.oppScore}`, {
+    fontFamily: 'Arial Black, Arial', fontSize: '64px', color: '#ffffff',
+    stroke: '#000', strokeThickness: 8, align: 'center', lineSpacing: 10
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
+
+  O.result = s.add.text(270, 450, headline, {
+    fontFamily: 'Arial Black, Arial', fontSize: '48px',
+    color: youWon ? '#ffe066' : '#ff8a8a', stroke: '#000', strokeThickness: 7
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(52).setScale(0);
+  s.tweens.add({ targets: O.result, scale: 1, duration: 450, ease: 'Back.Out' });
+
+  O.winner = s.add.text(270, 512,
+    (youWon ? G.team.name : G.oppTeam.name) + ' WIN!', {
+    fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ffffff',
+    stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
+
+  O.again = s.add.text(270, 600, 'tap to play again', {
+    fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#8fd0ff',
+    stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
+  s.tweens.add({ targets: O.again, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+
+  G.gameOverOverlay = O;
+}
+
+function returnToMenuFromGameOver() {
+  const O = G.gameOverOverlay;
+  if (O) { for (const k in O) if (O[k] && O[k].destroy) O[k].destroy(); G.gameOverOverlay = null; }
+  document.body.classList.remove('kicking', 'returning', 'two-player');
+  enterMenu();
+}
+
+// ---- small color helpers (for the opponent's on-screen colors) ----
+function hexColor(n) { return '#' + (n & 0xffffff).toString(16).padStart(6, '0'); }
+// Lighten a color a touch so dark team colors still read on the dark overlay.
+function brighten(n) {
+  let r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+  r = Math.min(255, Math.round(r + (255 - r) * 0.45));
+  g = Math.min(255, Math.round(g + (255 - g) * 0.45));
+  b = Math.min(255, Math.round(b + (255 - b) * 0.45));
+  return (r << 16) | (g << 8) | b;
 }
 
 // ============================================================
@@ -1110,6 +1601,11 @@ function startGameWithTeam() {
   let oi;
   do { oi = Phaser.Math.Between(0, NFL_TEAMS.length - 1); } while (oi === G.menuIndex);
   G.oppTeam = NFL_TEAMS[oi];
+
+  // Fresh scoreboard & game clock for a brand-new game.
+  G.score = 0; G.oppScore = 0;
+  G.quarter = 1; G.clock = QUARTER_SECONDS;
+  G.overtime = false; G.gameOver = false;
 
   // Paint both teams onto their players.
   makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);
@@ -1223,6 +1719,7 @@ function checkKickoffTackle() {
 // Tackled! Start a normal 1st-&-10 drive from wherever you were brought down.
 function endKickoffReturn() {
   freezeEveryone();
+  advanceClock(TIME_KICKOFF);   // the kickoff + return took a few seconds
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(G.ballCarrier.s.y)), 1, 99);
   G.next = { los: spot, down: 1, fd: Math.min(spot + 10, 100) };  // no 'fresh' → a normal drive next
   G.state = 'dead';
@@ -1357,9 +1854,33 @@ function endReplay() {
 // SETTING UP A PLAY — line all 14 players up at the LOS
 // ============================================================
 function startNextPlay() {
-  // A brand-new possession is fielded as a kickoff return; otherwise it's a
-  // normal down from wherever the last play ended.
-  if (G.next && G.next.fresh) startKickoff();
+  // This is a dead-ball boundary: settle the game clock / quarter first.
+  // Sudden death — a lead in overtime ends the game right here.
+  if (G.overtime && G.score !== G.oppScore) { endGame(); return; }
+  const t = tickPeriodAtBoundary();
+  if (t === 'gameover') { endGame(); return; }
+
+  if (t === 'halftime') {
+    // REAL NFL RULES at the half: you fielded the game-opening kickoff, so the
+    // OTHER team gets the ball to start the second half — and a drive never
+    // carries across halftime (whatever you had going is over).
+    startBreak('half', startCpuDrive);
+    return;
+  }
+  if (t === 'qbreak') {
+    // Between Q1/Q2 and Q3/Q4 the game takes a breather, then picks up EXACTLY
+    // where it left off — a drive DOES carry over inside a half (real rules).
+    startBreak('q', () => {
+      if (G.next && G.next.fresh) startCpuDrive();
+      else { document.body.classList.remove('kicking'); setupPlay(G.next); }
+    });
+    return;
+  }
+
+  // A possession change (fresh) hands the ball to the COMPUTER now — its drive
+  // plays out (and can score) before you get the ball back. Otherwise this same
+  // drive of yours simply continues to the next down.
+  if (G.next && G.next.fresh) startCpuDrive();
   else setupPlay(G.next);
 }
 
@@ -1476,6 +1997,8 @@ function setupTouchButtons() {
   if (gameCanvas) {
     let swipeStart = null;
     gameCanvas.addEventListener('pointerdown', e => {
+      if (G.state === 'gameover') { returnToMenuFromGameOver(); return; }  // tap the final screen to play again
+      if (G.state === 'qbreak') { endBreak(); return; }     // tap ends the quarter break / halftime
       if (G.state === 'replay') { skipReplay(); return; }   // tap the field to skip the instant replay
       if (canQBPass()) {                                     // behind the line: a tap throws to a receiver
         const w = canvasTapToWorld(e.clientX, e.clientY);
@@ -1631,6 +2154,9 @@ function buildHUD(scene) {
   hud.score = scene.add.text(12, 10, '', hudStyle(18)).setScrollFactor(0).setDepth(20);
   hud.down  = scene.add.text(12, 36, '', hudStyle(16, '#ffe066')).setScrollFactor(0).setDepth(20);
   hud.spot  = scene.add.text(12, 60, '', hudStyle(12, '#cccccc')).setScrollFactor(0).setDepth(20);
+  // The game clock + quarter, tucked in the top-right corner.
+  hud.clock = scene.add.text(528, 10, '', hudStyle(17, '#ffe066'))
+    .setOrigin(1, 0).setScrollFactor(0).setDepth(20);
   hud.help  = scene.add.text(270, 700, '', hudStyle(13, '#ffffff'))
     .setOrigin(0.5).setScrollFactor(0).setDepth(20);
 }
@@ -1653,10 +2179,21 @@ function updateHUD() {
     }
   }
 
-  // Scoreboard shows your team code, your score, and who you're playing.
+  // Scoreboard now shows BOTH teams' points — yours and the computer's.
   hud.score.setText(G.team
-    ? `${G.team.abbr} ${G.score}   vs ${G.oppTeam.abbr}`
+    ? `${G.team.abbr} ${G.score}  —  ${G.oppTeam.abbr} ${G.oppScore}`
     : 'SCORE: ' + G.score);
+
+  // The game clock + quarter (Q2 · 3:45), top-right.
+  if (hud.clock) hud.clock.setText(G.team ? `${quarterLabel()} · ${formatClock(G.clock)}` : '');
+
+  // While the computer is driving, the down/distance area names whose ball it is.
+  if (G.state === 'cpudrive') {
+    hud.down.setText(G.oppTeam.name + ' BALL');
+    hud.spot.setText('');
+    hud.help.setText('');
+    return;
+  }
 
   // On a kickoff there's no down & distance yet — show return info instead.
   if (G.state === 'kickoff') {
