@@ -73,6 +73,19 @@ kicks? Open **[`kick.html`](kick.html)**.
 coverage the defense can **intercept** it — that's a turnover, so your drive restarts. A hard
 tackle can also knock the ball loose (a **fumble**) — then either team can grab it.
 
+**📊 The dev dashboard:** tap the little **📊 tab on the left edge** and a panel slides out
+showing the **world player tracker** — how many games have been played and how many people
+have played, **worldwide**, with a little **flag for every country** 🇺🇸🇯🇵🇧🇷 — plus every
+**review** written on that device. After your **second finished game** the game politely asks
+*"Would you like to do a review?"* (with an *"Are you sure?"* so a mis-tap never traps you) —
+say yes twice and you can rate it **1–5 stars** and write what you think.
+
+*Privacy, because it matters:* the tracker only ever counts a **country** (like "US" — from
+[api.country.is](https://api.country.is)) and bumps public **number-only counters** on
+[Abacus](https://abacus.jasoncameron.dev), a free open-source hit counter. No names, no
+accounts, nothing personal — and review text stays on the device it was written on (a shared
+review database is a future level!).
+
 ## Roadmap
 
 - [x] **v0.1 — The field.** Scrolling field, yard lines, chibi runner, touchdowns.
@@ -101,6 +114,9 @@ tackle can also knock the ball loose (a **fumble**) — then either team can gra
       (score + a very silly made-up ad 📺), and **real NFL halftime rules**: the other team
       gets the second-half kickoff, drives don't cross the half, and the extra point is
       untimed.
+- [x] **v1.0.2 — 📊 Who's playing?** A world player tracker (games + players by country),
+      a friendly review pop-up after your 2nd game (stars + words), and a slide-out
+      **dev dashboard** on the left edge showing it all.
 - [ ] **v1.1 — Better defense & routes.** Smarter coverage, more pass routes, touchdown replays.
 - [ ] **The next big one — play defense!** Instead of *watching* the computer's drive, control
       a defender and try to stop them yourself. (Then: seasons, a "Max Bowl," and drafting players.)

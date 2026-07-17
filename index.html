@@ -205,6 +205,107 @@
 
     /* The HAND button dims + goes dead when you're too far from the RB to hand off */
     #btn-hand.off { opacity: 0.3; pointer-events: none; }
+
+    /* ---- 📊 The DEVELOPER DASHBOARD (see src/stats.js) ------------------
+       A little tab on the LEFT edge; tap it and the dashboard slides out:
+       the world player tracker on top, the reviews underneath. */
+    #dash-tab {
+      position: fixed; z-index: 45;
+      left: 0; top: 38%;
+      width: 34px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      background: rgba(10,16,32,0.85);
+      border: 2px solid rgba(255,214,10,0.6); border-left: none;
+      border-radius: 0 12px 12px 0;
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+    }
+    #dash {
+      position: fixed; z-index: 60;
+      left: 0; top: 0; bottom: 0;
+      width: min(320px, 86vw);
+      background: #0a1020;
+      border-right: 2px solid rgba(255,214,10,0.6);
+      box-shadow: 4px 0 24px rgba(0,0,0,.6);
+      transform: translateX(-102%);              /* parked off-screen... */
+      transition: transform 0.25s ease;
+      display: flex; flex-direction: column;
+    }
+    #dash.open { transform: translateX(0); }     /* ...slides out when open */
+    #dash-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: max(12px, env(safe-area-inset-top)) 14px 10px;
+      font: 800 16px "Arial Black", Arial; color: #ffe066;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    #dash-close { font-size: 20px; color: #aab4c8; padding: 2px 8px;
+      -webkit-tap-highlight-color: transparent; }
+    #dash-body {
+      flex: 1; overflow-y: auto; touch-action: pan-y;   /* the panel scrolls */
+      padding: 10px 14px max(14px, env(safe-area-inset-bottom));
+      font: 13px/1.45 Arial, sans-serif; color: #cfd8e8;
+    }
+    .dash-sec {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 12px 0 8px; color: #ffe066;
+      font: 800 13px "Arial Black", Arial; letter-spacing: 1px;
+    }
+    .dash-sec span { color: #8fd0ff; font-size: 12px; padding: 2px 6px;
+      -webkit-tap-highlight-color: transparent; }
+    #dash-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .dash-tile {
+      background: rgba(255,255,255,0.07); border-radius: 10px;
+      padding: 8px 6px; text-align: center;
+    }
+    .dash-big { font: 800 24px "Arial Black", Arial; color: #fff; }
+    .dash-lab { font-size: 10px; color: #aab4c8; margin-top: 2px; }
+    #dash-countries { margin-top: 8px; }
+    .dash-row {
+      display: flex; justify-content: space-between;
+      padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .dash-row b { color: #ffe066; }
+    #dash-note { font-size: 11px; color: #8a94a8; margin-bottom: 6px; }
+    #dash-progress { font-size: 11px; color: #8fd0ff; margin-top: 6px; min-height: 14px; }
+    .dash-review {
+      background: rgba(255,255,255,0.07); border-radius: 10px;
+      padding: 8px 10px; margin-bottom: 8px; word-wrap: break-word;
+    }
+    .dash-rev-head { color: #ffe066; font-size: 11px; margin-bottom: 3px; }
+
+    /* ---- ⭐ The REVIEW pop-up (3 gentle steps — see src/stats.js) ------- */
+    #review-modal {
+      position: fixed; z-index: 65; inset: 0;
+      display: none;                    /* stats.js flips this to flex */
+      align-items: center; justify-content: center;
+      background: rgba(10,16,32,0.78);
+    }
+    .rv-card {
+      width: min(86vw, 360px);
+      background: #101a30; border: 2px solid rgba(255,214,10,0.65);
+      border-radius: 18px; padding: 22px 18px;
+      text-align: center; box-shadow: 0 6px 30px rgba(0,0,0,.6);
+    }
+    .rv-title { font: 800 20px "Arial Black", Arial; color: #ffe066; margin-bottom: 6px; }
+    .rv-sub { font: 12px Arial; color: #aab4c8; margin-bottom: 6px; }
+    .rv-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+    .rv-btn {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      min-width: 96px; padding: 12px 14px; border-radius: 12px;
+      font: 800 17px "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.45);
+    }
+    .rv-btn.yes { background: rgba(255,214,10,0.3); border-color: rgba(255,214,10,0.75); }
+    .rv-btn:active { transform: scale(0.95); }
+    #rv-stars { font-size: 34px; color: #ffe066; letter-spacing: 6px; margin: 8px 0;
+      -webkit-tap-highlight-color: transparent; }
+    #rv-text {
+      width: 100%; box-sizing: border-box; height: 90px; resize: none;
+      border-radius: 10px; border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.09); color: #fff;
+      font: 14px Arial; padding: 8px;
+      -webkit-user-select: text; user-select: text; touch-action: auto;
+    }
   </style>
 </head>
 <body>
@@ -271,12 +372,56 @@
     <div class="btn" id="btn-snap">HIKE</div>
   </div>
 
+  <!-- 📊 The developer dashboard: a tab on the left edge slides it out.
+       World player tracker on top, reviews underneath (src/stats.js runs it). -->
+  <div id="dash-tab">📊</div>
+  <div id="dash">
+    <div id="dash-head"><span>📊 DEV DASHBOARD</span><span id="dash-close">✕</span></div>
+    <div id="dash-body">
+      <div class="dash-sec">🌍 PLAYER TRACKER <span id="dash-refresh">🔄 refresh</span></div>
+      <div id="dash-stats"></div>
+      <div id="dash-countries"></div>
+      <div id="dash-progress"></div>
+      <div class="dash-sec">⭐ REVIEWS <span id="dash-add">＋ write one</span></div>
+      <div id="dash-note"></div>
+      <div id="dash-reviews"></div>
+    </div>
+  </div>
+
+  <!-- ⭐ The review pop-up: would you like to? → are you sure? → write it!
+       stats.js shows it after your second finished game, and runs the steps. -->
+  <div id="review-modal">
+    <div class="rv-card">
+      <div class="rv-step" id="rv-step1">
+        <div class="rv-title">⭐ Would you like to do a review?</div>
+        <div class="rv-sub">Tell Max what you think of the game!</div>
+        <div class="rv-row"><div class="rv-btn yes" id="rv1-yes">YES</div><div class="rv-btn" id="rv1-no">NO</div></div>
+      </div>
+      <div class="rv-step" id="rv-step2">
+        <div class="rv-title">Are you sure?</div>
+        <div class="rv-sub">(just checking that wasn’t a mis-tap!)</div>
+        <div class="rv-row"><div class="rv-btn yes" id="rv2-yes">YES!</div><div class="rv-btn" id="rv2-no">NO</div></div>
+      </div>
+      <div class="rv-step" id="rv-step3">
+        <div class="rv-title">Your review!</div>
+        <div id="rv-stars"></div>
+        <textarea id="rv-text" maxlength="280" placeholder="What do you think of Touchdown Rush?"></textarea>
+        <div class="rv-row"><div class="rv-btn yes" id="rv-send">SEND IT 🏈</div><div class="rv-btn" id="rv-cancel">CANCEL</div></div>
+      </div>
+      <div class="rv-step" id="rv-step4">
+        <div class="rv-title">🎉 THANKS, COACH!</div>
+        <div class="rv-sub">Your review is on the dashboard.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Phaser 3: the open-source game engine doing the heavy lifting -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/kick.js?v=17"></script>
-  <script src="src/main.js?v=17"></script>
+  <script src="src/stats.js?v=18"></script>
+  <script src="src/kick.js?v=18"></script>
+  <script src="src/main.js?v=18"></script>
 </body>
 </html>

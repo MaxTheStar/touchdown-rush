@@ -1427,6 +1427,7 @@ function destroyCpuOverlay() {
 // GAME OVER — the final score, and who won
 // ============================================================
 function endGame() {
+  if (G.state === 'gameover') return;   // the whistle only blows once
   G.gameOver = true;
   G.state = 'gameover';
   freezeEveryone();
@@ -1436,6 +1437,10 @@ function endGame() {
   document.body.classList.add('kicking');   // hide the football buttons
   G.scene.cameras.main.stopFollow();
   buildGameOverOverlay();
+
+  // Tell the tracker a game FINISHED — after your second finished game it
+  // pops the friendly "Would you like to do a review?" (see src/stats.js).
+  if (window.TDStats) TDStats.recordGameEnd();
 }
 
 function buildGameOverOverlay() {
@@ -1621,6 +1626,11 @@ function startGameWithTeam() {
 
   setMenuVisible(false);
   document.body.classList.remove('menu');
+
+  // Count this game on the WORLD player tracker (see src/stats.js) —
+  // +1 game, and the very first game on a device adds its country flag.
+  if (window.TDStats) TDStats.recordGameStart();
+
   startKickoff();   // the game opens with a kickoff for you to return
 }
 
