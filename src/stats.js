@@ -1,6 +1,9 @@
 // ============================================================
-// TOUCHDOWN RUSH — stats.js: the WORLD TRACKER, player REVIEWS,
-// and the DEVELOPER DASHBOARD (the little 📊 tab on the left edge)
+// TOUCHDOWN RUSH — stats.js: the WORLD TRACKER and player REVIEWS
+// ------------------------------------------------------------
+// (The developer dashboard lives on its OWN page — dashboard.html —
+// so players never see it. It borrows this file's helpers through
+// TDStats.shared at the bottom.)
 // ------------------------------------------------------------
 // How can a game with no server know how many people play it?
 // We borrow two FREE public helpers:
@@ -198,123 +201,6 @@
     bump('reviews');                       // +1 on the world review counter
     showStep(4);                           // "THANKS!"
     setTimeout(closeReview, 1600);
-    if (dashOpen) renderReviews();         // dashboard updates live
-  }
-
-  // ============================================================
-  // THE DEVELOPER DASHBOARD — slides out from the 📊 tab.
-  // Local numbers appear instantly; world numbers arrive as the
-  // counters answer (tap 🔄 to re-ask).
-  // ============================================================
-  let dashOpen = false;
-
-  function toggleDash(open) {
-    dashOpen = (open !== undefined) ? open : !dashOpen;
-    $('dash').classList.toggle('open', dashOpen);
-    if (dashOpen) { renderReviews(); refreshWorld(); }
-  }
-
-  function statTile(big, label) {
-    return `<div class="dash-tile"><div class="dash-big">${big}</div><div class="dash-lab">${label}</div></div>`;
-  }
-
-  function renderStats(w) {
-    $('dash-stats').innerHTML =
-      statTile(w ? w.plays   : '…', 'games played<br>worldwide') +
-      statTile(w ? w.players : '…', 'players<br>worldwide') +
-      statTile(w ? w.reviews : '…', 'reviews<br>worldwide') +
-      statTile(load('games', 0),    'games finished<br>on this device');
-  }
-
-  function renderCountries(list) {
-    if (!list) { $('dash-countries').textContent = 'finding the flags…'; return; }
-    if (!list.length) { $('dash-countries').textContent = 'No countries yet — share the link!'; return; }
-    $('dash-countries').innerHTML = list.map(c =>
-      `<div class="dash-row"><span>${flagOf(c.cc)} ${nameOf(c.cc)}</span><b>${c.n}</b></div>`
-    ).join('');
-  }
-
-  function renderReviews() {
-    const reviews = load('reviews', []);
-    $('dash-note').textContent = DEV
-      ? '(practice numbers — this is your home computer)'
-      : 'Reviews written on this device:';
-    if (!reviews.length) { $('dash-reviews').textContent = 'No reviews here yet.'; return; }
-    $('dash-reviews').innerHTML = '';
-    for (const r of reviews) {
-      const div = document.createElement('div');
-      div.className = 'dash-review';
-      const head = document.createElement('div');
-      head.className = 'dash-rev-head';
-      head.textContent = ('★'.repeat(r.stars) + '☆'.repeat(5 - r.stars)) + '  ·  ' +
-        new Date(r.when).toLocaleDateString();
-      const body = document.createElement('div');
-      body.textContent = r.text || '(no words — just stars)';   // textContent = safe, plain text
-      div.appendChild(head); div.appendChild(body);
-      $('dash-reviews').appendChild(div);
-    }
-  }
-
-  // ---- Asking the world for fresh numbers -------------------------------
-  // Abacus only answers about 30 questions in a row before saying "slow
-  // down!" (a 429 answer) — and there are 249 countries. So the scan is
-  // POLITE: first the important stuff in one quick gulp (the top numbers,
-  // your country, countries we've found before, and the most likely ones),
-  // then it strolls through the rest of the world one country at a time,
-  // pausing for a breather whenever Abacus asks. Found flags pop in live,
-  // and get remembered so the next open is instant.
-  const POPULAR = ('US CA MX BR GB FR DE ES IT NL SE PL TR IN CN JP KR AU NZ SG PH ID VN ZA').split(' ');
-
-  let refreshing = false;
-  let scanStamp = 0;          // bumps every scan — an old scan sees it changed and stops
-
-  function refreshWorld() {
-    if (refreshing) return;
-    refreshing = true;
-    const myScan = ++scanStamp;
-    renderStats(null); renderCountries(null);
-
-    Promise.all([peek('plays'), peek('players'), peek('reviews')])
-      .then(([plays, players, reviews]) => renderStats({ plays, players, reviews }));
-
-    scanCountries(myScan).finally(() => { if (myScan === scanStamp) refreshing = false; });
-  }
-
-  async function scanCountries(myScan) {
-    const known = load('known-countries', []);          // flags found on earlier scans
-    const mine  = (load('country', {}) || {}).cc;       // this device's own country
-    // Check the likeliest countries FIRST (in one quick gulp), then everyone else.
-    const first = [...new Set([...known, mine, ...POPULAR].filter(Boolean))].slice(0, 25);
-    const rest  = ALL_COUNTRIES.filter(cc => !first.includes(cc));
-
-    const found = [];
-    function show(done, total) {
-      found.sort((a, b) => b.n - a.n);
-      renderCountries(found);
-      $('dash-progress').textContent =
-        (done < total) ? `🌍 checking the world… ${done} of ${total} countries` : '';
-    }
-
-    const quick = await Promise.all(first.map(cc => peekCareful('geo-' + cc)));
-    const queue = [...rest];
-    quick.forEach((r, i) => {
-      if (r.n > 0) found.push({ cc: first[i], n: r.n });
-      else if (r.limited) queue.push(first[i]);          // "slow down" ≠ zero — ask again later
-    });
-    const total = first.length + queue.length;
-    show(first.length, total);
-
-    let done = first.length;
-    while (queue.length) {
-      if (myScan !== scanStamp || !dashOpen) return;     // panel closed / new scan → stop quietly
-      const cc = queue.shift();
-      const r = await peekCareful('geo-' + cc);
-      if (r.limited) { queue.unshift(cc); await sleep(21000); continue; }   // breather, then retry
-      if (r.n > 0) found.push({ cc, n: r.n });
-      show(++done, total);
-      await sleep(500);                                  // stroll, don't sprint
-    }
-    store('known-countries', found.map(c => c.cc));      // remember for next time
   }
 
   // ---- Wire up all the buttons (pointerdown = instant, like the D-pad) ---
@@ -324,11 +210,6 @@
   }
 
   function wireUp() {
-    onTap('dash-tab',     () => toggleDash());
-    onTap('dash-close',   () => toggleDash(false));
-    onTap('dash-refresh', refreshWorld);
-    onTap('dash-add',     () => { openReview(3); });   // write one any time, no questions asked
-
     onTap('rv1-yes', () => showStep(2));
     onTap('rv1-no',  closeReview);
     onTap('rv2-yes', () => showStep(3));
@@ -337,7 +218,10 @@
     onTap('rv-cancel', closeReview);
 
     // The five stars — tap the 3rd star = a 3-star review.
+    // (dashboard.html loads this file too but has no review pop-up, so
+    // check the stars actually exist before building them.)
     const stars = $('rv-stars');
+    if (!stars) return;
     for (let i = 1; i <= 5; i++) {
       const s = document.createElement('span');
       s.textContent = '☆';
@@ -353,6 +237,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUp);
   else wireUp();
 
-  // What main.js (and DevTools) can call:
-  window.TDStats = { recordGameStart, recordGameEnd, openReview, toggleDash, refreshWorld };
+  // What main.js (and DevTools) can call — plus a "shared toolbox" that
+  // dashboard.html borrows so the counter code lives in exactly one place.
+  window.TDStats = {
+    recordGameStart, recordGameEnd, openReview,
+    shared: { API, NS, DEV, ALL_COUNTRIES, peek, peekCareful, bump, flagOf, nameOf, load, store, sleep }
+  };
 })();

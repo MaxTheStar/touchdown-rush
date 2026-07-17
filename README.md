@@ -50,9 +50,12 @@ Tied at the end? **Sudden-death overtime** — the next score wins it. The score
 shows **both** teams (`SEA 14 — CHI 7`) and the clock (`Q2 · 1:45`). Lose or win, tap the
 final screen to **play again**.
 
-**📺 TV breaks!** When a quarter ends, the game stops for a little break: the score so far
-and *a quick word from our sponsors* — every sponsor is 100% made-up and very silly
-(CHIBI COLA: the official drink of BIG HEADS!). Tap to continue.
+**📺 TV breaks!** When a quarter ends, the game cuts to a commercial break: the score so
+far, then an **animated commercial** — cola cans slide in with rising bubbles, cleats dash
+past with speed lines, a trophy rises through falling confetti. Every sponsor is still
+100% made up (CHILL COLA — *"Ice cold. Game on."*), just drawn and animated like a real
+TV spot. The commercials live in [`src/ads.js`](src/ads.js) — copy any entry to make your
+own ad. Tap to continue.
 
 **🏈 Real NFL rules at the half:** you fielded the opening kickoff, so the **other team
 gets the ball to start the second half**, and a drive can't carry across halftime — but
@@ -73,12 +76,15 @@ kicks? Open **[`kick.html`](kick.html)**.
 coverage the defense can **intercept** it — that's a turnover, so your drive restarts. A hard
 tackle can also knock the ball loose (a **fumble**) — then either team can grab it.
 
-**📊 The dev dashboard:** tap the little **📊 tab on the left edge** and a panel slides out
-showing the **world player tracker** — how many games have been played and how many people
-have played, **worldwide**, with a little **flag for every country** 🇺🇸🇯🇵🇧🇷 — plus every
-**review** written on that device. After your **second finished game** the game politely asks
-*"Would you like to do a review?"* (with an *"Are you sure?"* so a mis-tap never traps you) —
-say yes twice and you can rate it **1–5 stars** and write what you think.
+**📊 The dev dashboard** lives on its **own page** — players never see it in the game.
+Keep it open in a tab next to the game:
+**[maxthestar.github.io/touchdown-rush/dashboard.html](https://maxthestar.github.io/touchdown-rush/dashboard.html)**
+(or `localhost:8000/dashboard.html` at home). It shows the **world player tracker** — how
+many games have been played and how many people have played, **worldwide**, with a little
+**flag for every country** 🇺🇸🇯🇵🇧🇷 — plus every **review** written on that device. After a
+player's **second finished game** the game politely asks *"Would you like to do a review?"*
+(with an *"Are you sure?"* so a mis-tap never traps you) — say yes twice and they can rate
+it **1–5 stars** and write what they think.
 
 *Privacy, because it matters:* the tracker only ever counts a **country** (like "US" — from
 [api.country.is](https://api.country.is)) and bumps public **number-only counters** on
@@ -115,8 +121,12 @@ review database is a future level!).
       gets the second-half kickoff, drives don't cross the half, and the extra point is
       untimed.
 - [x] **v1.0.2 — 📊 Who's playing?** A world player tracker (games + players by country),
-      a friendly review pop-up after your 2nd game (stars + words), and a slide-out
-      **dev dashboard** on the left edge showing it all.
+      a friendly review pop-up after your 2nd game (stars + words), and a dev dashboard
+      showing it all.
+- [x] **v1.0.3 — 📺 Real commercials & a cleaner cockpit.** The TV-break ads are now
+      **animated mini-commercials** (motion, not just words) with a more real-TV voice,
+      and the dev dashboard moved to its **own page** (`dashboard.html`) so the game
+      screen belongs to the players.
 - [ ] **v1.1 — Better defense & routes.** Smarter coverage, more pass routes, touchdown replays.
 - [ ] **The next big one — play defense!** Instead of *watching* the computer's drive, control
       a defender and try to stop them yourself. (Then: seasons, a "Max Bowl," and drafting players.)

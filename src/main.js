@@ -119,19 +119,11 @@ const CPU_MAX_PLAYS      = 8;   // a drive wraps up after this many plays (kick 
 const CPU_TURNOVER_CHANCE = 0.06; // chance any single sim play is a turnover (pick/fumble)
 
 // ---- Quarter breaks, halftime… and the AD BREAK 📺 -------------------------
-// When a quarter ends, the game stops for a little TV-style break: the score
-// so far, a word from our sponsors (every "sponsor" is 100% made up and very
-// silly), and "tap to continue". HALFTIME follows real NFL rules — see the
-// notes on startBreak() below.
+// When a quarter ends, the game cuts to a TV-style break: the score so far,
+// then an ANIMATED commercial — a real little TV spot with moving parts.
+// The commercials live in src/ads.js (every sponsor is still 100% made up).
+// HALFTIME follows real NFL rules — see the notes on startBreak() below.
 const BREAK_MIN_MS = 1200;      // the break can't be tapped away for this long (so it registers)
-const FAKE_ADS = [
-  { brand: 'CHIBI COLA',              line: 'The official drink of BIG HEADS!',            color: 0xd22b2b },
-  { brand: 'BIG HELMET PIZZA',        line: 'Slices as big as your helmet!',               color: 0xe07b00 },
-  { brand: 'TURBO CLEATS 3000',       line: 'Run 3000% faster!*  (*not really)',           color: 0x0077cc },
-  { brand: "GRANDMA'S STICKY GLOVES", line: "You'll NEVER drop the ball again!",           color: 0x7a4dbc },
-  { brand: 'INVISIBLE DEFENSE SPRAY', line: "They can't tackle what they can't see!",      color: 0x11862f },
-  { brand: 'THE MAX BOWL',            line: 'The biggest game of the season… coming soon!', color: 0xbf9b00 },
-];
 
 // ---- Instant replay — after you score, watch it again in slow motion! -----
 // While a play is running we quietly remember where everyone was for the last
@@ -1333,20 +1325,9 @@ function buildBreakOverlay(kind) {
                28, '#ffe066');
   O.score = mk(172, `${G.team.abbr} ${G.score}   —   ${G.oppTeam.abbr} ${G.oppScore}`, 40, '#ffffff');
 
-  // ---- the "commercial break" (every sponsor is made up) ----
-  const ad = pick(FAKE_ADS);
-  O.adLabel = mk(250, 'a quick word from our sponsors…', 14, '#aab4c8');
-  O.card = s.add.graphics().setScrollFactor(0).setDepth(61);
-  O.card.fillStyle(0xfff6e0, 1);  O.card.fillRoundedRect(70, 278, 400, 186, 18);
-  O.card.lineStyle(3, 0xffd60a, 0.9); O.card.strokeRoundedRect(70, 278, 400, 186, 18);
-  O.adTag = s.add.text(452, 292, ' AD ', {
-    fontFamily: 'Arial Black, Arial', fontSize: '12px',
-    color: '#5b4300', backgroundColor: '#ffd60a'
-  }).setOrigin(1, 0).setScrollFactor(0).setDepth(62);
-  O.brand = mk(350, ad.brand, 28, hexColor(ad.color),
-               { strokeThickness: 0, wordWrap: { width: 360 } });
-  O.line  = mk(414, ad.line, 17, '#333f52',
-               { strokeThickness: 0, wordWrap: { width: 350 } });
+  // ---- the commercial break — an ANIMATED ad (see src/ads.js) ----
+  O.adLabel = mk(232, 'COMMERCIAL BREAK', 13, '#aab4c8');
+  if (window.TDAds) O.ad = TDAds.play(s);   // O.ad.destroy() runs at cleanup
 
   // Halftime: teach the real-football rule for who gets the ball next.
   if (kind === 'half') {

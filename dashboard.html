@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📊 Touchdown Rush — Dev Dashboard</title>
+  <!-- ==========================================================
+       THE DEVELOPER DASHBOARD — Max's private mission control.
+       This page is NOT linked from the game, so players never see
+       it. Keep it open in its own tab, next to the game:
+
+         live:  https://maxthestar.github.io/touchdown-rush/dashboard.html
+         home:  http://localhost:8055/dashboard.html
+
+       It shows the WORLD player tracker (counted by src/stats.js
+       inside the game) and every review written on THIS device.
+       ========================================================== -->
+  <style>
+    html, body {
+      margin: 0; padding: 0; min-height: 100%;
+      background: #0a1020; color: #cfd8e8;
+      font: 14px/1.5 "Helvetica Neue", Arial, sans-serif;
+    }
+    #wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 40px; }
+    header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      border-bottom: 2px solid rgba(255,214,10,0.5); padding-bottom: 10px;
+    }
+    h1 { margin: 0; font: 800 20px "Arial Black", Arial; color: #ffe066; }
+    header a { color: #8fd0ff; font-size: 13px; text-decoration: none; }
+    header a:hover { text-decoration: underline; }
+
+    .sec {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 22px 0 10px; color: #ffe066;
+      font: 800 14px "Arial Black", Arial; letter-spacing: 1px;
+    }
+    #refresh { color: #8fd0ff; font-size: 13px; cursor: pointer; user-select: none; }
+    #refresh:hover { text-decoration: underline; }
+
+    #stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 520px) { #stats { grid-template-columns: 1fr 1fr; } }
+    .tile {
+      background: rgba(255,255,255,0.07); border-radius: 12px;
+      padding: 12px 6px; text-align: center;
+    }
+    .big { font: 800 28px "Arial Black", Arial; color: #fff; }
+    .lab { font-size: 11px; color: #aab4c8; margin-top: 3px; }
+
+    #countries { margin-top: 12px; }
+    .row {
+      display: flex; justify-content: space-between;
+      padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 15px;
+    }
+    .row b { color: #ffe066; }
+    #progress { font-size: 12px; color: #8fd0ff; margin-top: 8px; min-height: 16px; }
+
+    #note { font-size: 12px; color: #8a94a8; margin-bottom: 8px; }
+    .review {
+      background: rgba(255,255,255,0.07); border-radius: 12px;
+      padding: 10px 12px; margin-bottom: 10px; word-wrap: break-word;
+    }
+    .rev-head { color: #ffe066; font-size: 12px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <header>
+      <h1>📊 DEV DASHBOARD</h1>
+      <a href="index.html">▶ play the game</a>
+    </header>
+
+    <div class="sec">🌍 PLAYER TRACKER <span id="refresh">🔄 refresh</span></div>
+    <div id="stats"></div>
+    <div id="countries"></div>
+    <div id="progress"></div>
+
+    <div class="sec">⭐ REVIEWS</div>
+    <div id="note"></div>
+    <div id="reviews"></div>
+  </div>
+
+  <!-- stats.js brings the shared counter toolbox (TDStats.shared) -->
+  <script src="src/stats.js?v=19"></script>
+  <script>
+    // Borrow the game's counter tools so the numbers can never disagree.
+    const T = TDStats.shared;
+    const $ = id => document.getElementById(id);
+
+    function tile(big, label) {
+      return `<div class="tile"><div class="big">${big}</div><div class="lab">${label}</div></div>`;
+    }
+
+    function renderStats(w) {
+      $('stats').innerHTML =
+        tile(w ? w.plays   : '…', 'games played<br>worldwide') +
+        tile(w ? w.players : '…', 'players<br>worldwide') +
+        tile(w ? w.reviews : '…', 'reviews<br>worldwide') +
+        tile(T.load('games', 0),  'games finished<br>on this device');
+    }
+
+    function renderCountries(list) {
+      if (!list) { $('countries').textContent = 'finding the flags…'; return; }
+      if (!list.length) { $('countries').textContent = 'No countries yet — share the link!'; return; }
+      $('countries').innerHTML = list.map(c =>
+        `<div class="row"><span>${T.flagOf(c.cc)} ${T.nameOf(c.cc)}</span><b>${c.n}</b></div>`
+      ).join('');
+    }
+
+    function renderReviews() {
+      const reviews = T.load('reviews', []);
+      $('note').textContent = (T.DEV ? '(practice numbers — this is your home computer) ' : '') +
+        'Reviews written on this device:';
+      if (!reviews.length) { $('reviews').textContent = 'No reviews here yet.'; return; }
+      $('reviews').innerHTML = '';
+      for (const r of reviews) {
+        const div = document.createElement('div');
+        div.className = 'review';
+        const head = document.createElement('div');
+        head.className = 'rev-head';
+        head.textContent = ('★'.repeat(r.stars) + '☆'.repeat(5 - r.stars)) + '  ·  ' +
+          new Date(r.when).toLocaleDateString();
+        const body = document.createElement('div');
+        body.textContent = r.text || '(no words — just stars)';  // textContent = safe, plain text
+        div.appendChild(head); div.appendChild(body);
+        $('reviews').appendChild(div);
+      }
+    }
+
+    // ---- Asking the world for fresh numbers -----------------------------
+    // Abacus (the free counter service) only answers ~30 questions in a
+    // burst before saying "slow down!" (a 429 answer) — and there are 249
+    // countries. So the scan is POLITE: the important stuff comes in one
+    // quick gulp (top numbers, flags found before, the likeliest countries),
+    // then it strolls through the rest of the world one country at a time,
+    // taking a breather whenever Abacus asks. Flags pop in live, and get
+    // remembered so the next visit is instant.
+    const POPULAR = ('US CA MX BR GB FR DE ES IT NL SE PL TR IN CN JP KR AU NZ SG PH ID VN ZA').split(' ');
+    let refreshing = false;
+    let scanStamp = 0;      // bumps every scan — an old scan sees it changed and stops
+
+    function refreshWorld() {
+      if (refreshing) return;
+      refreshing = true;
+      const myScan = ++scanStamp;
+      renderStats(null); renderCountries(null);
+
+      Promise.all([T.peek('plays'), T.peek('players'), T.peek('reviews')])
+        .then(([plays, players, reviews]) => renderStats({ plays, players, reviews }));
+
+      scanCountries(myScan).finally(() => { if (myScan === scanStamp) refreshing = false; });
+    }
+
+    async function scanCountries(myScan) {
+      const known = T.load('known-countries', []);        // flags found on earlier scans
+      const mine  = (T.load('country', {}) || {}).cc;     // this device's own country
+      const first = [...new Set([...known, mine, ...POPULAR].filter(Boolean))].slice(0, 25);
+      const rest  = T.ALL_COUNTRIES.filter(cc => !first.includes(cc));
+
+      const found = [];
+      function show(done, total) {
+        found.sort((a, b) => b.n - a.n);
+        renderCountries(found);
+        $('progress').textContent =
+          (done < total) ? `🌍 checking the world… ${done} of ${total} countries` : '';
+      }
+
+      const quick = await Promise.all(first.map(cc => T.peekCareful('geo-' + cc)));
+      const queue = [...rest];
+      quick.forEach((r, i) => {
+        if (r.n > 0) found.push({ cc: first[i], n: r.n });
+        else if (r.limited) queue.push(first[i]);         // "slow down" ≠ zero — ask again later
+      });
+      const total = first.length + queue.length;
+      show(first.length, total);
+
+      let done = first.length;
+      while (queue.length) {
+        if (myScan !== scanStamp) return;                 // a newer scan took over → stop quietly
+        const cc = queue.shift();
+        const r = await T.peekCareful('geo-' + cc);
+        if (r.limited) { queue.unshift(cc); await T.sleep(21000); continue; } // breather, retry
+        if (r.n > 0) found.push({ cc, n: r.n });
+        show(++done, total);
+        await T.sleep(500);                               // stroll, don't sprint
+      }
+      T.store('known-countries', found.map(c => c.cc));   // remember for next time
+    }
+
+    $('refresh').addEventListener('click', refreshWorld);
+    renderReviews();
+    refreshWorld();
+  </script>
+</body>
+</html>
