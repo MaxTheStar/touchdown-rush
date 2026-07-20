@@ -41,14 +41,55 @@ tries to tackle you. Player 1 runs the offense as usual.
 7-on-7. You're on offense. Get 10 yards in 4 downs for a first down; reach the endzone for
 a **touchdown = 6 points**, then kick the **extra point** for **+1** (7 total!).
 
-**🏆 It's a real game now — the other team scores too!** When your drive ends (a punt, a
-turnover, or after you score), the **computer gets the ball** and you watch its drive play
-out — the announcer calls each play, a bar shows them marching down the field, and it ends
-in a **touchdown, field goal, punt, or turnover**. A **game clock** counts down through
-**4 quick quarters of 2:30 each**; when time runs out, **whoever has more points WINS**.
-Tied at the end? **Sudden-death overtime** — the next score wins it. The scoreboard up top
-shows **both** teams (`SEA 14 — CHI 7`) and the clock (`Q2 · 1:45`). Lose or win, tap the
-final screen to **play again**.
+**🏆 It's a real game — the other team scores too!** When your drive ends (a punt, a
+turnover, or after you score), the **computer gets the ball**. A **game clock** counts down
+through **4 quick quarters of 2:30 each**; when time runs out, **whoever has more points
+WINS**. Tied at the end? **Sudden-death overtime** — the next score wins it. The scoreboard
+up top shows **both** teams (`SEA 14 — CHI 7`) and the clock (`Q2 · 1:45`). Lose or win,
+tap the final screen to **play again**.
+
+**⭐ …and now YOU play the defense!** When the other team has the ball they line up and run
+**real plays** at you — handoffs, drop-backs, passes to receivers running routes. **You
+control the defender wearing the YOU tag** (same arrows / D-pad as always) while your AI
+teammates rush the passer and cover the receivers. Get to the ball carrier and the tackle
+is automatic. Pressure their QB and he'll **panic-throw**; blanket their receivers and you
+can **break it up or PICK IT OFF**; stuff them for 4 downs and it's **your ball**. On 4th
+down they'll kick or punt — unless it's short and they **go for it**. Watch out.
+
+**🎩 Trick plays — the halfback pass!** Real football rules: **anyone** holding the ball
+can throw, as long as they're **behind the line of scrimmage** and nobody has thrown a
+forward pass yet that play. So: hand off to the RB, sweep him wide, and while the defense
+bites — **tap a receiver and let it fly**. One forward pass per play, just like on TV.
+
+**🎵 A soundtrack — played live by your browser!** No music files: the whole tune is made
+of math (oscillators — the same trick old arcade machines used). A chill loop on the team
+menu, a driving version in the game, a fanfare when you score, and a win/lose riff at the
+final whistle. The **🔊 button** (top-right) mutes it, and the game remembers your choice.
+
+**🪙 Earn coins & gear up in the PRO SHOP!** Every score pays out — **10 coins a touchdown**,
+5 a field goal, 2 an extra point, 3 for a defensive takeaway, and **+25 for winning** (+5 for
+a good try). Spend them on the team menu's **🛍 SHOP** on gear that really changes how you
+play: **👟 Speed Cleats** (faster every step), **⚡ Turbo Dash** (bigger, longer, quicker-
+recharging swipe-dashes), **🧤 Sticky Gloves** (more catches, fewer drops), and **🔋 Catch
+Energy** (a speed burst the instant you haul one in). Three levels each, and the boosts are
+real — the game reads your gear in the middle of every play.
+
+**🎁 Daily Rewards — a new present every day!** Come back each day and claim from a **7-day
+calendar**; keep the streak going and day 7 is the big one. Two of the days hand out
+**exclusive uniforms you can't pick anywhere else** — the purple **GALAXY** (day 3) and the
+shimmering **GOLD RUSH** (day 7) — and once unlocked they show up right in the CHOOSE YOUR
+TEAM menu. Miss a day and the week starts over, so it pays to keep playing.
+
+**⭐ The Premium Pass ($1.99).** Unlock it and **every daily reward gets bigger** — extra
+coins on top of the free ones, plus two **premium-only uniforms** (NEON ICE and BLACK
+DIAMOND). *Honesty corner:* the checkout is **pretend on purpose** — a homemade web game
+can't take real money (that needs a payment company and a grown-up's business account), so
+the button says so plainly and just unlocks it for free, to show how it *would* work.
+
+**🌍 The world tracker, now in the game too.** The team menu shows a little panel **off to
+the side of the screen** (never drawn on the field itself) with the worldwide games,
+players and reviews, and a link to the full dashboard. On small phone screens it tucks
+away so the menu stays clean.
 
 **📺 TV breaks!** When a quarter ends, the game cuts to a commercial break: the score so
 far, then an **animated commercial** — cola cans slide in with rising bubbles, cleats dash
@@ -127,9 +168,21 @@ review database is a future level!).
       **animated mini-commercials** (motion, not just words) with a more real-TV voice,
       and the dev dashboard moved to its **own page** (`dashboard.html`) so the game
       screen belongs to the players.
-- [ ] **v1.1 — Better defense & routes.** Smarter coverage, more pass routes, touchdown replays.
-- [ ] **The next big one — play defense!** Instead of *watching* the computer's drive, control
-      a defender and try to stop them yourself. (Then: seasons, a "Max Bowl," and drafting players.)
+- [x] **v1.1 — 🎵 Soundtrack, trick plays & a REAL hard mode.** A live chiptune soundtrack
+      (menu tune + game tune + scoring fanfares, with a 🔊 mute button), the **halfback
+      pass** (anyone behind the line can throw — real rules), and **hard difficulty now
+      fields a genuinely faster defense**.
+- [x] **⭐ v1.2 — PLAY DEFENSE!** The other team lines up and runs real plays — and you
+      control a defender (the YOU tag) to stop them: chase the runner, pressure the QB
+      into panic throws, break up passes, pick them off, stuff them on 4th down.
+- [x] **🪙 v1.3 — Coins, the PRO SHOP, DAILY REWARDS & a PREMIUM pass.** Earn coins by
+      playing and spend them on real gear (speed cleats, turbo dash, sticky gloves, catch
+      energy — 3 levels each). A **7-day daily-reward calendar** with **exclusive uniforms**
+      (GALAXY, GOLD RUSH) you can't get on the main menu, and an honest **pretend $1.99
+      Premium Pass** that makes every daily reward bigger and adds two premium-only
+      uniforms. The world tracker now also shows on the menu, **at the side of the screen**.
+- [ ] **Next up:** smarter routes on both sides, touchdown replays on defense, then
+      **seasons, a "Max Bowl," and drafting players**.
 
 ## The team
 

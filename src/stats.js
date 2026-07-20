@@ -203,6 +203,32 @@
     setTimeout(closeReview, 1600);
   }
 
+  // ============================================================
+  // 🌍 THE SIDE TRACKER — the world numbers at the SIDE of the screen
+  // ------------------------------------------------------------
+  // A little panel docked to the screen's edge (see index.html) — never
+  // drawn on the game itself. It asks Abacus for fresh numbers at most
+  // once a minute and remembers the last answer, so flipping back to the
+  // menu after every game is instant AND polite to the free service.
+  // ============================================================
+  function refreshTracker() {
+    if (!$('side-tracker')) return;    // (dashboard.html has no side panel)
+    const put = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    const paint = t => {
+      put('trk-plays', t.plays); put('trk-players', t.players);
+      put('trk-reviews', t.reviews); put('trk-games', load('games', 0));
+    };
+    const cached = load('trk', null);
+    if (cached) paint(cached);                                       // instant, from last time
+    if (cached && Date.now() - cached.when < 60000) return;          // fresh enough — done
+    Promise.all([peek('plays'), peek('players'), peek('reviews')])
+      .then(([plays, players, reviews]) => {
+        const t = { plays, players, reviews, when: Date.now() };
+        store('trk', t);
+        paint(t);
+      });
+  }
+
   // ---- Wire up all the buttons (pointerdown = instant, like the D-pad) ---
   function onTap(id, fn) {
     const el = $(id);
@@ -210,6 +236,7 @@
   }
 
   function wireUp() {
+    refreshTracker();                  // fill the 🌍 side panel right away
     onTap('rv1-yes', () => showStep(2));
     onTap('rv1-no',  closeReview);
     onTap('rv2-yes', () => showStep(3));
@@ -240,7 +267,7 @@
   // What main.js (and DevTools) can call — plus a "shared toolbox" that
   // dashboard.html borrows so the counter code lives in exactly one place.
   window.TDStats = {
-    recordGameStart, recordGameEnd, openReview,
+    recordGameStart, recordGameEnd, openReview, refreshTracker,
     shared: { API, NS, DEV, ALL_COUNTRIES, peek, peekCareful, bump, flagOf, nameOf, load, store, sleep }
   };
 })();

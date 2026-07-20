@@ -89,14 +89,17 @@
     }
     #btn-snap:active { background: rgba(255,214,10,0.55); }
 
-    /* Top-right buttons: Fullscreen (⛶) and the 1P/2P switch */
-    #btn-fs, #btn-mode {
+    /* Top-right buttons: Mute (🔊), Fullscreen (⛶) and the 1P/2P switch */
+    #btn-fs, #btn-mode, #btn-mute {
       position: fixed; z-index: 12;
       top: max(12px, env(safe-area-inset-top));
       width: 52px; height: 40px; font-size: 17px;
     }
     #btn-mode { right: max(12px, env(safe-area-inset-right)); }
     #btn-fs   { right: calc(max(12px, env(safe-area-inset-right)) + 60px); font-size: 22px; }
+    /* The mute button stays visible on EVERY screen (menu, kicks, breaks) —
+       you should always be able to turn the music off. */
+    #btn-mute { right: calc(max(12px, env(safe-area-inset-right)) + 120px); font-size: 19px; }
 
     /* Player 2's D-pad, top-center — hidden until 2-player mode is on */
     #dpad2 {
@@ -239,6 +242,138 @@
       font: 14px Arial; padding: 8px;
       -webkit-user-select: text; user-select: text; touch-action: auto;
     }
+
+    /* ---- 🌍 The WORLD TRACKER — at the SIDE of the screen, off the field --
+       A little panel docked to the screen's left edge (never drawn on the
+       game itself). stats.js fills in the numbers. It appears on the team
+       menu when the screen is big enough to fit it (a computer or an iPad
+       on its side); on small phone screens it stays out of the way. */
+    #side-tracker {
+      position: fixed; z-index: 8; display: none;
+      left: max(12px, env(safe-area-inset-left));
+      bottom: max(20px, env(safe-area-inset-bottom));
+      width: 148px; flex-direction: column; gap: 7px;
+      background: rgba(10,16,32,0.88); border: 2px solid rgba(255,214,10,0.4);
+      border-radius: 14px; padding: 12px;
+    }
+    @media (min-width: 700px) and (min-height: 600px) {
+      body.menu #side-tracker { display: flex; }
+    }
+    .trk-title { font: 800 12px "Arial Black", Arial; color: #ffe066; letter-spacing: 1px; }
+    .trk-stat b { display: block; font: 800 20px "Arial Black", Arial; color: #fff; }
+    .trk-stat span { font-size: 10px; color: #aab4c8; }
+    #side-tracker a { color: #8fd0ff; font-size: 11px; text-decoration: none; margin-top: 2px; }
+
+    /* ---- 🪙 The menu's money row: coins + SHOP + DAILY (top-left) -------- */
+    #menu-meta {
+      position: fixed; z-index: 40; display: none; gap: 7px;
+      left: max(12px, env(safe-area-inset-left));
+      top: max(12px, env(safe-area-inset-top));
+    }
+    body.menu #menu-meta { display: flex; }
+    #coin-chip {
+      display: flex; align-items: center; padding: 0 10px; height: 44px;
+      background: rgba(255,214,10,0.22); border: 2px solid rgba(255,214,10,0.65);
+      border-radius: 12px; color: #ffe066; font: 800 15px "Arial Black", Arial;
+    }
+    .meta-btn {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      width: 50px; height: 44px; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
+      color: #fff; font: 800 16px "Arial Black", Arial;
+    }
+    .meta-btn small { font-size: 8px; letter-spacing: 0.5px; margin-top: 1px; }
+    .meta-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
+
+    /* ---- Shared pop-up styles (the shop, daily rewards, premium) --------- */
+    .ov {
+      position: fixed; z-index: 70; inset: 0;
+      display: none;                       /* shop.js flips these to flex */
+      align-items: center; justify-content: center;
+      background: rgba(10,16,32,0.8);
+    }
+    .ov-card {
+      width: min(92vw, 420px); max-height: 86vh; overflow-y: auto;
+      box-sizing: border-box; touch-action: pan-y;
+      background: #101a30; border: 2px solid rgba(255,214,10,0.65);
+      border-radius: 18px; padding: 18px 16px; text-align: center;
+      box-shadow: 0 6px 30px rgba(0,0,0,.6);
+    }
+    .ov-title { font: 800 20px "Arial Black", Arial; color: #ffe066; margin-bottom: 4px; }
+    .ov-sub { font: 12px Arial; color: #aab4c8; margin-bottom: 10px; }
+    .ov-btn {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      display: inline-block; min-width: 110px; padding: 12px 16px; margin-top: 12px;
+      border-radius: 12px; font: 800 16px "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.45);
+    }
+    .ov-btn.yes { background: rgba(255,214,10,0.3); border-color: rgba(255,214,10,0.75); }
+    .ov-btn:active { transform: scale(0.95); }
+
+    /* ---- 🛍 Shop shelves ---- */
+    #shop-coins { font: 800 17px "Arial Black", Arial; color: #ffe066; margin-bottom: 10px; }
+    .shop-row {
+      display: flex; align-items: center; gap: 10px; text-align: left;
+      background: rgba(255,255,255,0.07); border-radius: 12px;
+      padding: 10px; margin-bottom: 8px;
+    }
+    .shop-icon { font-size: 26px; }
+    .shop-info { flex: 1; min-width: 0; }
+    .shop-name { font: 800 13px "Arial Black", Arial; color: #fff; }
+    .shop-pips { color: #ffd60a; letter-spacing: 2px; margin-left: 4px; }
+    .shop-blurb { font: 11px Arial; color: #aab4c8; margin-top: 2px; }
+    .shop-buy {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      padding: 10px 12px; border-radius: 10px; white-space: nowrap;
+      font: 800 13px "Arial Black", Arial; color: #fff;
+      background: rgba(255,214,10,0.3); border: 2px solid rgba(255,214,10,0.75);
+    }
+    .shop-buy:active { transform: scale(0.94); }
+    .shop-buy.poor  { opacity: 0.35; }          /* not enough coins yet */
+    .shop-buy.maxed { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);
+                      color: #ffd60a; pointer-events: none; }
+
+    /* ---- 🎁 The 7-day calendar ---- */
+    #daily-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .day-cell {
+      background: rgba(255,255,255,0.07); border: 2px solid transparent;
+      border-radius: 8px; padding: 5px 1px; overflow: hidden;
+    }
+    .day-cell.today { border-color: #ffd60a; background: rgba(255,214,10,0.14); }
+    .day-cell.claimed { opacity: 0.45; }
+    .day-num { font: 800 9px "Arial Black", Arial; color: #ffe066; margin-bottom: 3px; }
+    .day-free { font: 800 10px "Arial Black", Arial; color: #fff; min-height: 26px; }
+    .day-prem { font: 800 10px "Arial Black", Arial; color: #ffd60a; min-height: 26px;
+                border-top: 1px dashed rgba(255,255,255,0.25); margin-top: 3px; padding-top: 3px; }
+    .uni-chip { width: 22px; height: 12px; border-radius: 3px; margin: 1px auto;
+                border: 1px solid rgba(255,255,255,0.55); }
+    .uni-name { font: 800 6.5px "Arial Black", Arial; letter-spacing: 0; }
+    .daily-legend { font: 10px Arial; color: #aab4c8; margin-top: 6px; }
+    #daily-claim.done { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);
+                        color: #aab4c8; pointer-events: none; }
+
+    /* the premium strip under the calendar */
+    .prem-btn {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      margin-top: 12px; padding: 12px; border-radius: 12px;
+      background: linear-gradient(160deg, rgba(255,214,10,0.35), rgba(255,150,10,0.25));
+      border: 2px solid #ffd60a; color: #ffe066;
+      font: 800 15px "Arial Black", Arial;
+    }
+    .prem-btn span { display: block; font: 10px Arial; color: #fff; margin-top: 3px; }
+    .prem-btn:active { transform: scale(0.97); }
+    .prem-on {
+      margin-top: 12px; padding: 10px; border-radius: 12px;
+      background: rgba(255,214,10,0.16); border: 2px solid rgba(255,214,10,0.5);
+      color: #ffe066; font: 800 12px "Arial Black", Arial;
+    }
+    .prem-perk { text-align: left; font: 13px Arial; color: #fff; margin: 6px 0 0 8px; }
+    .prem-honest {
+      margin-top: 12px; padding: 10px; border-radius: 10px; text-align: left;
+      background: rgba(143,208,255,0.1); border: 1px solid rgba(143,208,255,0.4);
+      font: 11px Arial; color: #8fd0ff;
+    }
   </style>
 </head>
 <body>
@@ -258,6 +393,24 @@
     <div class="tm-btn" id="tm-play">PLAY ▶</div>
   </div>
 
+  <!-- 🌍 The world tracker — docked to the SIDE of the screen (off the field).
+       stats.js fills the numbers in; the CSS shows it on big-enough screens. -->
+  <aside id="side-tracker">
+    <div class="trk-title">🌍 WORLD TRACKER</div>
+    <div class="trk-stat"><b id="trk-plays">…</b><span>games played worldwide</span></div>
+    <div class="trk-stat"><b id="trk-players">…</b><span>players worldwide</span></div>
+    <div class="trk-stat"><b id="trk-reviews">…</b><span>reviews worldwide</span></div>
+    <div class="trk-stat"><b id="trk-games">…</b><span>games finished here</span></div>
+    <a href="dashboard.html">📊 full dashboard</a>
+  </aside>
+
+  <!-- 🪙 Coins + SHOP + DAILY buttons (top-left, menu only — see shop.js) -->
+  <div id="menu-meta">
+    <div id="coin-chip">🪙&nbsp;<b id="coin-amt">0</b></div>
+    <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
+    <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
+  </div>
+
   <!-- Difficulty picker (Easy / Medium / Hard) — shown on the menu, above PLAY -->
   <div id="tm-diff">
     <div class="tm-diff-lab">DIFFICULTY</div>
@@ -268,7 +421,8 @@
     </div>
   </div>
 
-  <!-- Fullscreen + 1P/2P switch (top-right) -->
+  <!-- Mute + Fullscreen + 1P/2P switch (top-right) -->
+  <div class="btn" id="btn-mute">🔊</div>
   <div class="btn" id="btn-fs">⛶</div>
   <div class="btn" id="btn-mode">1P</div>
 
@@ -305,6 +459,48 @@
     <div class="btn" id="btn-snap">HIKE</div>
   </div>
 
+  <!-- 🛍 THE PRO SHOP — spend your coins on gear. shop.js fills the shelves. -->
+  <div class="ov" id="shop-modal">
+    <div class="ov-card">
+      <div class="ov-title">🛍 THE PRO SHOP</div>
+      <div class="ov-sub">Gear up! Every upgrade really changes how you play.</div>
+      <div id="shop-coins"></div>
+      <div id="shop-items"></div>
+      <div class="ov-btn" id="shop-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 🎁 DAILY REWARDS — the 7-day calendar. shop.js draws the days. -->
+  <div class="ov" id="daily-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎁 DAILY REWARDS</div>
+      <div class="ov-sub">Play every day to keep the streak — day 7 is the BIG one!</div>
+      <div id="daily-grid"></div>
+      <div class="daily-legend">white row = everyone · <b style="color:#ffd60a">gold row</b> = premium extras</div>
+      <div class="ov-btn yes" id="daily-claim">CLAIM 🎁</div>
+      <div id="daily-premium"></div>
+      <div class="ov-btn" id="daily-close">CLOSE</div>
+    </div>
+  </div>
+
+  <!-- ⭐ PREMIUM PASS — an honest PRETEND checkout (no real money; a web game
+       can't charge real dollars without a payment company + a grown-up). -->
+  <div class="ov" id="premium-modal">
+    <div class="ov-card">
+      <div class="ov-title">⭐ PREMIUM PASS</div>
+      <div class="ov-sub">$1.99 · better rewards, every single day</div>
+      <div class="prem-perk">🪙 EXTRA coins on every daily reward</div>
+      <div class="prem-perk">🎽 2 premium-only uniforms — NEON ICE (day 3) and BLACK DIAMOND (day 7)</div>
+      <div class="prem-perk">⭐ a gold badge on your calendar forever</div>
+      <div class="prem-honest">🔒 <b>Honesty corner:</b> this checkout is PRETEND. A homemade
+        web game can't take real money — that needs a payment company and a grown-up's
+        business account. Tapping the button unlocks Premium for free, so you can see
+        exactly how it would work.</div>
+      <div class="ov-btn yes" id="prem-buy">PRETEND PAY $1.99 ✅</div>
+      <div class="ov-btn" id="prem-no">NO THANKS</div>
+    </div>
+  </div>
+
   <!-- ⭐ The review pop-up: would you like to? → are you sure? → write it!
        stats.js shows it after your second finished game, and runs the steps. -->
   <div id="review-modal">
@@ -337,9 +533,11 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=19"></script>
-  <script src="src/ads.js?v=19"></script>
-  <script src="src/kick.js?v=19"></script>
-  <script src="src/main.js?v=19"></script>
+  <script src="src/stats.js?v=21"></script>
+  <script src="src/sound.js?v=21"></script>
+  <script src="src/shop.js?v=21"></script>
+  <script src="src/ads.js?v=21"></script>
+  <script src="src/kick.js?v=21"></script>
+  <script src="src/main.js?v=21"></script>
 </body>
 </html>
