@@ -12,26 +12,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-20.
 
-## ⚠️ Sync status — ACTION NEEDED to publish
+## ✅ Sync status — in sync
 
-Local `main` is **ahead of `origin/main`** and the new work has not reached GitHub yet.
-The SSH key on the machine used this session is **not authorized** for the
-`MaxTheStar` GitHub account, so pushing fails:
-
-```
-$ ssh -T git@github.com
-git@github.com: Permission denied (publickey).
-```
-
-**To publish everything:** from a computer whose SSH key *is* on the MaxTheStar
-account (or after adding this machine's key at github.com → Settings → SSH keys),
-run:
-
-```
-git push origin main
-```
-
-Until that push happens, the live site shows an older version than what's committed.
+Local `main` and `origin/main` are in sync as of 2026-07-20. The earlier push
+blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
+fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
+MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
+Normal workflow from here: commit, then `git push origin main`, and GitHub Pages
+rebuilds the live site within a minute or two.
 
 ## 🎮 What's built (feature state)
 
