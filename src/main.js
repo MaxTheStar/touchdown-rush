@@ -20,8 +20,10 @@ const ENDZONE = 10 * PX_PER_YARD;         // 10-yard endzones
 
 // ---- Field colors (team colors live in NFL_TEAMS, chosen at the menu) ----
 const ENDZONE_COLOR = 0x14337a;   // the painted endzones at each end
-const GRASS_DARK = 0x2d7a2d;
-const GRASS_LIGHT = 0x379437;
+// Two greens for the "mowed grass" stripes — a real field has light and dark
+// bands where the mower drove up and down. A touch richer than before.
+const GRASS_DARK = 0x246b26;
+const GRASS_LIGHT = 0x2f8a33;
 
 // ---- Speeds (pixels/sec) — tune these to make it easier/harder ----
 const PLAYER_SPEED = 215;   // the player you control
@@ -259,6 +261,7 @@ let offense = [];  // 7 blue players (objects, see makePlayer)
 let defense = [];  // 7 red players
 let ball;          // the football sprite
 let ballFollow = true;
+let shadowGfx;     // soft ground shadows under every player + the ball (the "3D pop")
 let routeGfx;      // the colored "route lines" drawn behind each receiver
 let referee;       // the striped official (flavor only, no physics)
 let keys;          // keyboard
@@ -316,6 +319,12 @@ function create() {
 
   ball = this.physics.add.sprite(0, 0, 'ball').setDepth(6);
 
+  // Soft ground shadows: a dark oval painted under every player + the ball,
+  // one frame at a time (see drawShadows). It's what makes the little figures
+  // look like they're STANDING ON the grass instead of pasted flat on it — the
+  // single biggest trick for a 3D feel. Sits just above the field, under everyone.
+  shadowGfx = this.add.graphics().setDepth(2);
+
   // The colored route lines drawn behind the receivers (under the players).
   routeGfx = this.add.graphics().setDepth(3);
 
@@ -367,6 +376,10 @@ function create() {
 
   buildHUD(this);
 
+  // Put the field in your saved view (3D tilt or flat 2D). It's suppressed on the
+  // team menu by the CSS, so it "clicks in" the moment the first drive starts.
+  applyView(currentView());
+
   // Show the CHOOSE YOUR TEAM menu first. When you tap PLAY (startGameWithTeam)
   // it paints your colors on and kicks off the first drive at your own 20.
   buildTeamMenu(this);
@@ -381,6 +394,10 @@ function create() {
 // UPDATE — the heartbeat, ~60x per second
 // ============================================================
 function update(time, delta) {
+  // Repaint the ground shadows first thing, every frame, so they follow the
+  // players no matter what the game is doing (many states below "return" early).
+  drawShadows();
+
   // MAIN MENU: pick your team. On a computer, ← → flip teams and SPACE starts;
   // on the iPad the on-screen ◀ ▶ PLAY buttons do the same (see setupTouchButtons).
   if (G.state === 'menu') {
@@ -704,11 +721,24 @@ function canPass() {
 // Turn a screen tap (client x/y) into a spot on the field (world x/y). The
 // field is drawn at 540x720 then scaled to fit the screen, so we undo that
 // scaling and add the camera's scroll to get the real field position.
-function canvasTapToWorld(clientX, clientY) {
+function canvasTapToWorld(e) {
   const cam = G.scene.cameras.main;
-  const rect = G.scene.sys.game.canvas.getBoundingClientRect();
-  const fx = (clientX - rect.left) / rect.width  * 540;   // 540 = game width
-  const fy = (clientY - rect.top)  / rect.height * 720;   // 720 = game height
+  const canvas = G.scene.sys.game.canvas;
+  // offsetX/offsetY are where you tapped INSIDE the canvas, in the canvas's own
+  // coordinate space. The browser works those out AFTER undoing any CSS transform
+  // — including our 3D tilt — so a tap lands on the right receiver whether the
+  // field is flat (2D) or leaning back (3D). (The old code used the on-screen
+  // bounding box, which the tilt would have skewed.) If a browser somehow doesn't
+  // give us offsets, fall back to the bounding-box math.
+  let fx, fy;
+  if (typeof e.offsetX === 'number' && canvas.offsetWidth) {
+    fx = e.offsetX / canvas.offsetWidth  * 540;   // 540 = game width
+    fy = e.offsetY / canvas.offsetHeight * 720;   // 720 = game height
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    fx = (e.clientX - rect.left) / rect.width  * 540;
+    fy = (e.clientY - rect.top)  / rect.height * 720;
+  }
   return { x: fx / cam.zoom + cam.scrollX, y: fy / cam.zoom + cam.scrollY };
 }
 
@@ -2297,8 +2327,9 @@ function setupTouchButtons() {
   bindHold('btn2-left', 'left', touch2);
   bindHold('btn2-right', 'right', touch2);
 
-  // The 1P / 2P switch and the Fullscreen button
+  // The 1P / 2P switch, the 3D/2D view toggle, and the Fullscreen button
   bindTapEl('btn-mode', toggleTwoPlayer);
+  bindTapEl('btn-view', toggleView);
   bindTapEl('btn-fs', toggleFullscreen);
 
   // The 4th-down choice buttons (① play the down, ② kick)
@@ -2328,7 +2359,7 @@ function setupTouchButtons() {
       if (G.state === 'qbreak') { endBreak(); return; }     // tap ends the quarter break / halftime
       if (G.state === 'replay') { skipReplay(); return; }   // tap the field to skip the instant replay
       if (canPass()) {                                       // behind the line: a tap throws to a receiver
-        const w = canvasTapToWorld(e.clientX, e.clientY);
+        const w = canvasTapToWorld(e);
         passToNearest(w.x, w.y);
         return;
       }
@@ -2435,6 +2466,29 @@ function toggleTwoPlayer() {
   if (btn) btn.textContent = G.twoPlayer ? '2P' : '1P';
 }
 
+// ---- 3D / 2D field view -----------------------------------------------------
+// A pure-CSS "camera": adding the .threeD class to #game-container tilts the
+// whole field back so you're looking DOWN it into the distance — the classic
+// arcade-football look (all the CSS lives in index.html). It's ONLY a picture
+// change: the game, the physics, and every control work exactly the same in both
+// views. We remember your pick in localStorage so the game opens the way you like.
+// The button shows the view you're IN (like the 1P/2P button) — tap it to flip.
+function currentView() {
+  try { return localStorage.getItem('tdr-view') === '2D' ? '2D' : '3D'; }
+  catch (e) { return '3D'; }   // default: show off the 3D field
+}
+function applyView(mode) {
+  const gc = document.getElementById('game-container');
+  if (gc) gc.classList.toggle('threeD', mode === '3D');
+  const btn = document.getElementById('btn-view');
+  if (btn) btn.textContent = mode;
+  try { localStorage.setItem('tdr-view', mode); } catch (e) {}
+  if (window.game && game.scale) game.scale.refresh();   // re-fit after the box tilts
+}
+function toggleView() {
+  applyView(currentView() === '3D' ? '2D' : '3D');
+}
+
 function steer(sprite, tx, ty, speed) {
   const a = Math.atan2(ty - sprite.y, tx - sprite.x);
   sprite.setVelocity(Math.cos(a) * speed, Math.sin(a) * speed);
@@ -2478,14 +2532,20 @@ function yardsFromOwnGoal(y) { return (FIELD_LENGTH - ENDZONE - y) / PX_PER_YARD
 // ============================================================
 let hud = {};
 function buildHUD(scene) {
-  hud.score = scene.add.text(12, 10, '', hudStyle(18)).setScrollFactor(0).setDepth(20);
-  hud.down  = scene.add.text(12, 36, '', hudStyle(16, '#ffe066')).setScrollFactor(0).setDepth(20);
-  hud.spot  = scene.add.text(12, 60, '', hudStyle(12, '#cccccc')).setScrollFactor(0).setDepth(20);
-  // The game clock + quarter, tucked in the top-right corner.
-  hud.clock = scene.add.text(528, 10, '', hudStyle(17, '#ffe066'))
-    .setOrigin(1, 0).setScrollFactor(0).setDepth(20);
-  hud.help  = scene.add.text(270, 700, '', hudStyle(13, '#ffffff'))
-    .setOrigin(0.5).setScrollFactor(0).setDepth(20);
+  // The scoreboard used to be drawn ON the game canvas. Now it lives in the PAGE
+  // — the little #hud boxes in index.html — so when the field tilts back into 3D
+  // the score, clock and hints stay flat and crisp on top instead of leaning with
+  // the field. Each box gets a tiny wrapper with a .setText() so the rest of the
+  // game can keep calling hud.score.setText(...) exactly like it always has.
+  const box = id => {
+    const el = document.getElementById(id);
+    return { el, setText: t => { if (el) el.textContent = t; } };
+  };
+  hud.score = box('hud-score');
+  hud.down  = box('hud-down');
+  hud.spot  = box('hud-spot');
+  hud.clock = box('hud-clock');
+  hud.help  = box('hud-help');
 }
 
 function updateHUD() {
@@ -2586,11 +2646,6 @@ function showBanner(text, big) {
   });
 }
 
-function hudStyle(size, color = '#ffffff') {
-  return { fontFamily: 'Arial Black, Arial', fontSize: size + 'px', color,
-           stroke: '#000', strokeThickness: 4 };
-}
-
 // Pick a random item from a list (used for the announcer's lines).
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -2610,82 +2665,179 @@ function sayComment(text) {
 // ART — field, chibi players, football (all drawn in code)
 // ============================================================
 function drawField(scene) {
-  const g = scene.add.graphics();
-  for (let i = 0; i < 12; i++) {
-    g.fillStyle(i % 2 === 0 ? GRASS_DARK : GRASS_LIGHT);
-    g.fillRect(0, i * 10 * PX_PER_YARD, FIELD_WIDTH, 10 * PX_PER_YARD);
-  }
-  g.fillStyle(ENDZONE_COLOR);
-  g.fillRect(0, 0, FIELD_WIDTH, ENDZONE);
-  g.fillRect(0, FIELD_LENGTH - ENDZONE, FIELD_WIDTH, ENDZONE);
+  const W = FIELD_WIDTH, L = FIELD_LENGTH;
+  const g = scene.add.graphics().setDepth(0);
 
+  // --- 1) Mowed-grass stripes -------------------------------------------------
+  // A real field has light + dark bands where the mower drove up and down. We
+  // paint a band every 5 yards (24 bands over 120 yards) for a lush striped look.
+  for (let i = 0; i < 24; i++) {
+    g.fillStyle(i % 2 === 0 ? GRASS_DARK : GRASS_LIGHT);
+    g.fillRect(0, i * 5 * PX_PER_YARD, W, 5 * PX_PER_YARD);
+  }
+
+  // --- 2) End zones -----------------------------------------------------------
+  // A solid painted colour with a slightly darker inner block + diagonal paint
+  // stripes, so they read as real end-zone turf instead of a flat rectangle.
+  for (const top of [0, L - ENDZONE]) {
+    g.fillStyle(ENDZONE_COLOR);              g.fillRect(0, top, W, ENDZONE);
+    g.fillStyle(0x000000, 0.16);             g.fillRect(6, top + 6, W - 12, ENDZONE - 12);
+    g.lineStyle(2, 0xffffff, 0.14);          // faint diagonal "paint" hatching
+    for (let x = -ENDZONE; x < W; x += 22) {
+      g.beginPath(); g.moveTo(x, top); g.lineTo(x + ENDZONE, top + ENDZONE); g.strokePath();
+    }
+  }
+
+  // --- 3) Yard lines (every 5 yds; bold on the 10s) + goal lines --------------
   for (let yd = 0; yd <= 100; yd += 5) {
     const y = ENDZONE + yd * PX_PER_YARD;
-    g.lineStyle(yd % 10 === 0 ? 3 : 1.5, 0xffffff, yd % 10 === 0 ? 0.9 : 0.5);
-    g.beginPath(); g.moveTo(0, y); g.lineTo(FIELD_WIDTH, y); g.strokePath();
+    const onTen = yd % 10 === 0;
+    g.lineStyle(onTen ? 3 : 1.5, 0xffffff, onTen ? 0.9 : 0.5);
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.strokePath();
   }
-  g.lineStyle(1, 0xffffff, 0.35);
+  // The two GOAL lines get the boldest paint (that's where a touchdown counts).
+  g.lineStyle(5, 0xffffff, 0.95);
+  for (const y of [ENDZONE, L - ENDZONE]) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.strokePath(); }
+
+  // --- 4) Hash marks — two inner rows of little ticks, like the real thing ----
+  g.lineStyle(1, 0xffffff, 0.4);
   for (let yd = 0; yd < 100; yd++) {
     const y = ENDZONE + yd * PX_PER_YARD;
-    for (const x of [FIELD_WIDTH * 0.35, FIELD_WIDTH * 0.65]) {
+    for (const x of [W * 0.35, W * 0.65]) {
       g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x + 4, y); g.strokePath();
     }
   }
+
+  // --- 5) Sidelines — a bright white boundary down each edge of the field -----
+  g.lineStyle(4, 0xffffff, 0.9);
+  g.strokeRect(1.5, ENDZONE, W - 3, L - 2 * ENDZONE);
+
+  // --- 6) Yard NUMBERS on both sides (10..50..10), with a dark outline so they
+  //        stay readable on the light grass stripes. ---------------------------
   for (let yd = 10; yd <= 90; yd += 10) {
     const label = String(yd <= 50 ? yd : 100 - yd);
-    for (const x of [40, FIELD_WIDTH - 40]) {
+    for (const x of [42, W - 42]) {
       scene.add.text(x, ENDZONE + yd * PX_PER_YARD, label, {
-        fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ffffff'
-      }).setOrigin(0.5).setAlpha(0.5);
+        fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ffffff',
+        stroke: '#0c3a12', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(1).setAlpha(0.65);
     }
   }
-  scene.add.text(FIELD_WIDTH / 2, ENDZONE / 2, 'TOUCHDOWN', {
-    fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#ffe066'
-  }).setOrigin(0.5).setAlpha(0.9);
-  // Your home endzone shows your team's name once you've picked it (see
+
+  // --- 7) Midfield star at the 50-yard line -----------------------------------
+  const midY = ENDZONE + 50 * PX_PER_YARD;
+  g.lineStyle(2, 0xffffff, 0.25); g.strokeCircle(W / 2, midY, 34);
+  scene.add.text(W / 2, midY, '★', {
+    fontFamily: 'Arial Black, Arial', fontSize: '46px', color: '#ffe066'
+  }).setOrigin(0.5).setDepth(1).setAlpha(0.35);
+
+  // --- 8) End-zone team names (nudged toward the goal line so the goalposts,
+  //        drawn next, sit clearly at the back of the zone) --------------------
+  scene.add.text(W / 2, ENDZONE * 0.78, 'TOUCHDOWN', {
+    fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#ffe066',
+    stroke: '#000', strokeThickness: 4
+  }).setOrigin(0.5).setDepth(1).setAlpha(0.92);
+  // Your home end zone shows your team's name once you've picked it (see
   // startGameWithTeam). Until then it just says MAX FC.
-  G.endzoneLabel = scene.add.text(FIELD_WIDTH / 2, FIELD_LENGTH - ENDZONE / 2, 'MAX FC', {
-    fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#ffffff'
-  }).setOrigin(0.5).setAlpha(0.7);
+  G.endzoneLabel = scene.add.text(W / 2, L - ENDZONE * 0.78, 'MAX FC', {
+    fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#ffffff',
+    stroke: '#000', strokeThickness: 4
+  }).setOrigin(0.5).setDepth(1).setAlpha(0.85);
+
+  // --- 9) Goalposts — their own layer, drawn ON TOP so they always show -------
+  const gp = scene.add.graphics().setDepth(1);
+  drawGoalpost(gp, W / 2, 'top');
+  drawGoalpost(gp, W / 2, 'bottom');
 }
 
-// Draw one chibi player in a team's two colors: JERSEY (body/shoulder pads)
-// and HELMET (head). We can call this again with the same `key` to REPAINT a
-// team — handy when you flip teams in the menu — so we clear the old picture
-// first (Phaser won't overwrite a texture that's still hanging around).
+// A classic yellow goalpost (base pole → crossbar → two uprights), tucked into
+// the back of an end zone. 'top' points down into the field; 'bottom' points up.
+function drawGoalpost(g, cx, where) {
+  const gold = 0xf5c518, spread = 26;
+  const top = where === 'top';
+  const uprightY = top ? 5  : FIELD_LENGTH - 5;    // tips of the uprights (at the end line)
+  const crossY   = top ? 30 : FIELD_LENGTH - 30;   // the crossbar
+  const baseY    = top ? 54 : FIELD_LENGTH - 54;   // where the base pole meets the field
+  // a small shadow line first so the posts read as 3D metal
+  g.lineStyle(6, 0x000000, 0.18);
+  g.beginPath(); g.moveTo(cx + 2, baseY); g.lineTo(cx + 2, crossY); g.strokePath();
+  g.lineStyle(5, gold, 1);
+  g.beginPath(); g.moveTo(cx, baseY); g.lineTo(cx, crossY); g.strokePath();               // base pole
+  g.beginPath(); g.moveTo(cx - spread, crossY); g.lineTo(cx + spread, crossY); g.strokePath(); // crossbar
+  g.beginPath(); g.moveTo(cx - spread, crossY); g.lineTo(cx - spread, uprightY); g.strokePath(); // upright L
+  g.beginPath(); g.moveTo(cx + spread, crossY); g.lineTo(cx + spread, uprightY); g.strokePath(); // upright R
+}
+
+// Repaint every ground shadow this frame — a soft dark oval a little BELOW each
+// visible player + the ball, so they look like they're standing on the grass.
+function drawShadows() {
+  if (!shadowGfx) return;
+  shadowGfx.clear();
+  const blob = (sp, rw) => {
+    if (!sp || !sp.visible) return;
+    shadowGfx.fillStyle(0x0a1f0a, 0.30);
+    shadowGfx.fillEllipse(sp.x, sp.y + 13, rw, rw * 0.42);
+  };
+  for (const o of offense) blob(o.s, 26);
+  for (const d of defense) blob(d.s, 26);
+  if (referee) blob(referee, 26);
+  if (ball && ballFollow !== undefined) blob(ball, 15);
+}
+
+// Draw one chibi player in a team's two colors: JERSEY (body/shoulder pads) and
+// HELMET (head). Now with soft shading — a bright highlight up top and a darker
+// rim below — so each little guy looks rounded and three-dimensional instead of
+// flat. We can call this again with the same `key` to REPAINT a team (handy when
+// you flip teams in the menu), so we clear the old picture first.
 function makeChibiTexture(scene, key, jersey, helmet) {
   if (scene.textures.exists(key)) scene.textures.remove(key);
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(jersey);          g.fillEllipse(20, 26, 30, 16);   // shoulder pads (jersey)
-  g.fillStyle(0xd9a066);        g.fillCircle(5, 26, 4);          // arms
-  g.fillCircle(35, 26, 4);
-  g.fillStyle(helmet);          g.fillCircle(20, 16, 13);        // BIG helmet
-  g.fillStyle(0xffffff);        g.fillCircle(20, 16, 10);        // facemask ring
-  g.fillStyle(helmet);          g.fillCircle(20, 16, 9);
-  g.fillStyle(jersey);          g.fillRect(18, 3, 4, 13);        // helmet stripe (jersey, so it shows)
+
+  // Shoulder pads (jersey), shaded: base → dark bottom rim → bright top highlight
+  g.fillStyle(jersey);          g.fillEllipse(20, 25, 32, 17);
+  g.fillStyle(0x000000, 0.20);  g.fillEllipse(20, 29, 30, 9);     // ambient-occlusion under the pads
+  g.fillStyle(0xffffff, 0.16);  g.fillEllipse(20, 20, 26, 8);     // sheen across the top of the pads
+
+  // Arms (skin tone) poking out the sides
+  g.fillStyle(0xd9a066);        g.fillCircle(5, 25, 4); g.fillCircle(35, 25, 4);
+
+  // Helmet — a rounded ball with a shine and a face mask
+  g.fillStyle(helmet);          g.fillCircle(20, 15, 13);         // the helmet
+  g.fillStyle(0x000000, 0.18);  g.fillEllipse(20, 19, 22, 12);    // shade at the base of the helmet
+  g.fillStyle(helmet);          g.fillCircle(20, 14, 12);         // re-cap the top so the shade sits low
+  g.fillStyle(0xffffff, 0.30);  g.fillEllipse(15, 10, 11, 7);     // top-left specular highlight (the shine)
+  g.fillStyle(0xe8e8e8);        g.fillEllipse(20, 20, 15, 5);     // face mask (light grey bar up front)
+  g.fillStyle(jersey);          g.fillRect(18, 3, 4, 12);         // helmet stripe (jersey colour, so it shows)
+
   g.generateTexture(key, 40, 36);
   g.destroy();
 }
 
 function makeBallTexture(scene) {
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(0x8B4513); g.fillEllipse(8, 5, 14, 9);
-  g.lineStyle(1.5, 0xffffff); g.beginPath(); g.moveTo(4, 5); g.lineTo(12, 5); g.strokePath();
-  g.generateTexture('ball', 16, 10);
+  g.fillStyle(0x6f3410);       g.fillEllipse(9, 6, 16, 10);       // dark leather base
+  g.fillStyle(0x8B4513);       g.fillEllipse(9, 5, 15, 9);        // brown top
+  g.fillStyle(0xffffff, 0.35); g.fillEllipse(6, 3.5, 6, 3);       // little shine
+  g.fillStyle(0xffffff);       g.fillRect(6, 4.4, 6, 1.2);        // white laces stripe
+  g.lineStyle(1, 0xffffff, 0.9);
+  for (const lx of [7, 9, 11]) { g.beginPath(); g.moveTo(lx, 3.4); g.lineTo(lx, 6.6); g.strokePath(); }
+  g.generateTexture('ball', 18, 12);
   g.destroy();
 }
 
 function makeRefTexture(scene) {
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  // black-and-white striped shirt (chibi, seen from above)
-  g.fillStyle(0xffffff); g.fillEllipse(20, 26, 30, 16);
+  // black-and-white striped shirt (chibi, seen from above), lightly shaded
+  g.fillStyle(0xffffff);        g.fillEllipse(20, 25, 32, 17);
   g.fillStyle(0x000000);
-  for (let i = 0; i < 4; i++) g.fillRect(9 + i * 7, 18, 3, 16);
+  for (let i = 0; i < 4; i++) g.fillRect(9 + i * 7, 17, 3, 16);
+  g.fillStyle(0x000000, 0.16);  g.fillEllipse(20, 29, 30, 8);     // shade under the shirt
   // arms
-  g.fillStyle(0xd9a066); g.fillCircle(5, 26, 4); g.fillCircle(35, 26, 4);
-  // head with a black cap
-  g.fillStyle(0xd9a066); g.fillCircle(20, 15, 12);
-  g.fillStyle(0x111111); g.fillEllipse(20, 10, 26, 12);
+  g.fillStyle(0xd9a066);        g.fillCircle(5, 25, 4); g.fillCircle(35, 25, 4);
+  // head with a black cap + a shine
+  g.fillStyle(0xd9a066);        g.fillCircle(20, 15, 12);
+  g.fillStyle(0x111111);        g.fillEllipse(20, 10, 26, 12);
+  g.fillStyle(0xffffff, 0.22);  g.fillEllipse(16, 8, 9, 4);
   g.generateTexture('ref', 40, 36);
   g.destroy();
 }

@@ -8,13 +8,13 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.3 — cache-buster is `?v=21` in `index.html`.
+- **Version:** v1.4 — cache-buster is `?v=22` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-07-20.
+- **Last updated:** 2026-07-22.
 
 ## ✅ Sync status — in sync
 
-Local `main` and `origin/main` are in sync as of 2026-07-20. The earlier push
+Local `main` and `origin/main` are in sync as of 2026-07-22 (v1.4 pushed). The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
 MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
@@ -42,6 +42,19 @@ rebuilds the live site within a minute or two.
   - ⭐ **Premium Pass** — a clearly-labeled *pretend* $1.99 unlock: bigger daily rewards +
     premium-only uniforms (NEON ICE, BLACK DIAMOND).
   - 🌍 **World tracker** moved to a side panel on the menu (off the game field).
+- **v1.4 — 3D field view + a nicer-looking field** (this iteration — `index.html` + `main.js`):
+  - 🎥 **3D / 2D view toggle** — the new cyan **3D** button (top-right, next to Mute) tilts
+    the whole field back so you look *down* it into the distance (a pure CSS `perspective`
+    tilt on the canvas — the physics and controls are identical). It defaults to 3D, eases
+    2D↔3D over 0.45s, is flat on the team menu, and remembers your pick (`tdr-view`).
+  - 🧾 **Scoreboard moved into the page** — score / clock / down / spot / hints are now real
+    DOM boxes (`#hud` in index.html), not canvas text, so they stay flat & crisp on top when
+    the field tilts. `buildHUD/updateHUD` fill them; the old canvas HUD + `hudStyle` are gone.
+  - 🎯 **Tap-to-throw stays accurate in 3D** — `canvasTapToWorld` now reads `offsetX/offsetY`
+    (the browser's transform-corrected tap position) instead of the on-screen bounding box.
+  - 🎨 **Field & players got a glow-up** — mowed-grass stripes, goalposts, a midfield ★, yard
+    numbers, bright sidelines, a night-stadium background, shaded chibi players/ball/ref, and
+    soft **ground shadows** (`drawShadows`, repainted every frame) so everyone looks 3D.
 
 ## 🗂 File map (who does what)
 
@@ -70,7 +83,7 @@ Script load order matters: `stats → sound → shop → ads → kick → main`.
 
 `tdr-coins`, `tdr-gear`, `tdr-daily`, `tdr-premium`, `tdr-owned-uniforms`, `tdr-trk`,
 `tdr-games`, `tdr-reviews`, `tdr-country`, `tdr-counted-player`, `tdr-counted-geo`,
-`tdr-known-countries`, `tdr-review-asked`.
+`tdr-known-countries`, `tdr-review-asked`, `tdr-view` (3D or 2D field view).
 
 ## 📝 Notes & limitations
 

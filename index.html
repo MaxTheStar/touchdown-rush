@@ -41,9 +41,59 @@
     /* On a phone/iPad, hide the title + hints so the field uses the whole screen */
     @media (max-width: 820px) { .controls, h1 { display: none; } }
 
-    /* the game fills whatever space is left; Phaser scales the field to fit it */
-    #game-container { flex: 1; width: 100%; min-height: 0; touch-action: none; }
-    #game-container canvas { display: block; margin: 0 auto; touch-action: none; }
+    /* the game fills whatever space is left; Phaser scales the field to fit it.
+       The background is a night STADIUM — a soft glow of lights up top, a dark
+       bowl below, and a faint dotted "crowd" — so when the 3D view tilts the
+       field back, the space around it looks like a stadium instead of empty. */
+    #game-container {
+      flex: 1; width: 100%; min-height: 0; touch-action: none;
+      perspective: 1400px;                 /* how strong the 3D depth is */
+      perspective-origin: 50% 42%;
+      background:
+        repeating-radial-gradient(circle at 50% 8%, rgba(255,255,255,0.035) 0 1.5px, transparent 1.5px 8px),
+        radial-gradient(130% 70% at 50% 4%, rgba(120,150,190,0.30), rgba(10,14,26,0) 55%),
+        linear-gradient(180deg, #0e1b34 0%, #0b1224 55%, #070b16 100%);
+      box-shadow: inset 0 0 220px rgba(0,0,0,0.65);   /* stadium vignette */
+    }
+    /* Phaser scales/positions the canvas with inline styles; we only add a
+       transform (via the .threeD class), which Phaser never touches. The smooth
+       transition makes flipping 2D↔3D feel like a camera tilting. */
+    #game-container canvas {
+      display: block; margin: 0 auto; touch-action: none;
+      transition: transform 0.45s ease;
+    }
+    /* THE 3D TILT: lean the whole field back so you're looking down it into the
+       distance (the classic arcade-football camera). Disabled on the team menu
+       (body.menu) so the team preview stays flat & readable. */
+    body:not(.menu) #game-container.threeD canvas {
+      transform: rotateX(18deg) scale(1.06);
+      transform-origin: 50% 54%;
+    }
+
+    /* ---- The scoreboard HUD (score / clock / down / spot / help) ------------
+       These live in the DOM (not on the canvas) so the 3D tilt never bends or
+       blurs them — they stay crisp and flat on top of the field. */
+    #hud { display: none; pointer-events: none; }
+    body:not(.menu) #hud { display: block; }
+    #hud > div { position: fixed; pointer-events: none; z-index: 14;
+      font-family: "Arial Black", Arial, sans-serif;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.9); }
+    #hud-score { top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left));
+      font-size: 20px; font-weight: 800; color: #fff; }
+    #hud-clock { top: calc(max(10px, env(safe-area-inset-top)) + 26px); left: max(12px, env(safe-area-inset-left));
+      font-size: 16px; font-weight: 800; color: #ffe066; }
+    #hud-down  { top: calc(max(10px, env(safe-area-inset-top)) + 48px); left: max(12px, env(safe-area-inset-left));
+      font-size: 15px; font-weight: 800; color: #ffe066; }
+    #hud-spot  { top: calc(max(10px, env(safe-area-inset-top)) + 68px); left: max(12px, env(safe-area-inset-left));
+      font-size: 12px; font-weight: 700; color: #dfe6f2; }
+    #hud-help  {
+      left: 50%; transform: translateX(-50%);
+      bottom: max(92px, calc(env(safe-area-inset-bottom) + 74px));
+      max-width: min(86vw, 520px); text-align: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      background: rgba(10,16,32,0.42); padding: 5px 12px; border-radius: 11px;
+    }
+    #hud-help:empty { display: none; }
 
     /* ---- On-screen touch controls (the iPad buttons) ---- */
     .btn {
@@ -89,17 +139,21 @@
     }
     #btn-snap:active { background: rgba(255,214,10,0.55); }
 
-    /* Top-right buttons: Mute (🔊), Fullscreen (⛶) and the 1P/2P switch */
-    #btn-fs, #btn-mode, #btn-mute {
+    /* Top-right buttons: Mute (🔊), View (3D/2D), Fullscreen (⛶), 1P/2P switch */
+    #btn-fs, #btn-mode, #btn-mute, #btn-view {
       position: fixed; z-index: 12;
       top: max(12px, env(safe-area-inset-top));
       width: 52px; height: 40px; font-size: 17px;
     }
     #btn-mode { right: max(12px, env(safe-area-inset-right)); }
     #btn-fs   { right: calc(max(12px, env(safe-area-inset-right)) + 60px); font-size: 22px; }
+    /* The 3D/2D view toggle — sits with the football buttons (hidden on the menu). */
+    #btn-view { right: calc(max(12px, env(safe-area-inset-right)) + 120px); font-size: 15px;
+      background: rgba(46,230,255,0.20); border-color: rgba(46,230,255,0.6); }
+    #btn-view:active { background: rgba(46,230,255,0.45); }
     /* The mute button stays visible on EVERY screen (menu, kicks, breaks) —
        you should always be able to turn the music off. */
-    #btn-mute { right: calc(max(12px, env(safe-area-inset-right)) + 120px); font-size: 19px; }
+    #btn-mute { right: calc(max(12px, env(safe-area-inset-right)) + 180px); font-size: 19px; }
 
     /* Player 2's D-pad, top-center — hidden until 2-player mode is on */
     #dpad2 {
@@ -149,6 +203,7 @@
     body.kicking #actions,
     body.kicking #dpad2,
     body.kicking #btn-mode,
+    body.kicking #btn-view,
     body.kicking #btn-fs { display: none !important; }
 
     /* While returning a kickoff you only RUN — hide the pass/handoff/HIKE
@@ -166,6 +221,7 @@
     body.menu #actions,
     body.menu #dpad2,
     body.menu #btn-mode,
+    body.menu #btn-view,
     body.menu #btn-fs { display: none !important; }
     .tm-btn {
       -webkit-tap-highlight-color: transparent; touch-action: none;
@@ -421,10 +477,21 @@
     </div>
   </div>
 
-  <!-- Mute + Fullscreen + 1P/2P switch (top-right) -->
+  <!-- Mute + 3D/2D view + Fullscreen + 1P/2P switch (top-right) -->
   <div class="btn" id="btn-mute">🔊</div>
+  <div class="btn" id="btn-view">3D</div>
   <div class="btn" id="btn-fs">⛶</div>
   <div class="btn" id="btn-mode">1P</div>
+
+  <!-- The scoreboard HUD. Lives in the DOM (not on the tilted canvas) so it
+       stays crisp. main.js fills these in every frame (see buildHUD/updateHUD). -->
+  <div id="hud">
+    <div id="hud-score"></div>
+    <div id="hud-clock"></div>
+    <div id="hud-down"></div>
+    <div id="hud-spot"></div>
+    <div id="hud-help"></div>
+  </div>
 
   <!-- 4th-down choice: play the down, or kick. main.js shows/hides this
        and fills in whether button ② is a FIELD GOAL or a PUNT. -->
@@ -533,11 +600,11 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=21"></script>
-  <script src="src/sound.js?v=21"></script>
-  <script src="src/shop.js?v=21"></script>
-  <script src="src/ads.js?v=21"></script>
-  <script src="src/kick.js?v=21"></script>
-  <script src="src/main.js?v=21"></script>
+  <script src="src/stats.js?v=22"></script>
+  <script src="src/sound.js?v=22"></script>
+  <script src="src/shop.js?v=22"></script>
+  <script src="src/ads.js?v=22"></script>
+  <script src="src/kick.js?v=22"></script>
+  <script src="src/main.js?v=22"></script>
 </body>
 </html>
