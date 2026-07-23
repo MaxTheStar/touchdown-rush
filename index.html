@@ -152,8 +152,13 @@
       background: rgba(46,230,255,0.20); border-color: rgba(46,230,255,0.6); }
     #btn-view:active { background: rgba(46,230,255,0.45); }
     /* The mute button stays visible on EVERY screen (menu, kicks, breaks) —
-       you should always be able to turn the music off. */
+       you should always be able to turn the music off. During a game it sits at
+       the far left of the top-right button strip (+180px). */
     #btn-mute { right: calc(max(12px, env(safe-area-inset-right)) + 180px); font-size: 19px; }
+    /* On the MENU the 1P / View / Fullscreen buttons are hidden, so mute slides
+       over to the empty top-right corner — otherwise on a narrow phone it would
+       sit on top of the 🏆/🛍/🎁 row in the top-left. */
+    body.menu #btn-mute { right: max(12px, env(safe-area-inset-right)); }
 
     /* Player 2's D-pad, top-center — hidden until 2-player mode is on */
     #dpad2 {
@@ -367,6 +372,33 @@
     .ov-btn.yes { background: rgba(255,214,10,0.3); border-color: rgba(255,214,10,0.75); }
     .ov-btn:active { transform: scale(0.95); }
 
+    /* ---- 🏆 Season hub (season.js fills #season-body) ---- */
+    #season-body { text-align: center; }
+    .se-intro, .se-out, .se-bracket { font: 13px/1.45 Arial; color: #dfe6f2; margin: 6px 2px 10px; }
+    .se-head { font: 800 14px "Arial Black", Arial; color: #fff; margin-bottom: 6px; }
+    .se-head span { color: #ffe066; }
+    .se-cap { font: 800 11px "Arial Black", Arial; color: #8fb0d8; letter-spacing: 1px;
+              margin: 12px 0 4px; text-align: left; }
+    .se-cap small { font: 9px Arial; color: #6f8199; letter-spacing: 0; }
+    .se-tab { width: 100%; border-collapse: collapse; font: 12px Arial; color: #dfe6f2; }
+    .se-tab td { padding: 4px 6px; text-align: center; }
+    .se-tab .se-ab { text-align: left; font-weight: 800; }
+    .se-tab .se-h td { color: #8fb0d8; font-weight: 800; font-size: 10px; }
+    .se-row.se-me { background: rgba(255,214,10,0.16); }
+    .se-row.se-me .se-ab { color: #ffe066; }
+    .se-row.se-line td { border-bottom: 2px solid rgba(46,230,255,0.55); }
+    .se-sched { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .se-wk { flex: 1 1 28%; min-width: 0; border-radius: 8px; padding: 6px 2px;
+             background: rgba(255,255,255,0.07); }
+    .se-wk-t { font: 800 12px "Arial Black", Arial; color: #fff; }
+    .se-wk-s { font: 9px Arial; color: #aab4c8; margin-top: 2px; }
+    .se-wk.se-w   { background: rgba(46,200,90,0.25); }
+    .se-wk.se-l   { background: rgba(230,70,70,0.22); }
+    .se-wk.se-now { background: rgba(255,214,10,0.28); border: 1px solid rgba(255,214,10,0.7); }
+    .se-champ { font: 800 16px "Arial Black", Arial; color: #ffe066; margin: 12px 0; line-height: 1.4; }
+    .se-champ span { font: 12px Arial; color: #fff; }
+    .se-titles { color: #ffe066; font: 700 12px Arial; margin-top: 8px; }
+
     /* ---- 🛍 Shop shelves ---- */
     #shop-coins { font: 800 17px "Arial Black", Arial; color: #ffe066; margin-bottom: 10px; }
     .shop-row {
@@ -463,6 +495,7 @@
   <!-- 🪙 Coins + SHOP + DAILY buttons (top-left, menu only — see shop.js) -->
   <div id="menu-meta">
     <div id="coin-chip">🪙&nbsp;<b id="coin-amt">0</b></div>
+    <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
   </div>
@@ -524,6 +557,17 @@
       <div class="btn" id="btn-hand">HAND</div>
     </div>
     <div class="btn" id="btn-snap">HIKE</div>
+  </div>
+
+  <!-- 🏆 SEASON MODE — a whole 8-team league, playoffs & the Max Bowl.
+       season.js fills #season-body and drives the PLAY button. -->
+  <div class="ov" id="season-modal">
+    <div class="ov-card">
+      <div class="ov-title">🏆 SEASON</div>
+      <div id="season-body"></div>
+      <div class="ov-btn yes" id="season-play">START SEASON</div>
+      <div class="ov-btn" id="season-close">CLOSE</div>
+    </div>
   </div>
 
   <!-- 🛍 THE PRO SHOP — spend your coins on gear. shop.js fills the shelves. -->
@@ -600,11 +644,12 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=22"></script>
-  <script src="src/sound.js?v=22"></script>
-  <script src="src/shop.js?v=22"></script>
-  <script src="src/ads.js?v=22"></script>
-  <script src="src/kick.js?v=22"></script>
-  <script src="src/main.js?v=22"></script>
+  <script src="src/stats.js?v=23"></script>
+  <script src="src/sound.js?v=23"></script>
+  <script src="src/shop.js?v=23"></script>
+  <script src="src/season.js?v=23"></script>
+  <script src="src/ads.js?v=23"></script>
+  <script src="src/kick.js?v=23"></script>
+  <script src="src/main.js?v=23"></script>
 </body>
 </html>

@@ -8,13 +8,13 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.4 — cache-buster is `?v=22` in `index.html`.
+- **Version:** v1.5 — cache-buster is `?v=23` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-22.
 
 ## ✅ Sync status — in sync
 
-Local `main` and `origin/main` are in sync as of 2026-07-22 (v1.4 pushed). The earlier push
+Local `main` and `origin/main` are in sync as of 2026-07-22 (v1.5 pushed). The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
 MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
@@ -55,6 +55,22 @@ rebuilds the live site within a minute or two.
   - 🎨 **Field & players got a glow-up** — mowed-grass stripes, goalposts, a midfield ★, yard
     numbers, bright sidelines, a night-stadium background, shaded chibi players/ball/ref, and
     soft **ground shadows** (`drawShadows`, repainted every frame) so everyone looks 3D.
+- **v1.5 — 🏆 Season mode & the Max Bowl** (this iteration — new `src/season.js`):
+  - 🏟 **A whole season** — you + 7 other teams form an 8-team league. You play a **6-game
+    schedule**; each week the other teams' games are **auto-simulated** (power-rated, with
+    upsets) so there's a real **standings** race. A new 🏆 SEASON button on the menu opens it.
+  - 🥇 **Playoffs → the Max Bowl** — the top 4 seeds make the playoffs (1v4, 2v3), then the
+    winners meet in the **Max Bowl**. Win it and you're the champion: a **+200 coins** jackpot,
+    an all-time **championships** count (`tdr-titles`), and the exclusive gold **CHAMPIONS**
+    uniform (defined in `shop.js`, granted via `TDShop.grantUniform`, shows in the team menu).
+  - 💾 **Save & resume** — the whole season saves to `localStorage` (`tdr-season`); quit and
+    pick up right where you left off. Miss the playoffs and the bracket is played out for you.
+  - 🔌 **How it wires in** — `season.js` never touches Phaser. It calls `window.TDGame`
+    (`main.js`) to start a game with the scheduled opponent (`beginGame(..., isSeason=true)`),
+    and `endGame` reports the score back via `TDSeason.reportResult`; then you land back on the
+    Season screen (not the plain menu). Quick Game is unchanged.
+  - 🔇 Also fixed a v1.4 layout nit: on the menu the Mute button now sits in the far-right
+    corner so it never overlaps the 🏆/🛍/🎁 row on a narrow phone.
 
 ## 🗂 File map (who does what)
 
@@ -65,11 +81,12 @@ rebuilds the live site within a minute or two.
 | `src/kick.js` | The field-goal/punt/extra-point kick mini-game. **Loads before main.js** (main uses `KickGame`). |
 | `src/sound.js` | Live chiptune soundtrack (oscillators). API: `window.TDSound`. |
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, Premium. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
+| `src/season.js` | 🏆 Season mode: league, standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
 | `src/ads.js` | Animated TV-break commercials. |
 | `dashboard.html` | Private dev dashboard (world numbers + on-device reviews). Not linked from the game. |
 
-Script load order matters: `stats → sound → shop → ads → kick → main`.
+Script load order matters: `stats → sound → shop → season → ads → kick → main`.
 
 ## 🧰 Conventions
 
@@ -83,7 +100,8 @@ Script load order matters: `stats → sound → shop → ads → kick → main`.
 
 `tdr-coins`, `tdr-gear`, `tdr-daily`, `tdr-premium`, `tdr-owned-uniforms`, `tdr-trk`,
 `tdr-games`, `tdr-reviews`, `tdr-country`, `tdr-counted-player`, `tdr-counted-geo`,
-`tdr-known-countries`, `tdr-review-asked`, `tdr-view` (3D or 2D field view).
+`tdr-known-countries`, `tdr-review-asked`, `tdr-view` (3D or 2D field view),
+`tdr-season` (the whole in-progress season), `tdr-titles` (all-time Max Bowl wins).
 
 ## 📝 Notes & limitations
 

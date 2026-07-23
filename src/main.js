@@ -218,6 +218,7 @@ const G = {
   breakOverlay: null,   // the break screen's on-screen pieces
   team: null,           // YOUR team (picked at the menu) — an entry from NFL_TEAMS
   oppTeam: null,        // the computer's team (a random other one)
+  seasonGame: false,    // 🏆 true while playing a Season game (see beginGame / season.js)
   menuIndex: 0,         // which team the menu is showing right now
   menu: null,           // the menu's on-screen pieces (preview player, name, code)
   endzoneLabel: null,   // the team-name text painted in your home endzone
@@ -1760,6 +1761,11 @@ function endGame() {
   // Tell the tracker a game FINISHED — after your second finished game it
   // pops the friendly "Would you like to do a review?" (see src/stats.js).
   if (window.TDStats) TDStats.recordGameEnd();
+
+  // 🏆 In a SEASON game, tell the season how it went — this records the result,
+  // auto-plays the other teams' games, and moves the schedule/playoffs along.
+  // We do it LAST, so the FINAL screen above still shows just THIS game's coins.
+  if (G.seasonGame && window.TDSeason) TDSeason.reportResult(G.score, G.oppScore);
 }
 
 function buildGameOverOverlay() {
@@ -1798,7 +1804,7 @@ function buildGameOverOverlay() {
       stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
   }
 
-  O.again = s.add.text(270, 600, 'tap to play again', {
+  O.again = s.add.text(270, 600, G.seasonGame ? 'tap for your season →' : 'tap to play again', {
     fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#8fd0ff',
     stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
   s.tweens.add({ targets: O.again, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
@@ -1810,7 +1816,12 @@ function returnToMenuFromGameOver() {
   const O = G.gameOverOverlay;
   if (O) { for (const k in O) if (O[k] && O[k].destroy) O[k].destroy(); G.gameOverOverlay = null; }
   document.body.classList.remove('kicking', 'returning', 'two-player');
+  const wasSeason = G.seasonGame;
+  G.seasonGame = false;
   enterMenu();
+  // 🏆 A season game drops you back on the SEASON screen (with updated standings,
+  // your next game, or the championship trophy) — not the plain team menu.
+  if (wasSeason && window.TDSeason) TDSeason.open();
 }
 
 // ---- small color helpers (for the opponent's on-screen colors) ----
@@ -1938,17 +1949,25 @@ function syncDiffButtons() {
     b.classList.toggle('sel', b.dataset.diff === G.difficulty));
 }
 
-// Tap PLAY: lock in your team, give the computer a random other team, paint
-// both uniforms for real, then start the game.
+// Tap PLAY (Quick Game): lock in your team and give the computer a random
+// OTHER team, then hand off to beginGame() to actually start.
 function startGameWithTeam() {
   if (G.state !== 'menu') return;
-  G.team = allTeams()[G.menuIndex];
-
+  const team = allTeams()[G.menuIndex];
   // Pick a random OTHER team for the computer (always a real NFL team —
   // your exclusive daily-reward uniforms are yours alone).
   let opp;
-  do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp === G.team);
+  do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp === team);
+  beginGame(team, opp, false);
+}
+
+// The shared "start a brand-new game" routine, used by BOTH Quick Game and
+// 🏆 Season mode. `team`/`opp` are team objects; `isSeason` is true for a
+// season game (so endGame knows to report the final score back to the season).
+function beginGame(team, opp, isSeason) {
+  G.team = team;
   G.oppTeam = opp;
+  G.seasonGame = !!isSeason;
 
   // Fresh scoreboard & game clock for a brand-new game.
   G.score = 0; G.oppScore = 0;
@@ -1979,6 +1998,24 @@ function startGameWithTeam() {
   if (window.TDSound) TDSound.setMode('game');   // 🎵 kick the music into gear
   startKickoff();   // the game opens with a kickoff for you to return
 }
+
+// ---- Season mode drives the game through here (see src/season.js) ---------
+// season.js does all the league bookkeeping in the DOM; when it's time to
+// actually PLAY, it calls startSeasonGame, and we report the score back to it
+// from endGame(). Kept tiny on purpose — the season never touches Phaser.
+window.TDGame = {
+  // find a team (or an earned uniform) by its abbreviation
+  teamByAbbr: (abbr) => allTeams().find(t => t.abbr === abbr) || null,
+  // the team currently shown on the CHOOSE YOUR TEAM menu
+  currentMenuTeamAbbr: () => { const t = allTeams()[G.menuIndex]; return t ? t.abbr : null; },
+  // just the real NFL teams (season.js builds the 8-team league from these)
+  nflAbbrs: () => NFL_TEAMS.map(t => t.abbr),
+  // start a season game: your team vs the week's scheduled opponent
+  startSeasonGame(youAbbr, oppAbbr) {
+    const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
+    if (team && opp && G.scene) beginGame(team, opp, true);
+  }
+};
 
 // ============================================================
 // KICKOFF RETURN — catch the kick deep and run it back

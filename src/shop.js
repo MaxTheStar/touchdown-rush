@@ -45,6 +45,9 @@
     GLD: { abbr: 'GLD', name: 'GOLD RUSH',     jersey: 0xc9a227, helmet: 0xffe066, special: true },
     ICE: { abbr: 'ICE', name: 'NEON ICE',      jersey: 0x0b6f8a, helmet: 0x4de3ff, special: true },
     BLK: { abbr: 'BLK', name: 'BLACK DIAMOND', jersey: 0x101014, helmet: 0x2ee6c8, special: true },
+    // 🏆 The gold CHAMPIONS uniform — you can ONLY get this by winning the
+    //    Max Bowl in Season mode (season.js grants it via TDShop.grantUniform).
+    CHMP: { abbr: 'CHMP', name: 'CHAMPIONS',   jersey: 0x8a6d1a, helmet: 0xffd700, special: true },
   };
 
   // ---- 🎁 The 7-day reward calendar ---------------------------------------
@@ -346,6 +349,16 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUp);
   else wireUp();
 
+  // Hand the player a uniform they earned outside the daily calendar (season.js
+  // calls this to award the 🏆 CHAMPIONS uniform for winning the Max Bowl).
+  // Returns true if it was NEW (so callers can celebrate the first time).
+  function grantUniform(abbr) {
+    if (!UNIFORMS[abbr] || owned.includes(abbr)) return false;
+    owned.push(abbr);
+    store('owned-uniforms', owned);
+    return true;
+  }
+
   // ---- What the rest of the game may use ----------------------------------
   window.TDShop = {
     // coins
@@ -356,6 +369,7 @@
     speedMult, dashBoost, gloveBoost, energyMs, ENERGY_MULT,
     // uniforms you've unlocked (the menu adds them to the team list)
     unlockedUniforms: () => owned.map(a => UNIFORMS[a]).filter(Boolean),
+    grantUniform,
     // menu hook
     onMenu,
   };
