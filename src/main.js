@@ -241,6 +241,13 @@ const G = {
   p2Defender: null,     // the single red player Player 2 drives in 2-player mode
   p2Label: null,        // the "P2" tag floating over that defender
 
+  // ---- 🧠 Smart football brains (v1.6): a play-caller for each down ----
+  concept: null,        // the offense's play this down (which route each receiver runs)
+  lastConcept: -1,      // don't call the exact same concept two downs in a row
+  coverage: 'man',      // how the CPU covers this down: 'man' (tight) or 'zone' (soft)
+  blitz: false,         // is a linebacker shooting the gap at the QB this down?
+  passTarget: null,     // where a thrown ball is headed — defenders break on it
+
   // ---- Swipe dash / juke (touch) ----
   dashVX: 0, dashVY: 0, // the velocity of an active dash/cut
   dashUntil: 0,         // the dash/cut overrides the D-pad until this time
@@ -388,7 +395,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -536,7 +543,13 @@ function snap(time) {
   G.dashUntil = 0;            // no leftover dash from the last play
   G.ballCarrier = offense[0]; // QB
   G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
-  if (Math.random() < 0.6) sayComment(pick(['Hut, hut!', 'Here we go!', 'The snap!']));
+  // Read out what the defense is doing — a blitz is always called (fair
+  // warning!), and the coverage is called out some of the time so you learn it.
+  if (G.blitz) sayComment(pick(['BLITZ!!', "They're coming!", 'Pressure!']));
+  else if (Math.random() < 0.5) sayComment(pick(['Hut, hut!', 'Here we go!', 'The snap!']));
+  else if (Math.random() < 0.55) sayComment(G.coverage === 'zone'
+             ? pick(['Zone coverage!', "They're in zone!"])
+             : pick(['Man to man!', 'Press coverage!']));
 }
 
 // How fast YOUR player runs right now: the base speed, times the 👟 SPEED
@@ -635,6 +648,7 @@ function throwTo(num) {
   const flight = dist / BALL_SPEED;
   const targetX = Phaser.Math.Clamp(wr.s.x + wr.s.body.velocity.x * flight, 10, FIELD_WIDTH - 10);
   const targetY = wr.s.y + wr.s.body.velocity.y * flight;
+  G.passTarget = { x: targetX, y: targetY };   // 🧠 defenders break on this spot
 
   ball.setPosition(thrower.x, thrower.y);
   G.scene.cameras.main.startFollow(ball, true, 0.12, 0.12);
@@ -649,6 +663,7 @@ function throwTo(num) {
 }
 
 function resolvePass(wr, x, y) {
+  G.passTarget = null;   // the ball has arrived — stop the break-on-the-ball chase
   // Where the receiver ACTUALLY is when the ball arrives (he kept running).
   const wx = wr.s.x, wy = wr.s.y;
 
@@ -798,24 +813,97 @@ function dashVelocity() {
 // ============================================================
 // RECEIVERS — run their routes after the snap
 // ============================================================
+// ============================================================
+// 🧠 SMART FOOTBALL BRAINS (v1.6) — the play-caller
+// ------------------------------------------------------------
+// Instead of running the SAME three routes every down, each play we pull a
+// "concept" out of this little playbook: a short option, a medium option and a
+// deep option that work together (just like a real offense). Then the defense
+// decides how to cover it — tight MAN (beat your guy) or a soft ZONE (find the
+// open window) — and might send a blitz. Higher difficulty = more zone, more
+// blitz, and defenders that break harder on the ball.
+// ============================================================
+const PLAYBOOK = [
+  { name: 'Slants',    wr1: 'slant',  wr2: 'slant',  rb: 'swing' },
+  { name: 'Verticals', wr1: 'streak', wr2: 'streak', rb: 'wheel' },
+  { name: 'Smash',     wr1: 'curl',   wr2: 'corner', rb: 'flat'  },
+  { name: 'Mesh',      wr1: 'drag',   wr2: 'drag',   rb: 'swing' },
+  { name: 'Out & up',  wr1: 'out',    wr2: 'corner', rb: 'flat'  },
+  { name: 'Dig-post',  wr1: 'in',     wr2: 'post',   rb: 'swing' },
+  { name: 'Flood',     wr1: 'curl',   wr2: 'out',    rb: 'wheel' },
+  { name: 'Classic',   wr1: 'slant',  wr2: 'streak', rb: 'swing' },
+];
+
+// Call the next play: give each receiver a route, and let the defense pick its
+// coverage + whether to blitz. Runs once per down, in setupPlay.
+function callPlay() {
+  let i = Phaser.Math.Between(0, PLAYBOOK.length - 1);
+  if (i === G.lastConcept) i = (i + 1) % PLAYBOOK.length;   // never repeat back-to-back
+  G.lastConcept = i;
+  const c = PLAYBOOK[i];
+  G.concept = c;
+  offense[2].route = c.wr1;   // WR #1 (lines up left)
+  offense[3].route = c.wr2;   // WR #2 (lines up right)
+  offense[1].route = c.rb;    // RB (#3)
+
+  // The defense reads its plan for the down. Easy = mostly tight man, no blitz.
+  // Hard = more zone and more pressure.
+  const d = G.difficulty;
+  const zoneOdds  = d === 'easy' ? 0.15 : d === 'hard' ? 0.55 : 0.42;
+  const blitzOdds = d === 'easy' ? 0.0  : d === 'hard' ? 0.30 : 0.15;
+  G.coverage = Math.random() < zoneOdds ? 'zone' : 'man';
+  G.blitz    = Math.random() < blitzOdds;
+  G.passTarget = null;
+}
+
+// -1 = this receiver lined up on the LEFT, +1 = on the RIGHT. We read his
+// SNAP spot (startX), not where he is now, so a crossing route doesn't flip
+// direction when it passes midfield.
+function sideOf(o) {
+  const x = (o.startX != null) ? o.startX : o.s.x;
+  return x < FIELD_WIDTH / 2 ? -1 : 1;
+}
+
+// The velocity for a receiver's route this frame, given how far he's run
+// (depth) and which side he started on. "IN" points toward the middle, "OUT"
+// toward his own sideline — so one route definition mirrors left and right.
+function routeVelocity(o, depth, side) {
+  const S = WR_SPEED, IN = -side, OUT = side;
+  switch (o.route) {
+    case 'slant':    return depth < 52  ? { vx: 0, vy: -S } : { vx: IN  * S * 0.70, vy: -S * 0.62 };
+    case 'out':      return depth < 96  ? { vx: 0, vy: -S } : { vx: OUT * S * 0.78, vy: -S * 0.32 };
+    case 'in':       return depth < 104 ? { vx: 0, vy: -S } : { vx: IN  * S * 0.78, vy: -S * 0.30 };
+    case 'corner':   return depth < 92  ? { vx: 0, vy: -S } : { vx: OUT * S * 0.55, vy: -S * 0.78 };
+    case 'post':     return depth < 92  ? { vx: 0, vy: -S } : { vx: IN  * S * 0.55, vy: -S * 0.78 };
+    case 'curl':     return depth < 118 ? { vx: 0, vy: -S } : { vx: IN  * S * 0.18, vy:  S * 0.42 };
+    case 'comeback': return depth < 150 ? { vx: 0, vy: -S } : { vx: OUT * S * 0.28, vy:  S * 0.36 };
+    case 'drag':     return { vx: IN * S * 0.90, vy: -S * 0.22 };                    // shallow cross
+    case 'wheel':    return depth < 26  ? { vx: S * 0.90, vy: -S * 0.16 } : { vx: S * 0.14, vy: -S * 0.95 };
+    case 'flat':     return { vx: S * 0.82, vy: -S * 0.16 };                         // RB checkdown
+    case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
+    default:         return { vx: 0, vy: -S };                                        // 'streak'
+  }
+}
+
 function updateReceivers(elapsed) {
   for (const o of offense) {
     if (o.role !== 'WR' && o.role !== 'RB') continue;
     if (o === G.ballCarrier) continue; // once caught / handed the ball, the player drives
 
     const depth = o.startY - o.s.y; // yards upfield since the snap
-    let vx = 0, vy = -WR_SPEED;
+    const side = sideOf(o);
+    let { vx, vy } = routeVelocity(o, depth, side);
 
-    if (o.route === 'streak') {
-      vx = 0;                                   // straight up the field
-    } else if (o.route === 'slant') {
-      if (depth > 70) { vx = WR_SPEED * 0.7; vy = -WR_SPEED * 0.6; } // cut inside
-    } else if (o.route === 'out') {
-      if (depth > 110) { vx = -WR_SPEED * 0.7; vy = -WR_SPEED * 0.4; } // break to sideline
-    } else if (o.route === 'swing') {
-      // the running back swings out to the flat, then turns upfield
-      if (depth < 20) { vx = WR_SPEED * 0.85; vy = -WR_SPEED * 0.2; }
-      else { vx = WR_SPEED * 0.25; vy = -WR_SPEED * 0.9; }
+    // 🧠 WORK OPEN — if a defender is crowding him, the receiver slides toward
+    // the open grass (away from that defender) to shake free. Just a nudge, so
+    // the route still looks like a route. WRs only, and only past the stem.
+    if (o.role === 'WR' && depth > 44) {
+      let nearX = null, nd = Infinity;
+      for (const d of defense) {
+        const dd = Phaser.Math.Distance.Between(o.s.x, o.s.y, d.s.x, d.s.y);
+        if (dd < nd) { nd = dd; nearX = d.s.x; }
+      }
+      if (nearX != null && nd < 40) vx += (o.s.x < nearX ? -1 : 1) * WR_SPEED * 0.28;
     }
 
     // Don't run off the field or into the endzone wall
@@ -876,18 +964,28 @@ function drawRoutePreview() {
   }
 }
 
-// A simple sketch of where each route goes, from the receiver's pre-snap spot.
+// A simple sketch of where each route goes, from the receiver's pre-snap spot,
+// so you can read the play and pick who to throw to before the snap.
 function routePath(o) {
   const sx = o.s.x, sy = o.s.y, top = ENDZONE + 20;
+  const side = sideOf(o), IN = -side, OUT = side;
   const clampX = x => Phaser.Math.Clamp(x, 12, FIELD_WIDTH - 12);
-  if (o.route === 'slant') {          // up a bit, then cut inside
-    return [{ x: sx, y: sy }, { x: sx, y: sy - 70 }, { x: clampX(sx + 120), y: sy - 170 }];
+  const up = d => Math.max(top, sy - d);
+  switch (o.route) {
+    case 'slant':    return [{ x: sx, y: sy }, { x: sx, y: up(60)  }, { x: clampX(sx + IN  * 130), y: up(150) }];
+    case 'out':      return [{ x: sx, y: sy }, { x: sx, y: up(100) }, { x: clampX(sx + OUT * 95),  y: up(135) }];
+    case 'in':       return [{ x: sx, y: sy }, { x: sx, y: up(108) }, { x: clampX(sx + IN  * 150), y: up(150) }];
+    case 'corner':   return [{ x: sx, y: sy }, { x: sx, y: up(95)  }, { x: clampX(sx + OUT * 110), y: up(230) }];
+    case 'post':     return [{ x: sx, y: sy }, { x: sx, y: up(95)  }, { x: clampX(sx + IN  * 120), y: up(235) }];
+    case 'curl':     return [{ x: sx, y: sy }, { x: sx, y: up(125) }, { x: clampX(sx + IN  * 20),  y: up(95)  }];
+    case 'comeback': return [{ x: sx, y: sy }, { x: sx, y: up(160) }, { x: clampX(sx + OUT * 35),  y: up(120) }];
+    case 'drag':     return [{ x: sx, y: sy }, { x: clampX(sx + IN * 180), y: up(45) }];
+    case 'wheel':    return [{ x: sx, y: sy }, { x: clampX(sx + 90), y: up(20) }, { x: clampX(sx + 120), y: up(230) }];
+    case 'flat':     return [{ x: sx, y: sy }, { x: clampX(sx + 95), y: up(18) }];
+    case 'swing': {  const ox = clampX(sx + 90);
+                     return [{ x: sx, y: sy }, { x: ox, y: up(20) }, { x: clampX(ox + 35), y: up(210) }]; }
+    default:         return [{ x: sx, y: sy }, { x: sx, y: up(300) }];   // 'streak' = straight up
   }
-  if (o.route === 'swing') {          // out to the flat, then turn upfield
-    const ox = clampX(sx + 90);
-    return [{ x: sx, y: sy }, { x: ox, y: sy - 20 }, { x: clampX(ox + 35), y: Math.max(top, sy - 210) }];
-  }
-  return [{ x: sx, y: sy }, { x: sx, y: Math.max(top, sy - 300) }];   // 'streak' = straight up
 }
 
 // ============================================================
@@ -950,19 +1048,74 @@ function updateDefense(elapsed) {
       // difficulty (easy = a strong pocket, hard = rushers push through faster).
       if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow;
     } else if (d.role === 'LB') {
-      // Linebackers spy the QB in a short zone — they don't blitz, so the
-      // pocket holds; they pursue once the ball is thrown or handed off.
-      tx = offense[0].s.x; ty = G.losY - 45;
-      speed = DEF_SPEED * boost * 0.8;
+      if (G.blitz && d === defense[2]) {
+        // 🔥 BLITZ — this linebacker shoots the gap and chases the QB (and gets
+        // slowed if a lineman picks him up, same as the down linemen).
+        tx = offense[0].s.x; ty = offense[0].s.y;
+        if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow;
+      } else if (G.coverage === 'zone') {
+        // Zone: sit in the short middle and jump the nearest crosser.
+        const th = nearestThreatInBand(175, 358);
+        tx = th ? th.s.x : (d === defense[2] ? 210 : 322);
+        ty = G.losY - 55;
+        speed = DEF_SPEED * boost * 0.85;
+      } else {
+        // Man/spy: shadow the QB in a short zone so the pocket holds; pursue
+        // once the ball is thrown or handed off.
+        tx = offense[0].s.x; ty = G.losY - 45;
+        speed = DEF_SPEED * boost * 0.8;
+      }
     } else { // DB
-      // Cover your receiver — stay on the goal side (just above him).
-      const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === d.cover);
-      if (wr) { tx = wr.s.x; ty = wr.s.y - 24; }
-      else { tx = carrier.x; ty = carrier.y; }
+      if (G.coverage === 'zone') {
+        // Zone: guard a deep third; slide toward the most dangerous receiver in
+        // it (the one who's run the farthest upfield), else sit at your landmark.
+        const z = dbZone(d);
+        const th = nearestThreatInBand(z.lo, z.hi);
+        tx = th ? th.s.x : z.homeX;
+        ty = Math.min((th ? th.s.y : G.losY) - 26, G.losY - 92);
+      } else {
+        // Man: stay glued to your receiver, on the goal side (just above him).
+        const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === d.cover);
+        if (wr) { tx = wr.s.x; ty = wr.s.y - 24; }
+        else { tx = carrier.x; ty = carrier.y; }
+      }
+    }
+
+    // 🧠 BREAK ON THE BALL — the instant a pass is in the air, any defender
+    // near where it's headed drives hard to that spot to knock it down or pick
+    // it. A wide-open throw still sails in; a covered one gets contested.
+    if (G.state === 'pass' && G.passTarget && d.role !== 'DL') {
+      const toBall = Phaser.Math.Distance.Between(d.s.x, d.s.y, G.passTarget.x, G.passTarget.y);
+      const reach = G.difficulty === 'easy' ? 118 : G.difficulty === 'hard' ? 165 : 145;
+      if (toBall < reach) {
+        tx = G.passTarget.x; ty = G.passTarget.y;
+        speed = DEF_SPEED * boost * (G.difficulty === 'easy' ? 1.0 : 1.12);
+      }
     }
 
     steer(d.s, tx, ty, speed);
   }
+}
+
+// The receiver (of yours) most threatening a zone: whoever is inside the x-band
+// [loX..hiX] and has run the farthest upfield (smallest y). null = nobody there.
+function nearestThreatInBand(loX, hiX) {
+  let best = null, bestY = Infinity;
+  for (const o of offense) {
+    if (o.role !== 'WR' && o.role !== 'RB') continue;
+    if (o === G.ballCarrier) continue;
+    if (o.s.x < loX || o.s.x > hiX) continue;
+    if (o.s.y < bestY) { bestY = o.s.y; best = o; }
+  }
+  return best;
+}
+
+// Which deep third a zone defender patrols — matched to who he'd cover in man
+// (DB #1 = left, DB #2 = right, DB #3 = the middle).
+function dbZone(d) {
+  if (d.cover === 1) return { lo: 0,   hi: 205,         homeX: 120 };
+  if (d.cover === 2) return { lo: 328, hi: FIELD_WIDTH, homeX: FIELD_WIDTH - 120 };
+  return               { lo: 150, hi: 383,         homeX: FIELD_WIDTH / 2 };
 }
 
 function nearBlocker(d) {
@@ -2303,9 +2456,9 @@ function setupPlay(next) {
   place(offense[4], 226, L + 16);   // OL
   place(offense[5], 266, L + 16);   // OL
   place(offense[6], 306, L + 16);   // OL
-  offense[1].startY = offense[1].s.y;   // RB
-  offense[2].startY = offense[2].s.y;   // WR #1
-  offense[3].startY = offense[3].s.y;   // WR #2
+  offense[1].startY = offense[1].s.y; offense[1].startX = offense[1].s.x;   // RB
+  offense[2].startY = offense[2].s.y; offense[2].startX = offense[2].s.x;   // WR #1
+  offense[3].startY = offense[3].s.y; offense[3].startX = offense[3].s.x;   // WR #2
 
   place(defense[0], 246, L - 16);   // DL RUSH
   place(defense[1], 286, L - 16);   // DL RUSH
@@ -2320,6 +2473,7 @@ function setupPlay(next) {
 
   G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
   updateBall();
+  callPlay();           // 🧠 pick this down's routes + the defense's coverage/blitz
   drawRoutePreview();   // show where the receivers will run, BEFORE the snap
 
   // On 4th down, don't snap right away — first offer the choice:
@@ -2548,7 +2702,7 @@ function makePlayer(scene, color, role, opts) {
   const s = scene.physics.add.sprite(0, 0, color);
   s.setCollideWorldBounds(true);
   s.setDepth(5);
-  const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, label: null, trail: [] };
+  const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, startX: 0, label: null, trail: [] };
   // Labels so the key players are obvious: QB, RB, receivers 1/2,
   // and the two rushers ("the defense on the quarterback").
   if (role === 'QB' || role === 'WR' || role === 'DL' || role === 'RB') {

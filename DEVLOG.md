@@ -8,13 +8,15 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.5 — cache-buster is `?v=23` in `index.html`.
+- **Version:** v1.6 — cache-buster is `?v=24` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-07-22.
+- **Last updated:** 2026-07-28.
 
-## ✅ Sync status — in sync
+## ✅ Sync status — v1.6 built locally, not yet pushed
 
-Local `main` and `origin/main` are in sync as of 2026-07-22 (v1.5 pushed). The earlier push
+`origin/main` is at v1.5. **v1.6 (🧠 Smart football brains) is edited in the working tree
+but NOT committed or pushed yet** — commit and `git push origin main` when Max is happy with it,
+and GitHub Pages rebuilds within a minute or two. The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
 MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
@@ -71,6 +73,34 @@ rebuilds the live site within a minute or two.
     Season screen (not the plain menu). Quick Game is unchanged.
   - 🔇 Also fixed a v1.4 layout nit: on the menu the Mute button now sits in the far-right
     corner so it never overlaps the 🏆/🛍/🎁 row on a narrow phone.
+- **v1.6 — 🧠 Smart football brains** (this iteration — all in `src/main.js`):
+  - 📋 **A route playbook** — instead of the same three routes every down, each play now pulls a
+    "concept" out of an 8-play `PLAYBOOK` (Slants, Verticals, Smash, Mesh, Out & up, Dig-post,
+    Flood, Classic), and never calls the same one twice in a row (`callPlay`, run from `setupPlay`).
+    Added 8 new route shapes on top of streak/slant/swing: `out, in (dig), corner, post, curl,
+    comeback, drag, wheel, flat`. Routes are defined once in `routeVelocity` and **mirror** by the
+    side the receiver lined up on (`sideOf` reads each receiver's snap-time `startX`), so a left and
+    a right receiver break in opposite directions from one definition. `routePath` draws them all in
+    the pre-snap preview.
+  - 🏃 **Receivers work open** — in `updateReceivers`, a WR crowded within 40px slides toward the
+    open grass (away from the nearest defender) to shake free. Just a nudge, so routes still look
+    like routes.
+  - 🛡 **The defense reads the play** — each down the CPU picks `G.coverage` = `man` (tight, glued
+    to your guy) or `zone` (DBs drop to deep thirds via `dbZone`/`nearestThreatInBand`, LBs widen to
+    the short middle), and may `G.blitz` (a linebacker shoots the gap at the QB). Odds scale by
+    difficulty: easy ≈ 15% zone / 0% blitz, medium ≈ 42% / 15%, hard ≈ 55% / 30%.
+  - 🎯 **Break on the ball** — the moment a pass is thrown, `throwTo` stores `G.passTarget` and any
+    non-lineman defender within reach (118/145/165px by difficulty) drives hard to that spot to knock
+    it down or pick it. A **wide-open** throw still sails in; a **covered** one gets contested. Reset
+    in `resolvePass`.
+  - 🔊 The announcer now calls the coverage/blitz at the snap ("BLITZ!!", "Zone coverage!",
+    "Man to man!") so you can learn to read it.
+  - ⚠️ **Only the offense-has-ball path got the brains.** When YOU play defense, the CPU offense
+    (the red team's `updateRedReceivers`/juke AI) is unchanged — that's the natural next follow-up.
+  - 🧪 Verified by frame-stepping the scene in the browser (the headless preview never paints the
+    WebGL canvas, so the rAF loop is frozen — step `scene.update` + `physics.world.update` by hand,
+    or just drive `__td.callPlay`): all 8 concepts appear with no repeats, every route breaks the
+    right way and mirrors, man/zone/break-on-ball/blitz all fire with no errors.
 
 ## 🗂 File map (who does what)
 
@@ -123,7 +153,11 @@ python3 -m http.server 8055
 
 ## 🔮 Next up (ideas for the next cycle)
 
-- Smarter pass routes on both offense and defense; touchdown replays on defensive stops.
+- **Brains for the OTHER side** — v1.6 made your offense + the CPU's coverage smart; now give the
+  CPU offense (when YOU play defense) the same route playbook, and make your AI teammates play
+  real man/zone. Also: touchdown replays on defensive stops.
+- Still on the difficulty ladder: **two-player pass-and-play** (the other v1.6 finalist), **Maxwell**
+  the superstar boss, a **drafted skill play**, weather/night games, player progression.
 - **Seasons**, a **"Max Bowl,"** and **drafting players**.
 - More shop items and more daily-reward uniforms; a little coins-fly animation and a
   "cha-ching" sound when you buy or claim.
