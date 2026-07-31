@@ -248,6 +248,13 @@ const G = {
   blitz: false,         // is a linebacker shooting the gap at the QB this down?
   passTarget: null,     // where a thrown ball is headed — defenders break on it
 
+  // ---- v1.7: timeouts, formations, and 👑 Maxwell ----
+  timeouts: 3,          // YOUR timeouts left this half (3 per half, like real football)
+  clockStopped: false,  // a called timeout stops the clock for the very next play
+  formation: 0,         // which offensive FORMATION you're lined up in (index into FORMATIONS)
+  maxwell: false,       // 👑 is the superstar defender "MAXWELL" switched on for this game?
+  starLabel: null,      // the floating "MAXWELL 👑" nametag over the superstar defender
+
   // ---- Swipe dash / juke (touch) ----
   dashVX: 0, dashVY: 0, // the velocity of an active dash/cut
   dashUntil: 0,         // the dash/cut overrides the D-pad until this time
@@ -378,6 +385,12 @@ function create() {
     color: '#2ee6ff', stroke: '#000', strokeThickness: 4
   }).setOrigin(0.5).setDepth(8).setVisible(false);
 
+  // 👑 The gold "MAXWELL" tag that floats over the superstar defender, when he's on.
+  G.starLabel = this.add.text(0, 0, 'MAXWELL 👑', {
+    fontFamily: 'Arial Black, Arial', fontSize: '11px',
+    color: '#ffd60a', stroke: '#000', strokeThickness: 4
+  }).setOrigin(0.5).setDepth(8).setVisible(false);
+
   // Camera & world
   this.physics.world.setBounds(0, 0, FIELD_WIDTH, FIELD_LENGTH);
   this.cameras.main.setBounds(0, 0, FIELD_WIDTH, FIELD_LENGTH);
@@ -393,9 +406,14 @@ function create() {
   buildTeamMenu(this);
   enterMenu();
 
+  // v1.7 setup: remember the 👑 Maxwell toggle, and pop the HOW TO PLAY card up
+  // on a brand-new player's first visit.
+  loadMaxwell();
+  maybeShowHowtoOnFirstVisit();
+
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -676,14 +694,18 @@ function resolvePass(wr, x, y) {
   }
 
   // Who is closest to the RECEIVER when the ball arrives?
-  let nearestDef = Infinity;
+  let nearestDef = Infinity, nearestD = null;
   for (const d of defense) {
-    nearestDef = Math.min(nearestDef, Phaser.Math.Distance.Between(d.s.x, d.s.y, wx, wy));
+    const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, wx, wy);
+    if (dd < nearestDef) { nearestDef = dd; nearestD = d; }
   }
+  const starThere = G.maxwell && nearestD === defense[6];   // 👑 is it Maxwell in coverage?
 
   // A defender is right there — he either intercepts it or knocks it away.
-  if (nearestDef < CATCH_CONTEST) {
-    if (Math.random() < INT_CHANCE) endPlay('interception');
+  // Maxwell contests from a hair farther and picks it off a lot more often.
+  if (nearestDef < (starThere ? CATCH_CONTEST + 6 : CATCH_CONTEST)) {
+    const intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
+    if (Math.random() < intChance) endPlay('interception');
     else endPlay('incomplete', 'BROKEN UP!');
     return;
   }
@@ -1036,11 +1058,20 @@ function updateDefense(elapsed) {
     }
 
     let tx, ty, speed = DEF_SPEED * boost;
+    const isStar = G.maxwell && d === defense[6];   // 👑 the superstar free safety
 
     if (!qbHasBall && G.state !== 'pass') {
       // Someone caught it (or is running it) — everyone hunts the ball, but at the
-      // slower PURSUE_SPEED so a good runner can actually break away.
-      tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED * boost;
+      // slower PURSUE_SPEED so a good runner can actually break away. (Maxwell,
+      // the ballhawk, closes a touch faster than the rest.)
+      tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED * boost * (isStar ? 1.12 : 1);
+    } else if (isStar) {
+      // 👑 MAXWELL roams the deep middle as a center-field robber: he hovers over
+      // the top of your deepest receiver and reads the throw, ignoring man/zone.
+      const deep = nearestThreatInBand(0, FIELD_WIDTH);
+      tx = deep ? (deep.s.x + FIELD_WIDTH / 2) / 2 : FIELD_WIDTH / 2;
+      ty = Math.min((deep ? deep.s.y : G.losY) - 28, G.losY - 118);
+      speed = DEF_SPEED * boost * 1.06;
     } else if (d.role === 'DL') {
       // Linemen rush the quarterback...
       tx = offense[0].s.x; ty = offense[0].s.y;
@@ -1086,10 +1117,11 @@ function updateDefense(elapsed) {
     // it. A wide-open throw still sails in; a covered one gets contested.
     if (G.state === 'pass' && G.passTarget && d.role !== 'DL') {
       const toBall = Phaser.Math.Distance.Between(d.s.x, d.s.y, G.passTarget.x, G.passTarget.y);
-      const reach = G.difficulty === 'easy' ? 118 : G.difficulty === 'hard' ? 165 : 145;
+      // Maxwell has a superstar's range — he breaks on the ball from much farther.
+      const reach = isStar ? 230 : G.difficulty === 'easy' ? 118 : G.difficulty === 'hard' ? 165 : 145;
       if (toBall < reach) {
         tx = G.passTarget.x; ty = G.passTarget.y;
-        speed = DEF_SPEED * boost * (G.difficulty === 'easy' ? 1.0 : 1.12);
+        speed = DEF_SPEED * boost * (isStar ? 1.22 : G.difficulty === 'easy' ? 1.0 : 1.12);
       }
     }
 
@@ -1182,6 +1214,22 @@ function endPlay(result, customMsg) {
   freezeEveryone();
   if (routeGfx) routeGfx.clear();   // the route lines vanish when the play ends
   let msg, next, big = false;
+
+  // 🛑 SAFETY — you got tackled with the ball in your OWN end zone. That's 2
+  // points for the other team, and you free-kick the ball back to them (so
+  // they get the next possession — you'll be playing defense).
+  if (result === 'tackle' && yardsFromOwnGoal(G.ballCarrier.s.y) <= 0) {
+    G.oppScore += 2;
+    if (window.TDSound) TDSound.sting('lose');
+    sayComment(pick(['SAFETY!', 'Tackled in the end zone!', 'Two points, the other way!']));
+    advanceClock(TIME_SCORE_PLAY);
+    G.next = { los: 20, down: 1, fd: 30, fresh: true };   // free kick → they receive
+    G.state = 'dead';
+    G.deadUntil = G.scene.time.now + 1800;
+    updateHUD();
+    showBanner('SAFETY!  ' + (G.oppTeam ? G.oppTeam.abbr : 'DEF') + ' +2', true);
+    return;
+  }
 
   if (result === 'touchdown') {
     G.score += 6;
@@ -1341,7 +1389,31 @@ function onKickDone(result) {
 // notice the clock hit 0 and roll it over cleanly.
 function advanceClock(sec) {
   if (G.gameOver) return;
+  if (G.clockStopped) { G.clockStopped = false; return; }   // ⏱ a timeout froze the clock this play
   G.clock = Math.max(0, G.clock - sec);
+}
+
+// ⏱ Call a timeout — it stops the game clock for the very next play (so it
+// doesn't burn any time). You get 3 per half, just like real football.
+function callTimeout() {
+  // Works whenever the ball's in play (your drive OR while you're on defense) —
+  // that's when stopping the clock actually matters late in a game.
+  const canCall = ['presnap', 'live', 'dead', 'dpresnap', 'dlive', 'ddead'].includes(G.state);
+  if (!canCall || G.timeouts <= 0 || G.gameOver || G.clockStopped) return;
+  G.timeouts--;
+  G.clockStopped = true;
+  sayComment('Timeout! The clock stops.');
+  showBanner('⏱ TIMEOUT  ·  ' + G.timeouts + ' left', false);
+  updateTimeoutBtn();
+}
+
+// Keep the on-screen TIMEOUT button showing how many you have left (and gray
+// it out when you're out, or when it isn't your clock to stop).
+function updateTimeoutBtn() {
+  const b = document.getElementById('btn-timeout');
+  if (!b) return;
+  b.innerHTML = '⏱<small>' + G.timeouts + '</small>';
+  b.classList.toggle('off', G.timeouts <= 0);
 }
 
 // Called at a dead-ball boundary AFTER the clock's been charged. Rolls into
@@ -1356,6 +1428,7 @@ function tickPeriodAtBoundary() {
   if (!G.overtime && G.quarter < NUM_QUARTERS) {         // Q1→Q2→Q3→Q4
     G.quarter++;
     G.clock = QUARTER_SECONDS;
+    if (G.quarter === 3) { G.timeouts = 3; updateTimeoutBtn(); }   // ⏱ fresh timeouts each half
     return (G.quarter === 3) ? 'halftime' : 'qbreak';    // Q2 just ended = halftime
   }
   // End of the 4th quarter (or an overtime period).
@@ -1738,6 +1811,12 @@ function redPlayEnd(result, customMsg, byYou) {
 
   let spot = G.cpu.spot;
   if (result !== 'incomplete') {
+    // 🛑 SAFETY (your way) — you dropped their ball carrier in THEIR own end
+    // zone. 2 points for YOU, and they free-kick it back to you.
+    if (result === 'tackle' && redYardsFromGoal(G.ballCarrier.s.y) <= 0) {
+      cpuDriveEnd('safety', 'SAFETY!  YOU +2');
+      return;
+    }
     spot = Phaser.Math.Clamp(Math.round(redYardsFromGoal(G.ballCarrier.s.y)), 1, 99);
   }
   const gain = spot - G.cpu.spot;
@@ -1803,6 +1882,10 @@ function cpuDriveEnd(kind, customMsg) {
                                    if (window.TDSound) TDSound.sting('lose'); }
   else if (kind === 'fieldgoal') { pts = 3; big = true; msg = abbr + ' FIELD GOAL  +3'; }
   else if (kind === 'punt')      { msg = abbr + ' PUNTS IT AWAY'; }
+  else if (kind === 'safety')    { big = true; msg = customMsg || 'SAFETY!  YOU +2';
+                                   G.score += 2;                          // 🛑 the 2 points are YOURS
+                                   if (window.TDSound) TDSound.sting('td');
+                                   if (window.TDShop) TDShop.earn(3); }   // 🪙 a takeaway-ish reward
   else                           { big = true; msg = customMsg || 'TURNOVER — YOUR BALL!';
                                    if (window.TDShop) TDShop.earn(3); }   // 🪙 takeaways pay 3
 
@@ -2127,6 +2210,8 @@ function beginGame(team, opp, isSeason) {
   G.quarter = 1; G.clock = QUARTER_SECONDS;
   G.overtime = false; G.gameOver = false;
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
+  G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
+  updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
 
   // Paint both teams onto their players.
@@ -2431,6 +2516,47 @@ function startNextPlay() {
   else setupPlay(G.next);
 }
 
+// ============================================================
+// 🧩 FORMATIONS (v1.7) — how your skill players line up before the snap.
+// Each entry gives WR#1 / WR#2's x and the RB's spot (x + how far behind the
+// QB). Moving a receiver across midfield flips which way his routes break
+// (routes mirror off each guy's snap side), so formations really play
+// differently — TRIPS overloads one side, I-FORM tightens up for the run.
+// ============================================================
+const FORMATIONS = [
+  { name: 'SPREAD',  wr1: 55,  wr2: 478, rbx: 266, rby: 84  },  // wide open, RB beside the QB
+  { name: 'TRIPS R', wr1: 360, wr2: 470, rbx: 150, rby: 44  },  // both WRs stacked to the right
+  { name: 'TRIPS L', wr1: 63,  wr2: 173, rbx: 416, rby: 44  },  // both WRs stacked to the left
+  { name: 'I-FORM',  wr1: 150, wr2: 383, rbx: 266, rby: 104 },  // tight, RB deep behind the QB
+];
+
+// Put WR#1, WR#2 and the RB where the current formation says, at line 'L' (the
+// pixel y of the line of scrimmage), and remember each one's snap spot (startX/
+// startY) so the route system knows which side he lined up on.
+function layoutSkill(L) {
+  const f = FORMATIONS[G.formation] || FORMATIONS[0];
+  place(offense[1], f.rbx, L + f.rby);   // RB
+  place(offense[2], f.wr1, L + 14);      // WR #1
+  place(offense[3], f.wr2, L + 14);      // WR #2
+  for (const i of [1, 2, 3]) { offense[i].startY = offense[i].s.y; offense[i].startX = offense[i].s.x; }
+}
+
+// The FORMATION button (pre-snap only): cycle to the next look, re-line-up, and
+// redraw the route preview from the new spots (same routes — they just move/mirror).
+function cycleFormation() {
+  if (G.state !== 'presnap') return;
+  G.formation = (G.formation + 1) % FORMATIONS.length;
+  layoutSkill(G.losY);
+  drawRoutePreview();
+  updateFormationBtn();
+  sayComment(FORMATIONS[G.formation].name + ' formation');
+}
+
+function updateFormationBtn() {
+  const b = document.getElementById('btn-formation');
+  if (b) b.innerHTML = '🧩<small>' + FORMATIONS[G.formation].name + '</small>';
+}
+
 function setupPlay(next) {
   // Bring everyone back onto the field (a kickoff return hides all but the returner).
   for (const o of offense) { o.s.setVisible(true); if (o.label) o.label.setVisible(true); o.trail = []; }
@@ -2450,15 +2576,11 @@ function setupPlay(next) {
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
-  place(offense[1], 266, L + 84);   // RB (behind the QB)
-  place(offense[2], 55,  L + 14);   // WR #1 (left)
-  place(offense[3], 478, L + 14);   // WR #2 (right)
   place(offense[4], 226, L + 16);   // OL
   place(offense[5], 266, L + 16);   // OL
   place(offense[6], 306, L + 16);   // OL
-  offense[1].startY = offense[1].s.y; offense[1].startX = offense[1].s.x;   // RB
-  offense[2].startY = offense[2].s.y; offense[2].startX = offense[2].s.x;   // WR #1
-  offense[3].startY = offense[3].s.y; offense[3].startX = offense[3].s.x;   // WR #2
+  layoutSkill(L);                   // 🧩 line up the RB + WRs per the chosen formation
+  updateFormationBtn();
 
   place(defense[0], 246, L - 16);   // DL RUSH
   place(defense[1], 286, L - 16);   // DL RUSH
@@ -2522,6 +2644,13 @@ function setupTouchButtons() {
   bindTapEl('btn-mode', toggleTwoPlayer);
   bindTapEl('btn-view', toggleView);
   bindTapEl('btn-fs', toggleFullscreen);
+
+  // ⏱ Timeout + 🧩 Formation (in-game), and the menu HOW TO PLAY / Maxwell toggle
+  bindTapEl('btn-timeout', callTimeout);
+  bindTapEl('btn-formation', cycleFormation);
+  bindTapEl('open-howto', openHowto);
+  bindTapEl('howto-close', closeHowto);
+  bindTapEl('toggle-maxwell', toggleMaxwell);
 
   // The 4th-down choice buttons (① play the down, ② kick)
   bindTapEl('btn-go', () => chooseFourthDown('play'));
@@ -2614,6 +2743,37 @@ function toggleFullscreen() {
     else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
   }
   setTimeout(() => { if (window.game && game.scale) game.scale.refresh(); }, 300);
+}
+
+// ---- 👑 MAXWELL toggle (on the menu) --------------------------------------
+// Flip the superstar defender on/off for your games, and remember the choice.
+function toggleMaxwell() {
+  G.maxwell = !G.maxwell;
+  try { localStorage.setItem('tdr-maxwell', G.maxwell ? '1' : '0'); } catch (e) {}
+  updateMaxwellBtn();
+  if (G.maxwell) sayComment && sayComment('👑 Maxwell is IN the game!');
+}
+function updateMaxwellBtn() {
+  const b = document.getElementById('toggle-maxwell');
+  if (b) b.classList.toggle('on', G.maxwell);
+}
+function loadMaxwell() {
+  try { G.maxwell = localStorage.getItem('tdr-maxwell') === '1'; } catch (e) {}
+  updateMaxwellBtn();
+}
+
+// ---- 📖 HOW TO PLAY (the tutorial overlay) --------------------------------
+// A friendly full-screen card that explains the controls. It pops up on your
+// very first visit, and any time you tap HOW TO PLAY on the menu.
+function openHowto()  { const el = document.getElementById('howto-modal'); if (el) el.style.display = 'flex'; }
+function closeHowto() {
+  const el = document.getElementById('howto-modal'); if (el) el.style.display = 'none';
+  try { localStorage.setItem('tdr-seen-howto', '1'); } catch (e) {}
+}
+function maybeShowHowtoOnFirstVisit() {
+  let seen = false;
+  try { seen = localStorage.getItem('tdr-seen-howto') === '1'; } catch (e) {}
+  if (!seen) openHowto();
 }
 
 // A "hold" button: down = start moving, up/leave = stop.
@@ -2775,6 +2935,14 @@ function updateHUD() {
       G.youLabel.setPosition(offense[0].s.x, offense[0].s.y - 22);
       if (G.p2Label) G.p2Label.setVisible(false);   // P2 sits out the defense phase (for now)
     }
+  }
+
+  // 👑 Float the gold "MAXWELL" tag over the superstar — only while YOU'RE on
+  // offense (that's when defense[6] is the CPU's ballhawk you're up against).
+  if (G.starLabel) {
+    const showStar = G.maxwell && G.team && !onDefense && defense[6] && G.state !== 'kickoff';
+    G.starLabel.setVisible(!!showStar);
+    if (showStar) G.starLabel.setPosition(defense[6].s.x, defense[6].s.y - 22);
   }
   if (onDefense) {
     if (G.cpu) {

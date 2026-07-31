@@ -160,6 +160,37 @@
        sit on top of the 🏆/🛍/🎁 row in the top-left. */
     body.menu #btn-mute { right: max(12px, env(safe-area-inset-right)); }
 
+    /* ---- v1.7 in-game controls: ⏱ Timeout + 🧩 Formation ---------------- */
+    /* A second little row on the right, just under the mute/view/fs buttons. */
+    #ingame-ctrls {
+      position: fixed; z-index: 12;
+      top: calc(max(12px, env(safe-area-inset-top)) + 48px);
+      right: max(12px, env(safe-area-inset-right));
+      display: flex; gap: 6px;
+    }
+    #ingame-ctrls .btn {
+      flex-direction: column; width: 66px; height: 40px; font-size: 16px; line-height: 1;
+    }
+    #ingame-ctrls .btn small { font-size: 8px; letter-spacing: .3px; margin-top: 2px; font-weight: 800; }
+    #ingame-ctrls .btn.off { opacity: .38; }
+    #ingame-ctrls .btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
+    body.menu #ingame-ctrls,
+    body.kicking #ingame-ctrls,
+    body.returning #ingame-ctrls { display: none !important; }
+
+    /* 👑 The Maxwell toggle lights up gold when he's switched on. */
+    #toggle-maxwell.on { background: rgba(255,214,10,0.5); border-color: #ffd60a; color: #fff; }
+
+    /* ---- 📖 HOW TO PLAY overlay (reuses the .ov / .ov-card modal look) ---- */
+    /* Sit ABOVE the other overlays (z 70) so on a first-ever load the tutorial
+       reads on top of the day-1 daily-rewards popup, not buried under it. */
+    #howto-modal { z-index: 85; }
+    #howto-modal .ov-card { max-width: min(92vw, 470px); text-align: left; max-height: 86vh; overflow-y: auto; }
+    .howto-h { font: 800 12px "Arial Black", Arial; color: #8fb8ff; letter-spacing: .6px; margin: 12px 0 3px; }
+    .howto-row { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; font: 13px/1.35 Arial; color: #dfe6f2; }
+    .howto-key { flex: 0 0 84px; font: 800 12px "Arial Black", Arial; color: #2ee6ff; }
+    .howto-row b { color: #ffe066; }
+
     /* Player 2's D-pad, top-center — hidden until 2-player mode is on */
     #dpad2 {
       position: fixed; left: 50%; transform: translateX(-50%); z-index: 10;
@@ -498,6 +529,7 @@
     <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
+    <div class="meta-btn" id="open-howto">📖<small>HOW TO</small></div>
   </div>
 
   <!-- Difficulty picker (Easy / Medium / Hard) — shown on the menu, above PLAY -->
@@ -508,6 +540,11 @@
       <div class="diff-btn sel" id="diff-medium" data-diff="medium">MEDIUM</div>
       <div class="diff-btn" id="diff-hard" data-diff="hard">HARD</div>
     </div>
+    <!-- 👑 Optional superstar-defender challenge -->
+    <div class="tm-diff-lab" style="margin-top:6px">SUPERSTAR CHALLENGE</div>
+    <div class="tm-diff-row">
+      <div class="diff-btn" id="toggle-maxwell">👑 FACE MAXWELL</div>
+    </div>
   </div>
 
   <!-- Mute + 3D/2D view + Fullscreen + 1P/2P switch (top-right) -->
@@ -515,6 +552,12 @@
   <div class="btn" id="btn-view">3D</div>
   <div class="btn" id="btn-fs">⛶</div>
   <div class="btn" id="btn-mode">1P</div>
+
+  <!-- v1.7 in-game buttons: ⏱ Timeout (3 per half) + 🧩 Formation (pre-snap) -->
+  <div id="ingame-ctrls">
+    <div class="btn" id="btn-timeout">⏱<small>3</small></div>
+    <div class="btn" id="btn-formation">🧩<small>SPREAD</small></div>
+  </div>
 
   <!-- The scoreboard HUD. Lives in the DOM (not on the tilted canvas) so it
        stays crisp. main.js fills these in every frame (see buildHUD/updateHUD). -->
@@ -557,6 +600,39 @@
       <div class="btn" id="btn-hand">HAND</div>
     </div>
     <div class="btn" id="btn-snap">HIKE</div>
+  </div>
+
+  <!-- 📖 HOW TO PLAY — the friendly tutorial. Pops up on a first visit, or from
+       the HOW TO button on the menu (see openHowto/closeHowto in main.js). -->
+  <div class="ov" id="howto-modal">
+    <div class="ov-card">
+      <div class="ov-title">📖 HOW TO PLAY</div>
+      <div class="ov-sub">You're the offense in cyan. Score touchdowns, stop them on defense!</div>
+
+      <div class="howto-h">🏃 MOVING & SNAPPING</div>
+      <div class="howto-row"><span class="howto-key">Arrows</span><span>Move your player around the field (or the arrow keys on a keyboard).</span></div>
+      <div class="howto-row"><span class="howto-key">HIKE / Space</span><span>Snap the ball to start the play. Everyone takes off running.</span></div>
+      <div class="howto-row"><span class="howto-key">Swipe</span><span>While running the ball, <b>swipe the field</b> — a long swipe is a speed <b>DASH</b>, a short one is a quick cut.</span></div>
+
+      <div class="howto-h">🏈 PASSING & RUNNING</div>
+      <div class="howto-row"><span class="howto-key">Tap a receiver</span><span>Behind the line, tap the guy you want and the QB throws to him. (Or press <b>1 / 2 / 3</b>.)</span></div>
+      <div class="howto-row"><span class="howto-key">Read the routes</span><span>The colored lines show where each receiver is running <b>before</b> the snap. Throw to whoever gets open!</span></div>
+      <div class="howto-row"><span class="howto-key">HAND / H</span><span>Hand off to the running back and pound it up the middle.</span></div>
+      <div class="howto-row"><span class="howto-key">Goal</span><span>Cross the far goal line for a <b>TOUCHDOWN</b> (6), then kick the extra point (+1).</span></div>
+
+      <div class="howto-h">🛡 PLAY DEFENSE</div>
+      <div class="howto-row"><span class="howto-key">You = YOU tag</span><span>When they have the ball, you control the player with the <b>YOU</b> tag. Chase down whoever has the ball and tackle him!</span></div>
+
+      <div class="howto-h">🧩 FORMATIONS &amp; ⏱ TIMEOUTS <span style="font-weight:400;color:#9fb0c8">(new!)</span></div>
+      <div class="howto-row"><span class="howto-key">🧩 Formation</span><span>Before the snap, tap it to change how your receivers line up — SPREAD, TRIPS, or I-FORM.</span></div>
+      <div class="howto-row"><span class="howto-key">⏱ Timeout</span><span>Stops the clock so you don't run out of time. You get <b>3 each half</b>.</span></div>
+      <div class="howto-row"><span class="howto-key">🛑 Safety</span><span>Get tackled in your <b>own</b> end zone and the other team gets <b>2 points</b> — so don't get pinned back there!</span></div>
+
+      <div class="howto-h">4️⃣ ON 4TH DOWN</div>
+      <div class="howto-row"><span class="howto-key">Go or kick</span><span>Go for it, try a <b>field goal</b> (3 points), or <b>punt</b> it away.</span></div>
+
+      <div class="ov-btn yes" id="howto-close">GOT IT — LET'S PLAY! 🏈</div>
+    </div>
   </div>
 
   <!-- 🏆 SEASON MODE — a whole 8-team league, playoffs & the Max Bowl.
@@ -644,12 +720,12 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=24"></script>
-  <script src="src/sound.js?v=24"></script>
-  <script src="src/shop.js?v=24"></script>
-  <script src="src/season.js?v=24"></script>
-  <script src="src/ads.js?v=24"></script>
-  <script src="src/kick.js?v=24"></script>
-  <script src="src/main.js?v=24"></script>
+  <script src="src/stats.js?v=25"></script>
+  <script src="src/sound.js?v=25"></script>
+  <script src="src/shop.js?v=25"></script>
+  <script src="src/season.js?v=25"></script>
+  <script src="src/ads.js?v=25"></script>
+  <script src="src/kick.js?v=25"></script>
+  <script src="src/main.js?v=25"></script>
 </body>
 </html>

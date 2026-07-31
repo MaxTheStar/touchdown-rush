@@ -8,15 +8,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.6 — cache-buster is `?v=24` in `index.html`.
+- **Version:** v1.7 — cache-buster is `?v=25` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-07-28.
+- **Last updated:** 2026-07-30.
 
-## ✅ Sync status — v1.6 built locally, not yet pushed
+## ✅ Sync status — v1.7 built locally, not yet pushed
 
-`origin/main` is at v1.5. **v1.6 (🧠 Smart football brains) is edited in the working tree
-but NOT committed or pushed yet** — commit and `git push origin main` when Max is happy with it,
-and GitHub Pages rebuilds within a minute or two. The earlier push
+`origin/main` is at v1.6 (commit f9ca686). **v1.7 (safeties, tutorial, timeouts, formations, and
+👑 Maxwell) is edited in the working tree** — commit and `git push origin main` to ship it. The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
 MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
@@ -101,6 +100,33 @@ rebuilds the live site within a minute or two.
     WebGL canvas, so the rAF loop is frozen — step `scene.update` + `physics.world.update` by hand,
     or just drive `__td.callPlay`): all 8 concepts appear with no repeats, every route breaks the
     right way and mirrors, man/zone/break-on-ball/blitz all fire with no errors.
+- **v1.7 — 🛑 Safeties, 📖 tutorial, ⏱ timeouts, 🧩 formations & 👑 Maxwell** (this iteration —
+  `src/main.js` + `index.html`):
+  - 🛑 **Safeties (2 points)** — tackled with the ball in your OWN end zone = +2 for the defense and
+    a free kick to the other team. Handled both ways: `endPlay` (you concede → `G.oppScore += 2`,
+    `fresh` possession to the CPU) and `redPlayEnd`→`cpuDriveEnd('safety')` (you tackle them in their
+    end zone → `G.score += 2`, ball kicked back to you). Guarded by `yardsFromOwnGoal(...) <= 0` /
+    `redYardsFromGoal(...) <= 0`; a normal midfield tackle never false-triggers.
+  - 📖 **HOW TO PLAY tutorial** — a friendly `#howto-modal` overlay (moving, passing, defense,
+    formations/timeouts, 4th down). Auto-pops on a first-ever visit (`tdr-seen-howto`), or via the
+    new 📖 HOW TO menu button. `z-index: 85` so it sits on top of the day-1 daily-rewards popup.
+  - ⏱ **Timeouts** — `callTimeout` gives you 3 per half; a timeout sets `G.clockStopped`, and the
+    next `advanceClock` is skipped (the clock stops for that play). Refills at halftime
+    (`tickPeriodAtBoundary`). The `#btn-timeout` button shows how many are left. Works on offense
+    AND while you're on defense (to stop their clock late).
+  - 🧩 **Formations** — `FORMATIONS` (SPREAD / TRIPS R / TRIPS L / I-FORM); `layoutSkill(L)` places
+    the RB + WRs and records `startX/startY`. `setupPlay` uses it; the `#btn-formation` button
+    (`cycleFormation`, pre-snap only) cycles the look and redraws the preview. Because routes mirror
+    off snap side, moving a WR across the ball actually changes how his route breaks.
+  - 👑 **Maxwell (the next-hardest feature)** — a superstar CPU free safety, toggled on the menu
+    (`toggle-maxwell`, persisted as `tdr-maxwell`). When on, `defense[6]` roams the deep middle as a
+    center-field robber, breaks on the ball from way farther (reach 230 vs 118–165), closes faster,
+    and picks it off far more often (`INT_CHANCE + 0.25` when he's the nearest defender). A gold
+    "MAXWELL 👑" nametag (`G.starLabel`) floats over him.
+  - 🧪 Verified in-browser: safeties both ways (+2, possession flips, no false positives on a normal
+    tackle), timeout decrement + clock-skip + halftime refill, all 4 formations reposition & update
+    `startX`, Maxwell's robber path + 230px break reach (a normal DB holds at 200px, breaks at 120px)
+    + persisted toggle + nametag. Tutorial + menu screenshotted at iPad size — clean, no overlap.
 
 ## 🗂 File map (who does what)
 
@@ -131,7 +157,8 @@ Script load order matters: `stats → sound → shop → season → ads → kick
 `tdr-coins`, `tdr-gear`, `tdr-daily`, `tdr-premium`, `tdr-owned-uniforms`, `tdr-trk`,
 `tdr-games`, `tdr-reviews`, `tdr-country`, `tdr-counted-player`, `tdr-counted-geo`,
 `tdr-known-countries`, `tdr-review-asked`, `tdr-view` (3D or 2D field view),
-`tdr-season` (the whole in-progress season), `tdr-titles` (all-time Max Bowl wins).
+`tdr-season` (the whole in-progress season), `tdr-titles` (all-time Max Bowl wins),
+`tdr-maxwell` (👑 the superstar-defender toggle), `tdr-seen-howto` (has the tutorial popped once).
 
 ## 📝 Notes & limitations
 
@@ -156,8 +183,10 @@ python3 -m http.server 8055
 - **Brains for the OTHER side** — v1.6 made your offense + the CPU's coverage smart; now give the
   CPU offense (when YOU play defense) the same route playbook, and make your AI teammates play
   real man/zone. Also: touchdown replays on defensive stops.
-- Still on the difficulty ladder: **two-player pass-and-play** (the other v1.6 finalist), **Maxwell**
-  the superstar boss, a **drafted skill play**, weather/night games, player progression.
+- Still on the difficulty ladder: **two-player pass-and-play** (the other v1.6 finalist), a **drafted
+  skill play**, weather/night games, player progression. (👑 Maxwell shipped in v1.7.)
+- Maxwell follow-ups if wanted: give him custom art (a crown on the chibi), let him jump routes he
+  didn't start near, or make him a whole boss TEAM instead of one player.
 - **Seasons**, a **"Max Bowl,"** and **drafting players**.
 - More shop items and more daily-reward uniforms; a little coins-fly animation and a
   "cha-ching" sound when you buy or claim.
