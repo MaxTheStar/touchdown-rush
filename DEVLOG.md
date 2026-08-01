@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.9 — cache-buster is `?v=27` in `index.html`.
+- **Version:** v1.9 — cache-buster is `?v=28` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-30.
 
@@ -160,20 +160,20 @@ rebuilds the live site within a minute or two.
     intended target: the nearest player of EITHER team within `LOOSE_BALL_DIST` makes a play — a
     defender picks it, or another receiver adjusts and catches it (shared `catchAndRun` hands you the
     controls).
-  - 🏈 **Pick-six returns + control-follows-the-ball** — on defense, `pickMyDefender` auto-switches
-    the defender YOU drive to whoever's closest to the ball (22px hysteresis, `G.myDefender`; the YOU
-    tag + `updateBlueTeammates` follow it). When you intercept, `startPickSix` makes you that defender
-    and **reuses the whole kickoff-return system** (state `'kickoff'`, `G.pickSix`) to run it back —
-    a tackle spots your new drive (`endKickoffReturn`), reaching the endzone is a defensive TD
-    (`checkTouchdown`→`endPlay('touchdown')`).
+  - 🏈 **Pick-six returns + control-follows-the-ball** — on defense, `pickMyDefender` switches the
+    defender YOU drive to whoever's closest to the ball (22px hysteresis, `G.myDefender`; the YOU tag
+    + `updateBlueTeammates` follow it). Per Max's call, `controlYourDefender` only runs that
+    auto-switch on a **live run** (`G.state==='dlive' && G.ballCarrier !== defense[0]`) — while their
+    QB is in the pocket, or the ball's in the air, you keep your own man. When you intercept,
+    `startPickSix` makes you that defender and **reuses the whole kickoff-return system** (state
+    `'kickoff'`, `G.pickSix`) to run it back — a tackle spots your new drive (`endKickoffReturn`),
+    reaching the endzone is a defensive TD (`checkTouchdown`→`endPlay('touchdown')`).
   - 🧪 Verified in-browser: ratings render + screenshot-checked (no overlap with the DIFFICULTY
     buttons — they start at canvas y≈546, bars sit above); control switches to the nearest defender
     with hysteresis; pick-six enters the return state controlling the picker; turnover spots computed
     + consumed both ways; open-field catch/INT on a bad throw. No console errors.
-  - ⚠️ NOTE for next time: `pickMyDefender` is literal "nearest to the ball," so at the snap control
-    can jump to a pass-rusher (the ball's with their QB). If that feels off, scope the auto-switch to
-    live runs / turnovers only. Also: a pick-six TD currently skips its own extra-point kick (it goes
-    through the kickoff-return TD path) — fine, but noting it.
+  - ⚠️ NOTE for next time: a pick-six TD currently skips its own extra-point kick (it goes through the
+    kickoff-return TD path) — fine, but noting it in case Max wants the PAT added.
 
 ## 🗂 File map (who does what)
 
