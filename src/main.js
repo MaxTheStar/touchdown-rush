@@ -55,6 +55,8 @@ const HANDOFF_DIST = 60;  // QB must be this close to the RB to hand off (else t
 const CATCH_CHANCE = 0.85; // an OPEN receiver hauls it in...
 const DROP_CHANCE  = 0.12; // ...but might catch it and then drop it
 const INT_CHANCE   = 0.40; // if a defender is right there, he PICKS IT OFF (else knocks it down)
+const BAD_THROW_CHANCE = 0.12; // the QB sometimes slips and sails one into open space
+const LOOSE_BALL_DIST  = 34;   // this close to a bad throw's landing = you can make a play on it
 
 // ---- Fumbles — a big tackle can knock the ball loose ----
 const FUMBLE_CHANCE      = 0.12; // this often, a tackle pops the ball out
@@ -176,6 +178,42 @@ const NFL_TEAMS = [
   { abbr: 'SF',  name: '49ERS',      jersey: 0xAA0000, helmet: 0xB3995D },
 ];
 
+// ============================================================
+// ⭐ TEAM RATINGS (v1.9) — every team gets an OFFENSE and a DEFENSE score out
+// of 10, so each one is better at a specific thing (Seattle's a defense team,
+// New England leans offense, Kansas City is an offense monster, etc). The menu
+// shows the stars, and the numbers give the opponent a gentle strength tilt so
+// a great team really does play a little tougher.
+// ============================================================
+const TEAM_RATINGS = {
+  SEA: { off: 6,  def: 9 },  PIT: { off: 6,  def: 8 },  BUF: { off: 9,  def: 8 },
+  MIA: { off: 8,  def: 6 },  NE:  { off: 8,  def: 6 },  NYJ: { off: 5,  def: 8 },
+  BAL: { off: 9,  def: 7 },  CIN: { off: 8,  def: 5 },  CLE: { off: 6,  def: 8 },
+  HOU: { off: 7,  def: 7 },  IND: { off: 7,  def: 6 },  JAX: { off: 6,  def: 5 },
+  TEN: { off: 6,  def: 7 },  DEN: { off: 6,  def: 8 },  KC:  { off: 10, def: 7 },
+  LV:  { off: 7,  def: 5 },  LAC: { off: 8,  def: 6 },  DAL: { off: 8,  def: 7 },
+  NYG: { off: 5,  def: 7 },  PHI: { off: 9,  def: 8 },  WAS: { off: 6,  def: 7 },
+  CHI: { off: 5,  def: 8 },  DET: { off: 9,  def: 6 },  GB:  { off: 8,  def: 6 },
+  MIN: { off: 8,  def: 7 },  ATL: { off: 7,  def: 5 },  CAR: { off: 5,  def: 6 },
+  NO:  { off: 7,  def: 6 },  TB:  { off: 7,  def: 8 },  ARI: { off: 6,  def: 5 },
+  LAR: { off: 7,  def: 8 },  SF:  { off: 8,  def: 9 },
+};
+
+// Look up a team's ratings (defaults to a balanced 5/5 for the unlockable
+// uniforms, which aren't real NFL teams). overall = the average, out of 10.
+function teamRating(team) {
+  const r = (team && TEAM_RATINGS[team.abbr]) || { off: 5, def: 5 };
+  const overall = Math.round((r.off + r.def) / 2);
+  const specialty = r.off > r.def ? 'OFFENSE' : r.def > r.off ? 'DEFENSE' : 'BALANCED';
+  return { off: r.off, def: r.def, overall, specialty };
+}
+
+// Draw a 0–10 rating as filled/empty stars for the menu, e.g. ★★★★★★★☆☆☆.
+function stars10(n) {
+  n = Phaser.Math.Clamp(Math.round(n), 0, 10);
+  return '★'.repeat(n) + '☆'.repeat(10 - n);
+}
+
 // The CHOOSE-YOUR-TEAM list: every NFL team PLUS any exclusive uniforms
 // you've unlocked from the daily rewards (they live in src/shop.js and
 // have special:true, so the menu can brag about them).
@@ -254,6 +292,16 @@ const G = {
   formation: 0,         // which offensive FORMATION you're lined up in (index into FORMATIONS)
   maxwell: false,       // 👑 is the superstar defender "MAXWELL" switched on for this game?
   starLabel: null,      // the floating "MAXWELL 👑" nametag over the superstar defender
+
+  // ---- v1.9: team-rating strength tilt (all default to 1 = neutral) ----
+  myOff: 1, myDef: 1,   // YOUR team's offense/defense multipliers (from teamRating)
+  oppOff: 1, oppDef: 1, // the opponent's offense/defense multipliers
+
+  // ---- v1.9: turnovers & control ----
+  turnoverSpotCpu: null, // where a turnover puts the ball for a NEW CPU drive (their yards)
+  turnoverSpotYou: null, // where a turnover puts the ball for a NEW drive of yours (your yards)
+  myDefender: null,      // the defender YOU control right now (closest to the ball, on defense)
+  pickSix: false,        // true while you're running back an interception
 
   // ---- v1.7: smart routes for the CPU OFFENSE (when you play defense) ----
   redConcept: null,     // the CPU offense's play this down (which route each red receiver runs)
@@ -419,7 +467,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, teamRating, stars10, resolveRedPass, resolveFumble, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -670,8 +718,16 @@ function throwTo(num) {
   const thrower = G.ballCarrier.s;
   const dist = Phaser.Math.Distance.Between(thrower.x, thrower.y, wr.s.x, wr.s.y);
   const flight = dist / BALL_SPEED;
-  const targetX = Phaser.Math.Clamp(wr.s.x + wr.s.body.velocity.x * flight, 10, FIELD_WIDTH - 10);
-  const targetY = wr.s.y + wr.s.body.velocity.y * flight;
+  let targetX = Phaser.Math.Clamp(wr.s.x + wr.s.body.velocity.x * flight, 10, FIELD_WIDTH - 10);
+  let targetY = wr.s.y + wr.s.body.velocity.y * flight;
+
+  // 🎲 Sometimes the QB slips and throws a bad one — it sails off into open
+  // space, where anyone nearby (a defender OR another receiver) can grab it.
+  if (Math.random() < BAD_THROW_CHANCE) {
+    targetX = Phaser.Math.Clamp(targetX + Phaser.Math.Between(-95, 95), 10, FIELD_WIDTH - 10);
+    targetY = targetY + Phaser.Math.Between(-80, 80);
+    sayComment(pick(['Bad throw!', 'Off the mark!', 'That one sailed!', 'Wobbly pass!']));
+  }
   G.passTarget = { x: targetX, y: targetY };   // 🧠 defenders break on this spot
 
   ball.setPosition(thrower.x, thrower.y);
@@ -691,10 +747,27 @@ function resolvePass(wr, x, y) {
   // Where the receiver ACTUALLY is when the ball arrives (he kept running).
   const wx = wr.s.x, wy = wr.s.y;
 
-  // If the ball landed nowhere near him, it was overthrown — INCOMPLETE.
-  // (This is the fix for the "ball sails way past him but it's still a catch,
-  //  and somehow a first down" bug — now a bad throw is just incomplete.)
+  // If the ball landed nowhere near the intended receiver, it was a BAD THROW
+  // into open space — now it's a scramble. Whoever is closest to where it comes
+  // down can make a play on it (a defender picks it, or another receiver grabs it).
   if (Phaser.Math.Distance.Between(x, y, wx, wy) > OVERTHROW_DIST) {
+    let nd = Infinity, ndef = null;
+    for (const d of defense) {
+      const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, x, y);
+      if (dd < nd) { nd = dd; ndef = d; }
+    }
+    if (nd < LOOSE_BALL_DIST) {   // a defender jumps the bad throw = INTERCEPTION
+      G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(y)), 1, 99);
+      endPlay('interception', 'PICKED OFF!');
+      return;
+    }
+    let nw = Infinity, nwr = null;   // one of YOUR receivers might adjust and haul it in
+    for (const o of offense) {
+      if (o.role !== 'WR' && o.role !== 'RB') continue;
+      const dd = Phaser.Math.Distance.Between(o.s.x, o.s.y, x, y);
+      if (dd < nw) { nw = dd; nwr = o; }
+    }
+    if (nwr && nw < LOOSE_BALL_DIST) { catchAndRun(nwr, x, y, pick(['Caught it anyway!', 'What a grab!'])); return; }
     endPlay('incomplete', 'OVERTHROWN!');
     return;
   }
@@ -711,8 +784,10 @@ function resolvePass(wr, x, y) {
   // Maxwell contests from a hair farther and picks it off a lot more often.
   if (nearestDef < (starThere ? CATCH_CONTEST + 6 : CATCH_CONTEST)) {
     const intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
-    if (Math.random() < intChance) endPlay('interception');
-    else endPlay('incomplete', 'BROKEN UP!');
+    if (Math.random() < intChance) {
+      G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(wy)), 1, 99);
+      endPlay('interception');
+    } else endPlay('incomplete', 'BROKEN UP!');
     return;
   }
 
@@ -723,19 +798,23 @@ function resolvePass(wr, x, y) {
   // ...or catch it and drop it.
   if (Math.random() < DROP_CHANCE - gl.dropCut)  { endPlay('incomplete', 'DROPPED IT!'); return; }
 
-  // Clean catch! Put the ball in his hands and you now control this receiver.
-  ball.setPosition(wx, wy);
+  // Clean catch! You now control this receiver.
+  catchAndRun(wr, wx, wy, nearestDef > 120 ? pick(['WIDE OPEN!', 'ALL ALONE!', 'Nobody there!'])
+                                           : pick(['Nice grab!', 'Caught it!', 'Reception!', 'What a catch!']));
+}
+
+// Put the ball in a receiver's hands and hand YOU the controls — shared by a
+// clean catch and an "caught the bad throw in open space" grab.
+function catchAndRun(wr, x, y, msg) {
+  ball.setPosition(x, y);
   G.ballCarrier = wr;
   G.state = 'live';
   ballFollow = true;
   G.scene.cameras.main.startFollow(wr.s, true, 0.12, 0.12);
-
   // 🔋 CATCH ENERGY (shop): a clean catch fires a burst of speed!
   const boostMs = window.TDShop ? TDShop.energyMs() : 0;
-  if (boostMs) G.boostUntil = G.scene.time.now + boostMs;
-  sayComment(boostMs ? pick(['🔋 CATCH ENERGY!', '🔋 Boost ON!'])
-           : nearestDef > 120 ? pick(['WIDE OPEN!', 'ALL ALONE!', 'Nobody there!'])
-                              : pick(['Nice grab!', 'Caught it!', 'Reception!', 'What a catch!']));
+  if (boostMs) { G.boostUntil = G.scene.time.now + boostMs; sayComment(pick(['🔋 CATCH ENERGY!', '🔋 Boost ON!'])); }
+  else sayComment(msg);
 }
 
 // ============================================================
@@ -939,7 +1018,7 @@ function updateReceivers(elapsed) {
     if (o.s.x > FIELD_WIDTH - 12 && vx > 0) vx = 0;
     if (o.s.y <= ENDZONE + 8) vy = 0;
 
-    o.s.setVelocity(vx, vy);
+    o.s.setVelocity(vx * G.myOff, vy * G.myOff);   // ⭐ your team's offense rating
     if (vx || vy) o.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
   }
 }
@@ -1053,7 +1132,7 @@ function updateLine() {
 function updateDefense(elapsed) {
   const carrier = G.ballCarrier.s;
   const qbHasBall = G.ballCarrier === offense[0] && !G.hasPassed;
-  const boost = diff().defBoost;   // HARD mode: the whole defense moves faster
+  const boost = diff().defBoost * G.oppDef;   // HARD mode + ⭐ the opponent's defense rating
 
   for (const d of defense) {
     // In 2-player mode, one defender is driven by Player 2's fingers (or WASD),
@@ -1202,7 +1281,8 @@ function resolveFumble() {
     // Your team dives on it — you keep the ball right where it came loose.
     endPlay('tackle', 'YOU RECOVERED IT!');
   } else {
-    // The defense recovers — turnover! (Fresh drive at your own 20, like a pick.)
+    // The defense recovers — turnover! Their new drive starts right here.
+    G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(ball.y)), 1, 99);
     endPlay('interception', 'FUMBLE LOST!');
   }
 }
@@ -1218,6 +1298,7 @@ function checkTouchdown() {
 // Decide what the next play is, show a banner, and pause briefly.
 function endPlay(result, customMsg) {
   freezeEveryone();
+  G.pickSix = false;                // a pick-six return that reached the endzone is done
   if (routeGfx) routeGfx.clear();   // the route lines vanish when the play ends
   let msg, next, big = false;
 
@@ -1485,7 +1566,11 @@ function redYardsFromGoal(y) { return (y - ENDZONE) / PX_PER_YARD; }
 function startCpuDrive() {
   // A safety net: if somehow there's no opponent, just kick off to the player.
   if (!G.oppTeam) { startKickoff(); return; }
-  G.cpu = { spot: 25, down: 1, togo: 10, play: null };
+  // After a turnover, they take over right where it happened; otherwise a normal
+  // possession starts at their own 25.
+  const spot = (G.turnoverSpotCpu != null) ? G.turnoverSpotCpu : 25;
+  G.turnoverSpotCpu = null;
+  G.cpu = { spot, down: 1, togo: 10, play: null };
   showBanner(G.oppTeam.abbr + ' BALL — PLAY DEFENSE!', true);
   sayComment('Tackle the ball carrier!');
   setupDefensePlay();
@@ -1529,6 +1614,7 @@ function setupDefensePlay() {
   referee.setPosition(410, L - 90);
 
   G.ballCarrier = defense[0];       // their QB starts with it
+  G.myDefender = offense[0];        // you start on your middle linebacker
   ballFollow = true;
   G.cpu.play = null;
   G.state = 'dpresnap';
@@ -1553,10 +1639,27 @@ function redSnap(time) {
   sayComment(pick(['Here they come!', 'The snap…', 'Stop them!']));
 }
 
-// YOU are the defender with the YOU tag — same controls as ever: arrows or
-// the D-pad. Get to whoever has the ball; the tackle happens on contact.
+// Control auto-switches to whichever of YOUR defenders is closest to the ball,
+// so you're always driving the guy in the best spot to make the play — with a
+// little "stickiness" so it doesn't flip every single frame. (On an interception
+// you become the guy who caught it — that's set straight away in startPickSix.)
+function pickMyDefender() {
+  if (!G.myDefender) G.myDefender = offense[0];
+  const bx = ball.x, by = ball.y;
+  let best = G.myDefender;
+  let bestD = Phaser.Math.Distance.Between(best.s.x, best.s.y, bx, by);
+  for (const o of offense) {
+    const dd = Phaser.Math.Distance.Between(o.s.x, o.s.y, bx, by);
+    if (dd < bestD - 22) { bestD = dd; best = o; }   // only switch if clearly closer
+  }
+  G.myDefender = best;
+}
+
+// YOU drive that nearest defender — same controls as ever: arrows or the D-pad.
+// Get to whoever has the ball; the tackle happens on contact.
 function controlYourDefender() {
-  const p = offense[0].s;
+  pickMyDefender();
+  const p = G.myDefender.s;
   const spd = runSpeed();   // cleats help you chase, too
   let vx = 0, vy = 0;
   if (keys.left.isDown || touch.left) vx = -spd;
@@ -1656,7 +1759,7 @@ function updateRedTeam(elapsed) {
     if (wr.s.x < 12 && vx < 0) vx = 0;
     if (wr.s.x > FIELD_WIDTH - 12 && vx > 0) vx = 0;
     if (wr.s.y >= FIELD_LENGTH - ENDZONE - 8) vy = 0;   // don't run into their endzone wall
-    wr.s.setVelocity(vx, vy);
+    wr.s.setVelocity(vx * G.oppOff, vy * G.oppOff);      // ⭐ the opponent's offense rating
     if (vx || vy) wr.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
   }
 
@@ -1695,7 +1798,7 @@ function updateRedTeam(elapsed) {
   }
   let tx = c.x + (266 - c.x) * 0.12;                        // drift off the sideline
   if (near && nd < 95) tx = c.x + (c.x - near.s.x) * 1.7;   // juke away from the tackler
-  steer(c, Phaser.Math.Clamp(tx, 24, FIELD_WIDTH - 24), c.y + 140, diff().redSpeed);
+  steer(c, Phaser.Math.Clamp(tx, 24, FIELD_WIDTH - 24), c.y + 140, diff().redSpeed * G.oppOff);   // ⭐ opp offense
 }
 
 // Their linemen block whoever is rushing their QB — and YOU count as a
@@ -1748,7 +1851,7 @@ function updateBlueTeammates() {
   const qbHasIt = carrier === defense[0] && !G.hasPassed;
 
   for (const o of offense) {
-    if (o === offense[0]) continue;   // that's YOU — you drive yourself
+    if (o === (G.myDefender || offense[0])) continue;   // that's YOU — you drive yourself
     let tx, ty, speed = DEF_SPEED;
 
     // Which red receiver does this teammate cover in man? (null = a rusher/spy.)
@@ -1785,7 +1888,7 @@ function updateBlueTeammates() {
       if (toBall < 135) { tx = G.dpassTarget.x; ty = G.dpassTarget.y; speed = DEF_SPEED * 1.08; }
     }
 
-    steer(o.s, tx, ty, speed);
+    steer(o.s, tx, ty, speed * G.myDef);   // ⭐ your team's defense rating
   }
 }
 
@@ -1812,10 +1915,13 @@ function redThrow(hurried) {
   const from = defense[0].s;
   const dist = Phaser.Math.Distance.Between(from.x, from.y, best.s.x, best.s.y);
   const flight = dist / BALL_SPEED;
-  const wobble = hurried ? 40 : 0;
+  // Their QB slips sometimes too — a bad throw sails wide, right into your reach.
+  const bad = !hurried && Math.random() < BAD_THROW_CHANCE;
+  const wob = bad ? 95 : (hurried ? 40 : 0);
+  if (bad) sayComment(pick(['Bad throw!', 'Off the mark!', 'That one sailed!']));
   const tX = Phaser.Math.Clamp(best.s.x + best.s.body.velocity.x * flight
-             + Phaser.Math.Between(-wobble, wobble), 10, FIELD_WIDTH - 10);
-  const tY = best.s.y + best.s.body.velocity.y * flight;
+             + Phaser.Math.Between(-wob, wob), 10, FIELD_WIDTH - 10);
+  const tY = best.s.y + best.s.body.velocity.y * flight + (bad ? Phaser.Math.Between(-80, 80) : 0);
   G.dpassTarget = { x: tX, y: tY };   // 🧠 your defenders break on this spot
   ball.setPosition(from.x, from.y);
   G.scene.cameras.main.startFollow(ball, true, 0.12, 0.12);
@@ -1833,19 +1939,39 @@ function resolveRedPass(wr, x, y) {
   const wx = wr.s.x, wy = wr.s.y;
 
   if (Phaser.Math.Distance.Between(x, y, wx, wy) > OVERTHROW_DIST) {
+    // A bad throw into open space — anybody nearby can grab it.
+    let nb = Infinity, jumper = null;   // nearest of YOUR defenders to the landing
+    for (const o of offense) {
+      const dd = Phaser.Math.Distance.Between(o.s.x, o.s.y, x, y);
+      if (dd < nb) { nb = dd; jumper = o; }
+    }
+    if (nb < LOOSE_BALL_DIST) { startPickSix(jumper, x, y); return; }   // you jump it = PICK SIX!
+    let nr = Infinity, rwr = null;      // nearest RED receiver to the landing
+    for (const rr of [defense[1], defense[2], defense[3]]) {
+      const dd = Phaser.Math.Distance.Between(rr.s.x, rr.s.y, x, y);
+      if (dd < nr) { nr = dd; rwr = rr; }
+    }
+    if (rwr && nr < LOOSE_BALL_DIST) {  // a red receiver adjusts and hauls it in — tackle him!
+      ball.setPosition(x, y);
+      G.ballCarrier = rwr; G.state = 'dlive'; ballFollow = true;
+      G.scene.cameras.main.startFollow(rwr.s, true, 0.12, 0.12);
+      sayComment(pick(['They caught it anyway!', 'Complete — get him!']));
+      return;
+    }
     redPlayEnd('incomplete', 'OVERTHROWN!');
     return;
   }
 
   // Whoever of YOURS is closest when it arrives can make a play on it.
-  let nd = Infinity;
+  let nd = Infinity, picker = null;
   for (const o of offense) {
-    nd = Math.min(nd, Phaser.Math.Distance.Between(o.s.x, o.s.y, wx, wy));
+    const dd = Phaser.Math.Distance.Between(o.s.x, o.s.y, wx, wy);
+    if (dd < nd) { nd = dd; picker = o; }
   }
   if (nd < CATCH_CONTEST + 2) {
     if (Math.random() < RED_INT) {
-      if (window.TDSound) TDSound.sting('td');           // a takeaway deserves a fanfare!
-      cpuDriveEnd('turnover', 'INTERCEPTED — YOUR BALL!');
+      // 🏈 YOU picked it off — take control of that defender and RUN IT BACK!
+      startPickSix(picker, wx, wy);
     } else {
       redPlayEnd('incomplete', 'YOU BROKE IT UP!');
     }
@@ -1863,6 +1989,28 @@ function resolveRedPass(wr, x, y) {
   sayComment(pick(['Caught it — TACKLE HIM!', 'Complete — get him!']));
 }
 
+// 🏈 PICK SIX! You intercepted a pass — take control of that defender and run it
+// back toward THEIR endzone. We reuse the whole kickoff-return system: you drive
+// the ball carrier, the red team chases you, a tackle spots your new drive right
+// there (see endKickoffReturn), and reaching the endzone is a defensive TD.
+function startPickSix(picker, x, y) {
+  if (window.TDSound) TDSound.sting('td');
+  if (window.TDShop)  TDShop.earn(3);        // 🪙 takeaways pay 3 coins
+  G.cpu = null;                              // their drive is over
+  G.dpassTarget = null;
+  G.ballCarrier = picker;
+  G.myDefender = picker;                     // you instantly become the interceptor
+  ball.setPosition(x, y).setVisible(true);
+  ballFollow = true;
+  for (const o of offense) if (o !== picker) o.s.setVelocity(0, 0);   // teammates hold up
+  G.koLive = true;
+  G.pickSix = true;
+  G.state = 'kickoff';                        // ← the shared run-it-back machinery
+  G.scene.cameras.main.startFollow(picker.s, true, 0.12, 0.12);
+  showBanner('INTERCEPTED!  RUN IT BACK!', true);
+  sayComment(pick(['Pick! Take it to the house!', 'INTERCEPTED — go, go, go!', 'It’s a PICK!']));
+}
+
 // ---- Tackles, touchdowns, and the end of a red play ------------------------
 function redCheckTouchdown() {
   if (G.ballCarrier.s.y >= FIELD_LENGTH - ENDZONE) {
@@ -1878,6 +2026,8 @@ function redCheckTackle() {
     if (Phaser.Math.Distance.Between(o.s.x, o.s.y, c.x, c.y) < TACKLE_DIST) {
       if (Math.random() < RED_FUMBLE) {
         if (window.TDSound) TDSound.sting('td');
+        // You recover their fumble — YOUR drive starts right at this spot.
+        G.turnoverSpotYou = Phaser.Math.Clamp(Math.round(100 - redYardsFromGoal(c.y)), 1, 99);
         cpuDriveEnd('turnover', 'FUMBLE — YOUR BALL!');
       } else {
         redPlayEnd('tackle', null, o === offense[0]);   // did YOU make the stop?
@@ -1980,16 +2130,29 @@ function cpuDriveEnd(kind, customMsg) {
 }
 
 // Ball back to you: settle the clock/quarter at this possession boundary, then
-// you field a kickoff (unless the game is over, or it's time for a break).
+// take over. After a TURNOVER you start right at the spot; otherwise you field
+// a kickoff (unless the game is over, or it's time for a break).
 function finishCpuDrive() {
   G.cpu = null;
   document.body.classList.remove('returning');
   if (G.overtime && G.score !== G.oppScore) { endGame(); return; }  // sudden death
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
-  if (t === 'halftime') { startBreak('half', startCpuDrive); return; }  // they get the 2nd-half kick (real rules)
-  if (t === 'qbreak')   { startBreak('q', startKickoff); return; }
-  startKickoff();
+  if (t === 'halftime') { G.turnoverSpotYou = null; startBreak('half', startCpuDrive); return; }  // they get the 2nd-half kick
+  if (t === 'qbreak')   { startBreak('q', takeYourBall); return; }
+  takeYourBall();
+}
+
+// Start YOUR possession: right at the turnover spot if you just got one,
+// otherwise field a kickoff.
+function takeYourBall() {
+  if (G.turnoverSpotYou != null) {
+    const s = G.turnoverSpotYou; G.turnoverSpotYou = null;
+    document.body.classList.remove('returning');
+    setupPlay({ los: s, down: 1, fd: Math.min(s + 10, 100) });
+  } else {
+    startKickoff();
+  }
 }
 
 // ============================================================
@@ -2192,8 +2355,15 @@ function buildTeamMenu(scene) {
     fontSize: '40px', color: '#ffffff', stroke: '#000', strokeThickness: 6 })
     .setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
-  M.note = scene.add.text(mid, 520, 'You’ll play a random team', {
-    fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#aab4c8',
+  // The headline line: the team's OVERALL rating + what it's best at (or, for an
+  // unlocked uniform, its "exclusive" brag). Sits just under the team name.
+  M.note = scene.add.text(mid, 497, '', {
+    fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffd60a', align: 'center',
+    stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
+
+  // ⭐ Offense / defense star bars, tucked in above the DIFFICULTY buttons.
+  M.ratingBars = scene.add.text(mid, 524, '', { fontFamily: 'Arial, sans-serif',
+    fontSize: '13px', color: '#ffffff', align: 'center', lineSpacing: 2,
     stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
   G.menu = M;
@@ -2203,7 +2373,7 @@ function buildTeamMenu(scene) {
 // Show or hide all the menu pieces at once.
 function setMenuVisible(v) {
   const M = G.menu; if (!M) return;
-  for (const o of [M.bg, M.title, M.abbr, M.swatch, M.preview, M.name, M.note]) o.setVisible(v);
+  for (const o of [M.bg, M.title, M.abbr, M.swatch, M.preview, M.name, M.note, M.ratingBars]) o.setVisible(v);
 }
 
 // Open the menu (start it on the Seahawks — team #0).
@@ -2229,10 +2399,14 @@ function renderMenu() {
 
   G.menu.abbr.setText(t.abbr);
   G.menu.name.setText(t.name);
-  // Exclusive daily-reward uniforms get to show off a little.
-  G.menu.note.setText(t.special ? '⭐ EXCLUSIVE DAILY-REWARD UNIFORM!'
-                                : 'You’ll play a random team');
-  G.menu.note.setColor(t.special ? '#ffe066' : '#aab4c8');
+  // ⭐ Headline = overall rating + specialty (or the exclusive-uniform brag),
+  // then the offense & defense star bars underneath.
+  const r = teamRating(t);
+  G.menu.note.setText(t.special ? '⭐ EXCLUSIVE UNIFORM!'
+                                : 'OVERALL ' + r.overall + '/10  ·  BEST AT ' + r.specialty);
+  G.menu.note.setColor(t.special ? '#ffe066' : '#ffd60a');
+  G.menu.ratingBars.setText('🏈 OFFENSE  ' + stars10(r.off) + '  ' + r.off + '\n'
+                          + '🛡 DEFENSE  ' + stars10(r.def) + '  ' + r.def);
 
   // Two color bars: jersey on top, helmet under it.
   const g = G.menu.swatch; g.clear();
@@ -2288,6 +2462,14 @@ function beginGame(team, opp, isSeason) {
   G.team = team;
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
+
+  // ⭐ Turn each team's OFFENSE/DEFENSE ratings into a gentle speed tilt: a 5 is
+  // neutral, a 10 is +7.5%, a 1 is −6%. So a great team really does play tougher,
+  // and the team YOU pick plays to its strength — without breaking the balance.
+  const mr = teamRating(team), orr = teamRating(opp);
+  const tilt = v => 1 + (v - 5) * 0.015;
+  G.myOff = tilt(mr.off);  G.myDef = tilt(mr.def);
+  G.oppOff = tilt(orr.off); G.oppDef = tilt(orr.def);
 
   // Fresh scoreboard & game clock for a brand-new game.
   G.score = 0; G.oppScore = 0;
@@ -2435,6 +2617,7 @@ function checkKickoffTackle() {
 // Tackled! Start a normal 1st-&-10 drive from wherever you were brought down.
 function endKickoffReturn() {
   freezeEveryone();
+  G.pickSix = false;            // if this was an interception return, it's over now
   advanceClock(TIME_KICKOFF);   // the kickoff + return took a few seconds
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(G.ballCarrier.s.y)), 1, 99);
   G.next = { los: spot, down: 1, fd: Math.min(spot + 10, 100) };  // no 'fresh' → a normal drive next
@@ -3016,7 +3199,8 @@ function updateHUD() {
   if (G.youLabel) {
     G.youLabel.setVisible(onDefense);
     if (onDefense) {
-      G.youLabel.setPosition(offense[0].s.x, offense[0].s.y - 22);
+      const me = (G.myDefender || offense[0]).s;
+      G.youLabel.setPosition(me.x, me.y - 22);
       if (G.p2Label) G.p2Label.setVisible(false);   // P2 sits out the defense phase (for now)
     }
   }
@@ -3042,8 +3226,8 @@ function updateHUD() {
 
   // On a kickoff there's no down & distance yet — show return info instead.
   if (G.state === 'kickoff') {
-    hud.down.setText('KICKOFF');
-    hud.spot.setText('Catch it and run it back!');
+    hud.down.setText(G.pickSix ? 'INTERCEPTION!' : 'KICKOFF');
+    hud.spot.setText(G.pickSix ? 'Run it back to THEIR endzone!' : 'Catch it and run it back!');
     hud.help.setText(G.koLive ? 'RUN IT BACK! ⬆  ·  swipe = DASH' : 'Here comes the kick…');
     return;
   }

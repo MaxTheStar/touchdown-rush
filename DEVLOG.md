@@ -8,15 +8,15 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.8 — cache-buster is `?v=26` in `index.html`.
+- **Version:** v1.9 — cache-buster is `?v=27` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-30.
 
 ## ✅ Sync status — in sync
 
-Local `main` and `origin/main` are in sync: v1.7 (commit 3f0b3fd) and v1.8 (🧠 smart routes for the
-CPU offense) are both committed and pushed. GitHub Pages rebuilds the live site within a minute or
-two of each push. The earlier push
+Local `main` and `origin/main` are in sync through v1.9 (⭐ team ratings, turnover spotting, bad
+throws, pick-six returns, control-follows-the-ball). v1.7 = 3f0b3fd, v1.8 = 7778df0. GitHub Pages
+rebuilds the live site within a minute or two of each push. The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
 MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
@@ -143,6 +143,37 @@ rebuilds the live site within a minute or two.
     coverage tracks, zone drops the DBs to deep thirds, break-on-ball rallies the nearest defender —
     no runtime errors in any defensive state.
   - ⚠️ The CPU offense still lines up in one standard set (no CPU formations) — a possible follow-up.
+- **v1.9 — ⭐ Team ratings, turnovers, bad throws & pick-sixes** (this iteration — all in `src/main.js`):
+  - ⭐ **Team ratings** — every NFL team has a fixed OFFENSE and DEFENSE score out of 10 in
+    `TEAM_RATINGS` (e.g. SEA 6/9 = a defense team, NE 8/6 = offense, KC 10/7). `teamRating()` +
+    `stars10()` power a menu display (overall + specialty headline, then ⭐ star bars) under the team
+    name. The numbers also give a **gentle strength tilt**: `beginGame` turns each rating into a
+    multiplier (`tilt(v)=1+(v-5)*0.015`, so 5 is neutral, 10≈+7.5%) stored on `G.myOff/myDef/oppOff/
+    oppDef` and applied to your WR route speed, their coverage `boost`, their carrier/receiver speed,
+    and your teammates' pursuit. Unlockable uniforms default to a balanced 5/5.
+  - 🔁 **Turnover spotting** — an interception or fumble recovery now hands the ball over **right at
+    the spot**, no kickoff. `G.turnoverSpotCpu` (their yards) / `G.turnoverSpotYou` (your yards) are
+    set at the takeaway and consumed by `startCpuDrive` / the new `takeYourBall` (called from
+    `finishCpuDrive`).
+  - 🎲 **Bad throws** — both QBs (`throwTo` + `redThrow`) sometimes slip (`BAD_THROW_CHANCE`) and sail
+    one into open space. `resolvePass`/`resolveRedPass` now handle a ball that lands away from the
+    intended target: the nearest player of EITHER team within `LOOSE_BALL_DIST` makes a play — a
+    defender picks it, or another receiver adjusts and catches it (shared `catchAndRun` hands you the
+    controls).
+  - 🏈 **Pick-six returns + control-follows-the-ball** — on defense, `pickMyDefender` auto-switches
+    the defender YOU drive to whoever's closest to the ball (22px hysteresis, `G.myDefender`; the YOU
+    tag + `updateBlueTeammates` follow it). When you intercept, `startPickSix` makes you that defender
+    and **reuses the whole kickoff-return system** (state `'kickoff'`, `G.pickSix`) to run it back —
+    a tackle spots your new drive (`endKickoffReturn`), reaching the endzone is a defensive TD
+    (`checkTouchdown`→`endPlay('touchdown')`).
+  - 🧪 Verified in-browser: ratings render + screenshot-checked (no overlap with the DIFFICULTY
+    buttons — they start at canvas y≈546, bars sit above); control switches to the nearest defender
+    with hysteresis; pick-six enters the return state controlling the picker; turnover spots computed
+    + consumed both ways; open-field catch/INT on a bad throw. No console errors.
+  - ⚠️ NOTE for next time: `pickMyDefender` is literal "nearest to the ball," so at the snap control
+    can jump to a pass-rusher (the ball's with their QB). If that feels off, scope the auto-switch to
+    live runs / turnovers only. Also: a pick-six TD currently skips its own extra-point kick (it goes
+    through the kickoff-return TD path) — fine, but noting it.
 
 ## 🗂 File map (who does what)
 
