@@ -248,12 +248,18 @@ const G = {
   blitz: false,         // is a linebacker shooting the gap at the QB this down?
   passTarget: null,     // where a thrown ball is headed — defenders break on it
 
-  // ---- v1.7: timeouts, formations, and 👑 Maxwell ----
+  // ---- v1.8 (in progress): timeouts, formations, and 👑 Maxwell ----
   timeouts: 3,          // YOUR timeouts left this half (3 per half, like real football)
   clockStopped: false,  // a called timeout stops the clock for the very next play
   formation: 0,         // which offensive FORMATION you're lined up in (index into FORMATIONS)
   maxwell: false,       // 👑 is the superstar defender "MAXWELL" switched on for this game?
   starLabel: null,      // the floating "MAXWELL 👑" nametag over the superstar defender
+
+  // ---- v1.7: smart routes for the CPU OFFENSE (when you play defense) ----
+  redConcept: null,     // the CPU offense's play this down (which route each red receiver runs)
+  lastRedConcept: -1,   // don't call the CPU's exact concept two downs in a row
+  dcoverage: 'man',     // how YOUR AI teammates cover this down: 'man' (tight) or 'zone' (soft)
+  dpassTarget: null,    // where the CPU's throw is headed — your defenders break on it
 
   // ---- Swipe dash / juke (touch) ----
   dashVX: 0, dashVY: 0, // the velocity of an active dash/cut
@@ -413,7 +419,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -1507,9 +1513,9 @@ function setupDefensePlay() {
   place(defense[4], 226, L - 16);   // their line
   place(defense[5], 266, L - 16);
   place(defense[6], 306, L - 16);
-  defense[1].startY = defense[1].s.y;
-  defense[2].startY = defense[2].s.y;
-  defense[3].startY = defense[3].s.y;
+  defense[1].startY = defense[1].s.y; defense[1].startX = defense[1].s.x;   // their RB
+  defense[2].startY = defense[2].s.y; defense[2].startX = defense[2].s.x;   // their left WR
+  defense[3].startY = defense[3].s.y; defense[3].startX = defense[3].s.x;   // their right WR
 
   // YOUR defense lines up to meet them — YOU are the middle linebacker:
   place(offense[0], 266, L + 46);   // YOU (the YOU tag floats over you)
@@ -1541,6 +1547,7 @@ function redSnap(time) {
     handed: false, thrown: false,
     throwAt: 0.8 + Math.random() * 0.8,   // pass plays let it fly at a random moment
   };
+  callRedPlay();                          // 🧠 pick their route concept + your coverage
   G.state = 'dlive';
   G.replay = [];
   sayComment(pick(['Here they come!', 'The snap…', 'Stop them!']));
@@ -1574,6 +1581,52 @@ function updateDefensePlay(time) {
   redCheckTackle();
 }
 
+// ---- 🧠 Smart routes for the CPU offense (v1.7) ----------------------------
+// The red team runs the SAME playbook your offense does, and your AI teammates
+// cover it with a man/zone mix — so playing defense is a real read now, not the
+// same slant-and-streak every down.
+function callRedPlay() {
+  let i = Phaser.Math.Between(0, PLAYBOOK.length - 1);
+  if (i === G.lastRedConcept) i = (i + 1) % PLAYBOOK.length;   // no back-to-back repeats
+  G.lastRedConcept = i;
+  const c = PLAYBOOK[i];
+  G.redConcept = c;
+  defense[2].route = c.wr1;   // their left WR
+  defense[3].route = c.wr2;   // their right WR
+  defense[1].route = c.rb;    // their RB
+  // Your AI teammates read their coverage for the down (man tight / zone soft).
+  const d = G.difficulty;
+  const zoneOdds = d === 'easy' ? 0.25 : d === 'hard' ? 0.5 : 0.4;
+  G.dcoverage = Math.random() < zoneOdds ? 'zone' : 'man';
+  G.dpassTarget = null;
+}
+
+// The red team attacks DOWN the screen, so their routes are your offense's
+// routes with the up/down flipped — same left/right breaks, opposite depth.
+function redRouteVelocity(wr, depth, side) {
+  const v = routeVelocity(wr, depth, side);
+  return { vx: v.vx, vy: -v.vy };
+}
+
+// The red receiver (defense[1/2/3]) most threatening a blue zone: inside the
+// x-band and farthest DOWNFIELD (largest y). null = nobody there.
+function nearestRedThreatInBand(loX, hiX) {
+  let best = null, bestY = -Infinity;
+  for (const wr of [defense[1], defense[2], defense[3]]) {
+    if (wr === G.ballCarrier) continue;
+    if (wr.s.x < loX || wr.s.x > hiX) continue;
+    if (wr.s.y > bestY) { bestY = wr.s.y; best = wr; }
+  }
+  return best;
+}
+
+// Which third a zone cover-defender of YOURS patrols (mirror of dbZone).
+function blueZone(o) {
+  if (o === offense[2]) return { lo: 0,   hi: 205,         homeX: 120 };
+  if (o === offense[3]) return { lo: 328, hi: FIELD_WIDTH, homeX: FIELD_WIDTH - 120 };
+  return               { lo: 150, hi: 383,         homeX: FIELD_WIDTH / 2 };   // offense[1], middle
+}
+
 // ---- The red team's brain --------------------------------------------------
 function updateRedTeam(elapsed) {
   const play = G.cpu.play;
@@ -1582,27 +1635,34 @@ function updateRedTeam(elapsed) {
 
   updateRedLine();   // their line blocks your rushers
 
-  // Their receivers run routes — "downfield" for them is DOWN the screen.
-  // (They run routes on run plays too. Real teams fake you out like that.)
-  for (const wr of [defense[2], defense[3]]) {
+  // Their receivers run REAL routes now — the same playbook your offense uses,
+  // just flipped so "downfield" for them is DOWN the screen. (They run routes on
+  // run plays too — real teams fake you out like that.) The RB only runs his
+  // route on a pass; on a run he's coming back for the handoff (handled below).
+  const runners = play.type === 'pass' ? [defense[1], defense[2], defense[3]] : [defense[2], defense[3]];
+  for (const wr of runners) {
     if (wr === carrier) continue;
     const depth = wr.s.y - wr.startY;
-    let vx = 0, vy = WR_SPEED;
-    if (wr === defense[2] && depth >= 70) {   // the slant cuts toward the middle
-      vx = WR_SPEED * 0.66; vy = WR_SPEED * 0.75;
+    let { vx, vy } = redRouteVelocity(wr, depth, sideOf(wr));
+    // Work open: a crowded receiver slides toward the open grass (WRs only).
+    if (wr !== defense[1] && depth > 44) {
+      let nearX = null, nd = Infinity;
+      for (const o of offense) {
+        const dd = Phaser.Math.Distance.Between(wr.s.x, wr.s.y, o.s.x, o.s.y);
+        if (dd < nd) { nd = dd; nearX = o.s.x; }
+      }
+      if (nearX != null && nd < 40) vx += (wr.s.x < nearX ? -1 : 1) * WR_SPEED * 0.28;
     }
+    if (wr.s.x < 12 && vx < 0) vx = 0;
+    if (wr.s.x > FIELD_WIDTH - 12 && vx > 0) vx = 0;
+    if (wr.s.y >= FIELD_LENGTH - ENDZONE - 8) vy = 0;   // don't run into their endzone wall
     wr.s.setVelocity(vx, vy);
-    wr.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+    if (vx || vy) wr.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
   }
 
-  // Their RB: on a pass he swings out to the flat; on a run he comes for the ball.
-  if (rb !== carrier) {
-    if (play.type === 'pass') {
-      const depth = rb.s.y - rb.startY;
-      rb.s.setVelocity(depth < 60 ? -WR_SPEED * 0.55 : 0, WR_SPEED * 0.7);
-    } else if (!play.handed) {
-      steer(rb.s, qb.s.x, qb.s.y + 2, WR_SPEED);
-    }
+  // Their RB on a RUN play comes back to the QB for the handoff.
+  if (rb !== carrier && play.type === 'run' && !play.handed) {
+    steer(rb.s, qb.s.x, qb.s.y + 2, WR_SPEED);
   }
 
   // Their QB: a run play hands it off; a pass play drops back, then throws —
@@ -1691,6 +1751,11 @@ function updateBlueTeammates() {
     if (o === offense[0]) continue;   // that's YOU — you drive yourself
     let tx, ty, speed = DEF_SPEED;
 
+    // Which red receiver does this teammate cover in man? (null = a rusher/spy.)
+    const assign = o === offense[2] ? defense[2]
+                 : o === offense[3] ? defense[3]
+                 : o === offense[1] ? defense[1] : null;
+
     if (!qbHasIt && G.state !== 'dpass') {
       // Someone's running the ball — your teammates chase, but on purpose a
       // step slow: THEY rally, but YOU are the closer. Stand around and the
@@ -1699,10 +1764,27 @@ function updateBlueTeammates() {
     } else if (o === offense[4] || o === offense[5]) {
       tx = defense[0].s.x; ty = defense[0].s.y;             // rush their QB…
       if (redNearBlocker(o)) speed = DEF_SPEED * 0.4;       // …through their blockers
-    } else if (o === offense[2]) { tx = defense[2].s.x; ty = defense[2].s.y + 24; }  // cover (goal-side = BELOW)
-    else if (o === offense[3]) { tx = defense[3].s.x; ty = defense[3].s.y + 24; }
-    else if (o === offense[1]) { tx = defense[1].s.x; ty = defense[1].s.y + 24; }
-    else { tx = carrier.s.x; ty = carrier.s.y + 55; speed = DEF_SPEED * 0.85; }      // the AI linebacker spies
+    } else if (assign && G.dcoverage === 'zone') {
+      // Zone: drop to your third and slide toward the deepest red threat in it
+      // (goal-side, for red, is BELOW — larger y).
+      const z = blueZone(o);
+      const th = nearestRedThreatInBand(z.lo, z.hi);
+      tx = th ? th.s.x : z.homeX;
+      ty = Math.max((th ? th.s.y : G.losY) + 26, G.losY + 92);
+    } else if (assign) {
+      tx = assign.s.x; ty = assign.s.y + 24;               // man: cover goal-side (below him)
+    } else {
+      tx = carrier.s.x; ty = carrier.s.y + 55; speed = DEF_SPEED * 0.85;   // the AI linebacker spies
+    }
+
+    // 🧠 BREAK ON THE BALL — when their pass is in the air, your nearby
+    // teammates rally to where it's headed to swat it or pick it (not the
+    // rushers, and not you — you drive yourself).
+    if (G.state === 'dpass' && G.dpassTarget && o !== offense[4] && o !== offense[5]) {
+      const toBall = Phaser.Math.Distance.Between(o.s.x, o.s.y, G.dpassTarget.x, G.dpassTarget.y);
+      if (toBall < 135) { tx = G.dpassTarget.x; ty = G.dpassTarget.y; speed = DEF_SPEED * 1.08; }
+    }
+
     steer(o.s, tx, ty, speed);
   }
 }
@@ -1734,6 +1816,7 @@ function redThrow(hurried) {
   const tX = Phaser.Math.Clamp(best.s.x + best.s.body.velocity.x * flight
              + Phaser.Math.Between(-wobble, wobble), 10, FIELD_WIDTH - 10);
   const tY = best.s.y + best.s.body.velocity.y * flight;
+  G.dpassTarget = { x: tX, y: tY };   // 🧠 your defenders break on this spot
   ball.setPosition(from.x, from.y);
   G.scene.cameras.main.startFollow(ball, true, 0.12, 0.12);
   G.scene.tweens.add({
@@ -1746,6 +1829,7 @@ function redThrow(hurried) {
 // The ball comes down — YOUR coverage decides what happens.
 function resolveRedPass(wr, x, y) {
   if (G.state !== 'dpass') return;   // the drive ended some other way — let it drop
+  G.dpassTarget = null;              // the ball has arrived — stop the break-on-the-ball chase
   const wx = wr.s.x, wy = wr.s.y;
 
   if (Phaser.Math.Distance.Between(x, y, wx, wy) > OVERTHROW_DIST) {

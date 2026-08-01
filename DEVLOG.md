@@ -8,14 +8,15 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.7 — cache-buster is `?v=25` in `index.html`.
+- **Version:** v1.8 — cache-buster is `?v=26` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-30.
 
-## ✅ Sync status — v1.7 built locally, not yet pushed
+## ✅ Sync status — in sync
 
-`origin/main` is at v1.6 (commit f9ca686). **v1.7 (safeties, tutorial, timeouts, formations, and
-👑 Maxwell) is edited in the working tree** — commit and `git push origin main` to ship it. The earlier push
+Local `main` and `origin/main` are in sync: v1.7 (commit 3f0b3fd) and v1.8 (🧠 smart routes for the
+CPU offense) are both committed and pushed. GitHub Pages rebuilds the live site within a minute or
+two of each push. The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
 MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
@@ -127,6 +128,21 @@ rebuilds the live site within a minute or two.
     tackle), timeout decrement + clock-skip + halftime refill, all 4 formations reposition & update
     `startX`, Maxwell's robber path + 230px break reach (a normal DB holds at 200px, breaks at 120px)
     + persisted toggle + nametag. Tutorial + menu screenshotted at iPad size — clean, no overlap.
+- **v1.8 — 🧠 Smart routes for the CPU offense** (this iteration — all in `src/main.js`):
+  - The v1.6 brains covered only YOUR offense. Now the CPU offense (when you play defense) runs the
+    **same 8-play `PLAYBOOK`**: `callRedPlay` (fired from `redSnap`, no back-to-back repeats) assigns
+    each red receiver a route, and `redRouteVelocity` is just `routeVelocity` with the downfield (vy)
+    flipped — so their routes break exactly like yours, mirrored L/R off `sideOf`/`startX` (now
+    recorded for `defense[1..3]` in `setupDefensePlay`). Red WRs "work open" when crowded, too.
+  - **Your AI teammates now read man vs zone** (`G.dcoverage`, picked per down by difficulty in
+    `callRedPlay`) in the rewritten `updateBlueTeammates`: `blueZone`/`nearestRedThreatInBand` drop
+    the cover-DBs into deep thirds, and they **break on the ball** (`G.dpassTarget`, set in `redThrow`,
+    cleared in `resolveRedPass`) — so the varied red routes have real coverage to beat.
+  - 🧪 Verified in-browser (frame-stepped, since the headless preview never paints): red play-caller
+    hits all 8 concepts with no repeats; a red post breaks inside AND downfield (`vy +152`); man
+    coverage tracks, zone drops the DBs to deep thirds, break-on-ball rallies the nearest defender —
+    no runtime errors in any defensive state.
+  - ⚠️ The CPU offense still lines up in one standard set (no CPU formations) — a possible follow-up.
 
 ## 🗂 File map (who does what)
 
@@ -180,9 +196,9 @@ python3 -m http.server 8055
 
 ## 🔮 Next up (ideas for the next cycle)
 
-- **Brains for the OTHER side** — v1.6 made your offense + the CPU's coverage smart; now give the
-  CPU offense (when YOU play defense) the same route playbook, and make your AI teammates play
-  real man/zone. Also: touchdown replays on defensive stops.
+- **Touchdown replays on defensive stops** — the brains are now smart on BOTH sides (your offense +
+  coverage in v1.6, the CPU offense + your AI teammates' man/zone in v1.8), so the remaining polish
+  here is showing the instant replay after a big defensive stop, and maybe CPU formations.
 - Still on the difficulty ladder: **two-player pass-and-play** (the other v1.6 finalist), a **drafted
   skill play**, weather/night games, player progression. (👑 Maxwell shipped in v1.7.)
 - Maxwell follow-ups if wanted: give him custom art (a crown on the chibi), let him jump routes he
