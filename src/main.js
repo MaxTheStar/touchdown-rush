@@ -2922,7 +2922,7 @@ function setupTouchButtons() {
   // ⏱ Timeout + 🧩 Formation (in-game), and the menu HOW TO PLAY / Maxwell toggle
   bindTapEl('btn-timeout', callTimeout);
   bindTapEl('btn-formation', cycleFormation);
-  bindTapEl('open-howto', () => { if (window.TDTour) TDTour.start('menu', true); });  // 🎓 replay the tour
+  bindTapEl('open-howto', () => { if (window.TDTour) { TDTour.reset(); TDTour.start('menu', true); } });  // 🎓 replay ALL tutorials
   bindTapEl('toggle-maxwell', toggleMaxwell);
 
   // The 4th-down choice buttons (① play the down, ② kick)

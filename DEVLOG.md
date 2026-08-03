@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.10 — cache-buster is `?v=29` in `index.html`.
+- **Version:** v1.10 — cache-buster is `?v=30` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-30.
 
@@ -180,8 +180,11 @@ rebuilds the live site within a minute or two.
     a dim backdrop + a gold spotlight ring on one button + a card with the tip, progress dots, Skip,
     and Next ▶ (last step = "Got it!"). main.js fires `TDTour.maybeStart('menu')` from `enterMenu`,
     `'offense'` at the first scrimmage `presnap` (in `setupPlay`), `'defense'` from `setupDefensePlay`.
-    The 📖 HOW TO button now replays the menu tour (`TDTour.start('menu', true)`). The old
-    `#howto-modal` + `openHowto/closeHowto/maybeShowHowtoOnFirstVisit` are **deleted**.
+    The 📖 HOW TO button **re-arms ALL tours** (`TDTour.reset()`) then replays the menu tour — so it
+    shows the menu tour now AND makes the offense/defense tours pop again next play (handy on a device
+    that's already seen them, e.g. "show it on my iPad"). The old `#howto-modal` +
+    `openHowto/closeHowto/maybeShowHowtoOnFirstVisit` are **deleted**. The tours have NO screen-size
+    gate — verified working at phone (375) and iPad (768).
   - The menu tour waits out the day-1 daily-gift popup (opens on a ~600ms timer): `anyModalOpen()`
     polling + a longer initial delay, so the gift shows first and the tour follows. During the
     `defense` tour the CPU snap is held (`update()` pushes `G.dsnapAt` forward while `TDTour.active()`).

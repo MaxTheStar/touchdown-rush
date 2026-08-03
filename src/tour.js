@@ -135,5 +135,12 @@
   }
   function maybeStart(n) { start(n, false); }
 
-  window.TDTour = { start, maybeStart, active, seen };
+  // Re-arm every tour so they'll all pop up again — the 📖 HOW TO button uses
+  // this, so tapping it shows the menu tour now AND makes the offense/defense
+  // tours reappear the next time you're on offense / defense.
+  function reset() {
+    for (const n of ['menu', 'offense', 'defense']) { try { localStorage.removeItem('tdr-tour-' + n); } catch (e) {} }
+  }
+
+  window.TDTour = { start, maybeStart, active, seen, reset };
 })();
