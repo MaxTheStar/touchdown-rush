@@ -181,15 +181,31 @@
     /* 👑 The Maxwell toggle lights up gold when he's switched on. */
     #toggle-maxwell.on { background: rgba(255,214,10,0.5); border-color: #ffd60a; color: #fff; }
 
-    /* ---- 📖 HOW TO PLAY overlay (reuses the .ov / .ov-card modal look) ---- */
-    /* Sit ABOVE the other overlays (z 70) so on a first-ever load the tutorial
-       reads on top of the day-1 daily-rewards popup, not buried under it. */
-    #howto-modal { z-index: 85; }
-    #howto-modal .ov-card { max-width: min(92vw, 470px); text-align: left; max-height: 86vh; overflow-y: auto; }
-    .howto-h { font: 800 12px "Arial Black", Arial; color: #8fb8ff; letter-spacing: .6px; margin: 12px 0 3px; }
-    .howto-row { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; font: 13px/1.35 Arial; color: #dfe6f2; }
-    .howto-key { flex: 0 0 84px; font: 800 12px "Arial Black", Arial; color: #2ee6ff; }
-    .howto-row b { color: #ffe066; }
+
+    /* ---- 🎓 STEP-BY-STEP TUTORIAL (src/tour.js) — one tip at a time -------- */
+    .tour-back { position: fixed; inset: 0; z-index: 95; display: none; background: rgba(6,10,20,0.55); }
+    .tour-ring { position: fixed; border: 3px solid #ffd60a; border-radius: 14px; pointer-events: none;
+      box-shadow: 0 0 0 3px rgba(255,214,10,0.30), 0 0 20px rgba(255,214,10,0.85); transition: all .18s ease; }
+    .tour-card {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+      width: min(90vw, 430px); box-sizing: border-box;
+      background: #101a30; border: 2px solid rgba(255,214,10,0.7); border-radius: 16px;
+      padding: 16px 16px 12px; box-shadow: 0 8px 30px rgba(0,0,0,.6);
+    }
+    .tour-card.tour-card-top { bottom: auto; top: max(16px, calc(env(safe-area-inset-top) + 8px)); }
+    .tour-text { font: 700 15px/1.45 "Helvetica Neue", Arial, sans-serif; color: #eef3fb; }
+    .tour-bar { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+    .tour-dots { display: flex; gap: 6px; flex: 1; }
+    .tour-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.28); }
+    .tour-dot.on { background: #ffd60a; }
+    .tour-skip, .tour-next {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      border-radius: 11px; font: 800 14px "Arial Black", Arial; padding: 9px 15px; border: 2px solid;
+    }
+    .tour-skip { background: transparent; border-color: rgba(255,255,255,0.28); color: #aab4c8; }
+    .tour-next { background: rgba(255,214,10,0.32); border-color: rgba(255,214,10,0.75); color: #fff; }
+    .tour-skip:active, .tour-next:active { transform: scale(0.95); }
 
     /* Player 2's D-pad, top-center — hidden until 2-player mode is on */
     #dpad2 {
@@ -351,9 +367,12 @@
     @media (min-width: 700px) and (min-height: 600px) {
       body.menu #side-tracker { display: flex; }
     }
-    .trk-title { font: 800 12px "Arial Black", Arial; color: #ffe066; letter-spacing: 1px; }
-    .trk-stat b { display: block; font: 800 20px "Arial Black", Arial; color: #fff; }
+    .trk-title { font: 800 11px "Arial Black", Arial; color: #ffe066; letter-spacing: .8px; }
+    .trk-stat b { display: block; font: 800 20px "Arial Black", Arial; color: #fff; line-height: 1.05; }
     .trk-stat span { font-size: 10px; color: #aab4c8; }
+    .trk-sep { height: 1px; background: rgba(255,255,255,0.15); margin: 4px 0 2px; }
+    #trk-dev { font-size: 9px; color: #e6a; line-height: 1.2; }
+    #trk-dev:empty { display: none; }
     #side-tracker a { color: #8fd0ff; font-size: 11px; text-decoration: none; margin-top: 2px; }
 
     /* ---- 🪙 The menu's money row: coins + SHOP + DAILY (top-left) -------- */
@@ -515,11 +534,14 @@
   <!-- 🌍 The world tracker — docked to the SIDE of the screen (off the field).
        stats.js fills the numbers in; the CSS shows it on big-enough screens. -->
   <aside id="side-tracker">
-    <div class="trk-title">🌍 WORLD TRACKER</div>
-    <div class="trk-stat"><b id="trk-plays">…</b><span>games played worldwide</span></div>
-    <div class="trk-stat"><b id="trk-players">…</b><span>players worldwide</span></div>
-    <div class="trk-stat"><b id="trk-reviews">…</b><span>reviews worldwide</span></div>
-    <div class="trk-stat"><b id="trk-games">…</b><span>games finished here</span></div>
+    <div class="trk-title">🌍 AROUND THE WORLD</div>
+    <div class="trk-stat"><b id="trk-plays">…</b><span>games played, everywhere</span></div>
+    <div class="trk-stat"><b id="trk-players">…</b><span>players, everywhere</span></div>
+    <div class="trk-stat"><b id="trk-reviews">…</b><span>reviews written</span></div>
+    <div class="trk-sep"></div>
+    <div class="trk-title">🏈 YOU (this device)</div>
+    <div class="trk-stat"><b id="trk-games">…</b><span>games you've finished</span></div>
+    <div id="trk-dev"></div>
     <a href="dashboard.html">📊 full dashboard</a>
   </aside>
 
@@ -602,38 +624,8 @@
     <div class="btn" id="btn-snap">HIKE</div>
   </div>
 
-  <!-- 📖 HOW TO PLAY — the friendly tutorial. Pops up on a first visit, or from
-       the HOW TO button on the menu (see openHowto/closeHowto in main.js). -->
-  <div class="ov" id="howto-modal">
-    <div class="ov-card">
-      <div class="ov-title">📖 HOW TO PLAY</div>
-      <div class="ov-sub">You're the offense in cyan. Score touchdowns, stop them on defense!</div>
-
-      <div class="howto-h">🏃 MOVING & SNAPPING</div>
-      <div class="howto-row"><span class="howto-key">Arrows</span><span>Move your player around the field (or the arrow keys on a keyboard).</span></div>
-      <div class="howto-row"><span class="howto-key">HIKE / Space</span><span>Snap the ball to start the play. Everyone takes off running.</span></div>
-      <div class="howto-row"><span class="howto-key">Swipe</span><span>While running the ball, <b>swipe the field</b> — a long swipe is a speed <b>DASH</b>, a short one is a quick cut.</span></div>
-
-      <div class="howto-h">🏈 PASSING & RUNNING</div>
-      <div class="howto-row"><span class="howto-key">Tap a receiver</span><span>Behind the line, tap the guy you want and the QB throws to him. (Or press <b>1 / 2 / 3</b>.)</span></div>
-      <div class="howto-row"><span class="howto-key">Read the routes</span><span>The colored lines show where each receiver is running <b>before</b> the snap. Throw to whoever gets open!</span></div>
-      <div class="howto-row"><span class="howto-key">HAND / H</span><span>Hand off to the running back and pound it up the middle.</span></div>
-      <div class="howto-row"><span class="howto-key">Goal</span><span>Cross the far goal line for a <b>TOUCHDOWN</b> (6), then kick the extra point (+1).</span></div>
-
-      <div class="howto-h">🛡 PLAY DEFENSE</div>
-      <div class="howto-row"><span class="howto-key">You = YOU tag</span><span>When they have the ball, you control the player with the <b>YOU</b> tag. Chase down whoever has the ball and tackle him!</span></div>
-
-      <div class="howto-h">🧩 FORMATIONS &amp; ⏱ TIMEOUTS <span style="font-weight:400;color:#9fb0c8">(new!)</span></div>
-      <div class="howto-row"><span class="howto-key">🧩 Formation</span><span>Before the snap, tap it to change how your receivers line up — SPREAD, TRIPS, or I-FORM.</span></div>
-      <div class="howto-row"><span class="howto-key">⏱ Timeout</span><span>Stops the clock so you don't run out of time. You get <b>3 each half</b>.</span></div>
-      <div class="howto-row"><span class="howto-key">🛑 Safety</span><span>Get tackled in your <b>own</b> end zone and the other team gets <b>2 points</b> — so don't get pinned back there!</span></div>
-
-      <div class="howto-h">4️⃣ ON 4TH DOWN</div>
-      <div class="howto-row"><span class="howto-key">Go or kick</span><span>Go for it, try a <b>field goal</b> (3 points), or <b>punt</b> it away.</span></div>
-
-      <div class="ov-btn yes" id="howto-close">GOT IT — LET'S PLAY! 🏈</div>
-    </div>
-  </div>
+  <!-- (The old wall-of-text HOW TO card is gone — new players now get the
+       step-by-step tutorial in src/tour.js, and the 📖 HOW TO button replays it.) -->
 
   <!-- 🏆 SEASON MODE — a whole 8-team league, playoffs & the Max Bowl.
        season.js fills #season-body and drives the PLAY button. -->
@@ -720,12 +712,13 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=28"></script>
-  <script src="src/sound.js?v=28"></script>
-  <script src="src/shop.js?v=28"></script>
-  <script src="src/season.js?v=28"></script>
-  <script src="src/ads.js?v=28"></script>
-  <script src="src/kick.js?v=28"></script>
-  <script src="src/main.js?v=28"></script>
+  <script src="src/stats.js?v=29"></script>
+  <script src="src/sound.js?v=29"></script>
+  <script src="src/shop.js?v=29"></script>
+  <script src="src/season.js?v=29"></script>
+  <script src="src/ads.js?v=29"></script>
+  <script src="src/tour.js?v=29"></script>
+  <script src="src/kick.js?v=29"></script>
+  <script src="src/main.js?v=29"></script>
 </body>
 </html>

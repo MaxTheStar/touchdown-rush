@@ -8,14 +8,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.9 — cache-buster is `?v=28` in `index.html`.
+- **Version:** v1.10 — cache-buster is `?v=29` in `index.html`.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-07-30.
 
 ## ✅ Sync status — in sync
 
-Local `main` and `origin/main` are in sync through v1.9 (⭐ team ratings, turnover spotting, bad
-throws, pick-six returns, control-follows-the-ball). v1.7 = 3f0b3fd, v1.8 = 7778df0. GitHub Pages
+Local `main` and `origin/main` are in sync through v1.10 (🎓 step-by-step tutorial `src/tour.js`,
+clearer 🌍 world tracker, UI de-clutter). v1.9 = ⭐ ratings/turnovers/pick-sixes. GitHub Pages
 rebuilds the live site within a minute or two of each push. The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
@@ -174,6 +174,29 @@ rebuilds the live site within a minute or two.
     + consumed both ways; open-field catch/INT on a bad throw. No console errors.
   - ⚠️ NOTE for next time: a pick-six TD currently skips its own extra-point kick (it goes through the
     kickoff-return TD path) — fine, but noting it in case Max wants the PAT added.
+- **v1.10 — 🎓 Step-by-step tutorial, clearer tracker, UI de-clutter** (new `src/tour.js`):
+  - 🎓 **Step tutorial (replaces the wall-of-text HOW TO)** — `src/tour.js` = `window.TDTour`. Short
+    "coach-mark" tours (`menu` / `offense` / `defense`), each shown ONCE (localStorage `tdr-tour-*`):
+    a dim backdrop + a gold spotlight ring on one button + a card with the tip, progress dots, Skip,
+    and Next ▶ (last step = "Got it!"). main.js fires `TDTour.maybeStart('menu')` from `enterMenu`,
+    `'offense'` at the first scrimmage `presnap` (in `setupPlay`), `'defense'` from `setupDefensePlay`.
+    The 📖 HOW TO button now replays the menu tour (`TDTour.start('menu', true)`). The old
+    `#howto-modal` + `openHowto/closeHowto/maybeShowHowtoOnFirstVisit` are **deleted**.
+  - The menu tour waits out the day-1 daily-gift popup (opens on a ~600ms timer): `anyModalOpen()`
+    polling + a longer initial delay, so the gift shows first and the tour follows. During the
+    `defense` tour the CPU snap is held (`update()` pushes `G.dsnapAt` forward while `TDTour.active()`).
+  - 🌍 **Clearer world tracker** — split into "🌍 AROUND THE WORLD" (games/players/reviews, worldwide)
+    vs "🏈 YOU (this device)" (games you've finished), and on localhost a pink "⚙️ practice numbers
+    (test mode)" note (`#trk-dev`, set in `stats.js refreshTracker`) so the small dev counters aren't
+    mistaken for the real world totals.
+  - 🧹 UI de-clutter: removed the giant HOW TO overlay + its CSS; verified menu at mobile (375) and
+    tablet (768) — tracker sits far-left, no overlap with the centered difficulty/PLAY stack.
+  - 💳 **Premium payment (still declined):** a static kids' game can't take real money → Premium stays
+    the clearly-labeled PRETEND unlock (the gold row + "$1.99 PRETEND" checkout already show in DAILY).
+    Did NOT add a real payment collector or a prominent buy button. A real store would be a grown-up's
+    project with a payment provider + their own business account.
+  - 🧪 Verified in-browser: all 3 tours trigger + step through + mark seen (menu 5 steps, offense 4,
+    defense 3); ring spotlights the right buttons; tracker relabeled; no console errors.
 
 ## 🗂 File map (who does what)
 
@@ -186,10 +209,11 @@ rebuilds the live site within a minute or two.
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, Premium. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
 | `src/season.js` | 🏆 Season mode: league, standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
+| `src/tour.js` | 🎓 The step-by-step tutorial (coach marks). API: `window.TDTour` (`maybeStart`/`start`/`active`). |
 | `src/ads.js` | Animated TV-break commercials. |
 | `dashboard.html` | Private dev dashboard (world numbers + on-device reviews). Not linked from the game. |
 
-Script load order matters: `stats → sound → shop → season → ads → kick → main`.
+Script load order matters: `stats → sound → shop → season → ads → tour → kick → main`.
 
 ## 🧰 Conventions
 

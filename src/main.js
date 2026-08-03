@@ -460,10 +460,9 @@ function create() {
   buildTeamMenu(this);
   enterMenu();
 
-  // v1.7 setup: remember the 👑 Maxwell toggle, and pop the HOW TO PLAY card up
-  // on a brand-new player's first visit.
+  // Remember the 👑 Maxwell toggle. (The old wall-of-text HOW TO card is gone —
+  // a brand-new player now gets the step-by-step TDTour, kicked off by enterMenu.)
   loadMaxwell();
-  maybeShowHowtoOnFirstVisit();
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
@@ -513,7 +512,8 @@ function update(time, delta) {
   // ⭐ PLAY DEFENSE — the other team has the ball and runs REAL plays at you.
   if (G.state === 'dpresnap') {                 // they're lining up…
     freezeEveryone();
-    if (time >= G.dsnapAt) redSnap(time);
+    if (window.TDTour && TDTour.active()) G.dsnapAt = time + 1100;   // hold the snap during the tutorial
+    else if (time >= G.dsnapAt) redSnap(time);
     updateBall(); updateHUD();
     return;
   }
@@ -1622,6 +1622,7 @@ function setupDefensePlay() {
   G.scene.cameras.main.startFollow(defense[0].s, true, 0.12, 0.12);
   updateBall();
   updateHUD();
+  if (window.TDTour) TDTour.maybeStart('defense');   // 🎓 first-time-on-defense tour
 }
 
 // They snap it! Secretly pick their play — a run or a pass. You'll find out
@@ -2391,6 +2392,7 @@ function enterMenu() {
   syncDiffButtons();   // highlight the current difficulty
   if (window.TDShop)  TDShop.onMenu();           // 🪙 coin count + a daily gift if one's ready
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
+  if (window.TDTour)  TDTour.maybeStart('menu');  // 🎓 first-visit menu tour (waits for popups)
 }
 
 // Paint the menu for whichever team you're currently looking at.
@@ -2876,6 +2878,7 @@ function setupPlay(next) {
     showFourthDownChoice();
   } else {
     G.state = 'presnap';
+    if (window.TDTour) TDTour.maybeStart('offense');   // 🎓 first-snap offense tour
   }
 }
 
@@ -2919,8 +2922,7 @@ function setupTouchButtons() {
   // ⏱ Timeout + 🧩 Formation (in-game), and the menu HOW TO PLAY / Maxwell toggle
   bindTapEl('btn-timeout', callTimeout);
   bindTapEl('btn-formation', cycleFormation);
-  bindTapEl('open-howto', openHowto);
-  bindTapEl('howto-close', closeHowto);
+  bindTapEl('open-howto', () => { if (window.TDTour) TDTour.start('menu', true); });  // 🎓 replay the tour
   bindTapEl('toggle-maxwell', toggleMaxwell);
 
   // The 4th-down choice buttons (① play the down, ② kick)
@@ -3031,20 +3033,6 @@ function updateMaxwellBtn() {
 function loadMaxwell() {
   try { G.maxwell = localStorage.getItem('tdr-maxwell') === '1'; } catch (e) {}
   updateMaxwellBtn();
-}
-
-// ---- 📖 HOW TO PLAY (the tutorial overlay) --------------------------------
-// A friendly full-screen card that explains the controls. It pops up on your
-// very first visit, and any time you tap HOW TO PLAY on the menu.
-function openHowto()  { const el = document.getElementById('howto-modal'); if (el) el.style.display = 'flex'; }
-function closeHowto() {
-  const el = document.getElementById('howto-modal'); if (el) el.style.display = 'none';
-  try { localStorage.setItem('tdr-seen-howto', '1'); } catch (e) {}
-}
-function maybeShowHowtoOnFirstVisit() {
-  let seen = false;
-  try { seen = localStorage.getItem('tdr-seen-howto') === '1'; } catch (e) {}
-  if (!seen) openHowto();
 }
 
 // A "hold" button: down = start moving, up/leave = stop.

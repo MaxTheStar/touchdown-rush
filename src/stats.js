@@ -214,6 +214,9 @@
   function refreshTracker() {
     if (!$('side-tracker')) return;    // (dashboard.html has no side panel)
     const put = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    // On your own computer these are separate PRACTICE counters, so say so —
+    // otherwise the small "test" numbers look like the real world totals.
+    put('trk-dev', DEV ? '⚙️ practice numbers (test mode)' : '');
     const paint = t => {
       put('trk-plays', t.plays); put('trk-players', t.players);
       put('trk-reviews', t.reviews); put('trk-games', load('games', 0));
