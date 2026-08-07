@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — ads.js: ANIMATED COMMERCIALS for the TV breaks 📺
+// TOUCHDOWN FUN — ads.js: ANIMATED COMMERCIALS for the TV breaks 📺
 // ------------------------------------------------------------
 // When a quarter ends, the game cuts to a commercial — and now the
 // commercials MOVE: products slide in, bubbles rise, cleats dash,

@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — stats.js: the WORLD TRACKER and player REVIEWS
+// TOUCHDOWN FUN — stats.js: the WORLD TRACKER and player REVIEWS
 // ------------------------------------------------------------
 // (The developer dashboard lives on its OWN page — dashboard.html —
 // so players never see it. It borrows this file's helpers through

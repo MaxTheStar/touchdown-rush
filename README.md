@@ -1,4 +1,4 @@
-# 🏈 Touchdown Rush
+# 🏈 Touchdown Fun
 
 An arcade American football game with **big heads and small bodies** — real football,
 chibi style. Built with [Phaser 3](https://phaser.io), the open-source 2D game engine.
@@ -71,20 +71,20 @@ final whistle. The **🔊 button** (top-right) mutes it, and the game remembers 
 a good try). Spend them on the team menu's **🛍 SHOP** on gear that really changes how you
 play: **👟 Speed Cleats** (faster every step), **⚡ Turbo Dash** (bigger, longer, quicker-
 recharging swipe-dashes), **🧤 Sticky Gloves** (more catches, fewer drops), and **🔋 Catch
-Energy** (a speed burst the instant you haul one in). Three levels each, and the boosts are
-real — the game reads your gear in the middle of every play.
+Energy** (a speed burst the instant you haul one in), plus **💪 Stiff Arm** (shrug off the
+first tackler) and **🔒 Iron Grip** (way fewer fumbles). **Ten levels each** now, so you can
+keep upgrading — and the boosts are real, read by the game in the middle of every play.
 
-**🎁 Daily Rewards — a new present every day!** Come back each day and claim from a **7-day
-calendar**; keep the streak going and day 7 is the big one. Two of the days hand out
-**exclusive uniforms you can't pick anywhere else** — the purple **GALAXY** (day 3) and the
-shimmering **GOLD RUSH** (day 7) — and once unlocked they show up right in the CHOOSE YOUR
-TEAM menu. Miss a day and the week starts over, so it pays to keep playing.
+**🎁 Daily Rewards — a new present every day!** Come back each day and claim from a **14-day
+calendar**; keep the streak going and day 14 is the big one. Five of the days hand out
+**exclusive uniforms you can't pick anywhere else** — the purple **GALAXY** (day 3), the
+shimmering **GOLD RUSH** (day 7), the brand-new fiery **LAVA** (day 10), glowing **NEON ICE**
+(day 12), and the **BLACK DIAMOND** finale (day 14) — and once unlocked they show up right in
+the CHOOSE YOUR TEAM menu. Every reward is **free**. Miss a day and the streak starts over, so
+it pays to keep playing.
 
-**⭐ The Premium Pass ($1.99).** Unlock it and **every daily reward gets bigger** — extra
-coins on top of the free ones, plus two **premium-only uniforms** (NEON ICE and BLACK
-DIAMOND). *Honesty corner:* the checkout is **pretend on purpose** — a homemade web game
-can't take real money (that needs a payment company and a grown-up's business account), so
-the button says so plainly and just unlocks it for free, to show how it *would* work.
+**✨ A coin celebration.** Claim a daily reward or buy some gear and a **shower of coins
+flies up** with a happy *cha‑ching!* — a little jackpot moment every time you win something.
 
 **🌍 The world tracker, now in the game too.** The team menu shows a little panel **off to
 the side of the screen** (never drawn on the field itself) with the worldwide games,
@@ -175,14 +175,25 @@ review database is a future level!).
 - [x] **⭐ v1.2 — PLAY DEFENSE!** The other team lines up and runs real plays — and you
       control a defender (the YOU tag) to stop them: chase the runner, pressure the QB
       into panic throws, break up passes, pick them off, stuff them on 4th down.
-- [x] **🪙 v1.3 — Coins, the PRO SHOP, DAILY REWARDS & a PREMIUM pass.** Earn coins by
+- [x] **🪙 v1.3 — Coins, the PRO SHOP & DAILY REWARDS.** Earn coins by
       playing and spend them on real gear (speed cleats, turbo dash, sticky gloves, catch
-      energy — 3 levels each). A **7-day daily-reward calendar** with **exclusive uniforms**
-      (GALAXY, GOLD RUSH) you can't get on the main menu, and an honest **pretend $1.99
-      Premium Pass** that makes every daily reward bigger and adds two premium-only
-      uniforms. The world tracker now also shows on the menu, **at the side of the screen**.
-- [ ] **Next up:** smarter routes on both sides, touchdown replays on defense, then
-      **seasons, a "Max Bowl," and drafting players**.
+      energy). A daily-reward calendar with **exclusive uniforms** you can't get on the main
+      menu. Every reward is **free** — the game doesn't take real money. The world tracker now
+      also shows on the menu, **at the side**.
+- [x] **✨ v1.11 — Coin celebration & no more paid pass.** Coins now fly up with a *cha-ching!*
+      when you claim or buy, and the old pretend "premium" pass is gone — everything's free.
+- [x] **🎁 v1.12 — Bigger rewards & deeper gear.** The daily calendar grew to **14 days** with
+      five free uniforms (adds LAVA, NEON ICE, BLACK DIAMOND), and every shop item now upgrades
+      all the way to **level 10** — plus two new items, **Stiff Arm** and **Iron Grip**.
+- [x] **✏️ v1.13 — New name!** The game is now **Touchdown Fun**. (Same link, same saved coins —
+      just a cooler name.)
+- [x] **📈 v1.14 — Your team levels up!** Every touchdown, field goal and takeaway earns **XP**.
+      Fill the bar and your **team level** goes up — from **ROOKIE** all the way to **HALL OF FAME** —
+      which makes your team a little stronger *and* pays a coin bonus. Watch the green level bar on
+      the menu, and win games to climb faster.
+- [ ] **Next up (the Add-On Draft Board):** replay the big defensive stops, weather & night
+      games, computer-offense formations, a drafted trick play, two-player pass-and-play, and
+      someday online leaderboards.
 
 ## The team
 

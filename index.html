@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Touchdown Rush" />
-  <title>Touchdown Rush 🏈</title>
+  <meta name="apple-mobile-web-app-title" content="Touchdown Fun" />
+  <title>Touchdown Fun 🏈</title>
   <style>
     html, body {
       margin: 0;
@@ -184,8 +184,17 @@
 
     /* ---- 🎓 STEP-BY-STEP TUTORIAL (src/tour.js) — one tip at a time -------- */
     .tour-back { position: fixed; inset: 0; z-index: 95; display: none; background: rgba(6,10,20,0.55); }
-    .tour-ring { position: fixed; border: 3px solid #ffd60a; border-radius: 14px; pointer-events: none;
-      box-shadow: 0 0 0 3px rgba(255,214,10,0.30), 0 0 20px rgba(255,214,10,0.85); transition: all .18s ease; }
+    /* The neon-yellow SQUARE box that frames whatever the tip is talking about. */
+    .tour-ring { position: fixed; border: 4px solid #e5ff00; border-radius: 3px; pointer-events: none;
+      background: rgba(229,255,0,0.08);
+      box-shadow: 0 0 0 2px rgba(229,255,0,0.25), 0 0 16px rgba(229,255,0,0.95), 0 0 30px rgba(229,255,0,0.5);
+      transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease;
+      animation: tourPulse 1.1s ease-in-out infinite; }
+    @keyframes tourPulse {
+      0%, 100% { box-shadow: 0 0 0 2px rgba(229,255,0,0.22), 0 0 12px rgba(229,255,0,0.85), 0 0 22px rgba(229,255,0,0.40); }
+      50%      { box-shadow: 0 0 0 3px rgba(229,255,0,0.40), 0 0 22px rgba(229,255,0,1.00), 0 0 38px rgba(229,255,0,0.60); }
+    }
+    @media (prefers-reduced-motion: reduce) { .tour-ring { animation: none; } }
     .tour-card {
       position: fixed; left: 50%; transform: translateX(-50%);
       bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
@@ -397,7 +406,31 @@
     .meta-btn small { font-size: 8px; letter-spacing: 0.5px; margin-top: 1px; }
     .meta-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
 
-    /* ---- Shared pop-up styles (the shop, daily rewards, premium) --------- */
+    /* ---- 📈 Team level + XP bar (sits just under the money row) ---------- */
+    #xp-bar {
+      position: fixed; z-index: 40; display: none; align-items: center; gap: 8px;
+      left: max(12px, env(safe-area-inset-left));
+      top: calc(max(12px, env(safe-area-inset-top)) + 51px);
+      width: 214px; height: 40px; padding: 0 10px; box-sizing: border-box;
+      background: rgba(10,16,32,0.72); border: 2px solid rgba(123,216,143,0.55);
+      border-radius: 12px;
+    }
+    body.menu #xp-bar { display: flex; }
+    #xp-badge {
+      font: 800 12px "Arial Black", Arial; color: #08130c; white-space: nowrap;
+      background: #7bd88f; border-radius: 8px; padding: 4px 7px;
+    }
+    #xp-mid { flex: 1; min-width: 0; }
+    #xp-title-row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+    #xp-title { font: 800 10px "Arial Black", Arial; color: #b6f0c6; letter-spacing: .6px; }
+    #xp-nums  { font: 700 9px Arial; color: #9fb6a8; white-space: nowrap; }
+    #xp-track { height: 7px; margin-top: 3px; border-radius: 999px;
+                background: rgba(255,255,255,0.14); overflow: hidden; }
+    #xp-fill  { height: 100%; width: 0%; border-radius: 999px;
+                background: linear-gradient(90deg,#5fc97f,#9be86a); transition: width .5s ease; }
+    @media (prefers-reduced-motion: reduce) { #xp-fill { transition: none; } }
+
+    /* ---- Shared pop-up styles (the shop & daily rewards) ----------------- */
     .ov {
       position: fixed; z-index: 70; inset: 0;
       display: none;                       /* shop.js flips these to flex */
@@ -482,8 +515,6 @@
     .day-cell.claimed { opacity: 0.45; }
     .day-num { font: 800 9px "Arial Black", Arial; color: #ffe066; margin-bottom: 3px; }
     .day-free { font: 800 10px "Arial Black", Arial; color: #fff; min-height: 26px; }
-    .day-prem { font: 800 10px "Arial Black", Arial; color: #ffd60a; min-height: 26px;
-                border-top: 1px dashed rgba(255,255,255,0.25); margin-top: 3px; padding-top: 3px; }
     .uni-chip { width: 22px; height: 12px; border-radius: 3px; margin: 1px auto;
                 border: 1px solid rgba(255,255,255,0.55); }
     .uni-name { font: 800 6.5px "Arial Black", Arial; letter-spacing: 0; }
@@ -491,31 +522,48 @@
     #daily-claim.done { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);
                         color: #aab4c8; pointer-events: none; }
 
-    /* the premium strip under the calendar */
-    .prem-btn {
-      -webkit-tap-highlight-color: transparent; touch-action: none;
-      margin-top: 12px; padding: 12px; border-radius: 12px;
-      background: linear-gradient(160deg, rgba(255,214,10,0.35), rgba(255,150,10,0.25));
-      border: 2px solid #ffd60a; color: #ffe066;
-      font: 800 15px "Arial Black", Arial;
+    /* ---- ✨ The coin celebration (shop.js sprays these on claim/buy) ---- */
+    /* A see-through layer ABOVE the pop-ups (z-index 70) so the coins show. */
+    #coin-fx { position: fixed; inset: 0; z-index: 200; pointer-events: none; overflow: hidden; }
+    .fx-coin {
+      position: absolute; font-size: 22px; will-change: transform, opacity;
+      transform: translate(-50%, -50%);
+      animation: coinFly 0.9s cubic-bezier(.22,.7,.3,1) forwards;
     }
-    .prem-btn span { display: block; font: 10px Arial; color: #fff; margin-top: 3px; }
-    .prem-btn:active { transform: scale(0.97); }
-    .prem-on {
-      margin-top: 12px; padding: 10px; border-radius: 12px;
-      background: rgba(255,214,10,0.16); border: 2px solid rgba(255,214,10,0.5);
-      color: #ffe066; font: 800 12px "Arial Black", Arial;
+    @keyframes coinFly {
+      0%   { transform: translate(-50%,-50%) scale(0.4) rotate(0);   opacity: 0; }
+      15%  {                                                          opacity: 1; }
+      100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(260deg); opacity: 0; }
     }
-    .prem-perk { text-align: left; font: 13px Arial; color: #fff; margin: 6px 0 0 8px; }
-    .prem-honest {
-      margin-top: 12px; padding: 10px; border-radius: 10px; text-align: left;
-      background: rgba(143,208,255,0.1); border: 1px solid rgba(143,208,255,0.4);
-      font: 11px Arial; color: #8fd0ff;
+    .fx-label {
+      position: absolute; transform: translate(-50%,-50%); white-space: nowrap;
+      font: 800 26px "Arial Black", Arial; color: #ffe066;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.65);
+      animation: coinLabel 1.1s ease-out forwards;
+    }
+    @keyframes coinLabel {
+      0%   { transform: translate(-50%,-50%)  scale(0.6); opacity: 0; }
+      20%  { transform: translate(-50%,-72%)  scale(1.1); opacity: 1; }
+      70%  {                                              opacity: 1; }
+      100% { transform: translate(-50%,-165%) scale(1);   opacity: 0; }
+    }
+    #coin-chip.bump { animation: chipBump 0.5s ease; }
+    @keyframes chipBump {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.28); background: rgba(255,214,10,0.42); }
+      100% { transform: scale(1); }
+    }
+    /* Respect "reduce motion": keep a gentle label, drop the flying coins & bump. */
+    @media (prefers-reduced-motion: reduce) {
+      .fx-coin { display: none; }
+      #coin-chip.bump { animation: none; }
+      .fx-label { animation: coinLabelCalm 0.9s ease-out forwards; }
+      @keyframes coinLabelCalm { 0%{opacity:0} 15%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
     }
   </style>
 </head>
 <body>
-  <h1>🏈 TOUCHDOWN RUSH</h1>
+  <h1>🏈 TOUCHDOWN FUN</h1>
   <div class="controls">
     <kbd>SPACE</kbd> hike &nbsp;·&nbsp; <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> run &nbsp;·&nbsp;
     <kbd>1</kbd> <kbd>2</kbd> pass to WR &nbsp;·&nbsp; <kbd>3</kbd> pass to RB &nbsp;·&nbsp;
@@ -552,6 +600,15 @@
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
     <div class="meta-btn" id="open-howto">📖<small>HOW TO</small></div>
+  </div>
+
+  <!-- 📈 Team level + XP progress bar (menu only — filled in by progress.js) -->
+  <div id="xp-bar">
+    <div id="xp-badge">LVL 1</div>
+    <div id="xp-mid">
+      <div id="xp-title-row"><span id="xp-title">ROOKIE</span><span id="xp-nums">0 / 100 XP</span></div>
+      <div id="xp-track"><div id="xp-fill"></div></div>
+    </div>
   </div>
 
   <!-- Difficulty picker (Easy / Medium / Hard) — shown on the menu, above PLAY -->
@@ -649,34 +706,15 @@
     </div>
   </div>
 
-  <!-- 🎁 DAILY REWARDS — the 7-day calendar. shop.js draws the days. -->
+  <!-- 🎁 DAILY REWARDS — the 14-day calendar. shop.js draws the days. -->
   <div class="ov" id="daily-modal">
     <div class="ov-card">
       <div class="ov-title">🎁 DAILY REWARDS</div>
-      <div class="ov-sub">Play every day to keep the streak — day 7 is the BIG one!</div>
+      <div class="ov-sub">Play every day to keep the streak — day 14 is the BIG one!</div>
       <div id="daily-grid"></div>
-      <div class="daily-legend">white row = everyone · <b style="color:#ffd60a">gold row</b> = premium extras</div>
+      <div class="daily-legend">every reward is FREE · <b style="color:#ffd60a">special uniforms on days 3, 7, 10, 12 &amp; 14</b></div>
       <div class="ov-btn yes" id="daily-claim">CLAIM 🎁</div>
-      <div id="daily-premium"></div>
       <div class="ov-btn" id="daily-close">CLOSE</div>
-    </div>
-  </div>
-
-  <!-- ⭐ PREMIUM PASS — an honest PRETEND checkout (no real money; a web game
-       can't charge real dollars without a payment company + a grown-up). -->
-  <div class="ov" id="premium-modal">
-    <div class="ov-card">
-      <div class="ov-title">⭐ PREMIUM PASS</div>
-      <div class="ov-sub">$1.99 · better rewards, every single day</div>
-      <div class="prem-perk">🪙 EXTRA coins on every daily reward</div>
-      <div class="prem-perk">🎽 2 premium-only uniforms — NEON ICE (day 3) and BLACK DIAMOND (day 7)</div>
-      <div class="prem-perk">⭐ a gold badge on your calendar forever</div>
-      <div class="prem-honest">🔒 <b>Honesty corner:</b> this checkout is PRETEND. A homemade
-        web game can't take real money — that needs a payment company and a grown-up's
-        business account. Tapping the button unlocks Premium for free, so you can see
-        exactly how it would work.</div>
-      <div class="ov-btn yes" id="prem-buy">PRETEND PAY $1.99 ✅</div>
-      <div class="ov-btn" id="prem-no">NO THANKS</div>
     </div>
   </div>
 
@@ -697,7 +735,7 @@
       <div class="rv-step" id="rv-step3">
         <div class="rv-title">Your review!</div>
         <div id="rv-stars"></div>
-        <textarea id="rv-text" maxlength="280" placeholder="What do you think of Touchdown Rush?"></textarea>
+        <textarea id="rv-text" maxlength="280" placeholder="What do you think of Touchdown Fun?"></textarea>
         <div class="rv-row"><div class="rv-btn yes" id="rv-send">SEND IT 🏈</div><div class="rv-btn" id="rv-cancel">CANCEL</div></div>
       </div>
       <div class="rv-step" id="rv-step4">
@@ -712,13 +750,14 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
        change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=30"></script>
-  <script src="src/sound.js?v=30"></script>
-  <script src="src/shop.js?v=30"></script>
-  <script src="src/season.js?v=30"></script>
-  <script src="src/ads.js?v=30"></script>
-  <script src="src/tour.js?v=30"></script>
-  <script src="src/kick.js?v=30"></script>
-  <script src="src/main.js?v=30"></script>
+  <script src="src/stats.js?v=35"></script>
+  <script src="src/sound.js?v=35"></script>
+  <script src="src/shop.js?v=35"></script>
+  <script src="src/progress.js?v=35"></script>
+  <script src="src/season.js?v=35"></script>
+  <script src="src/ads.js?v=35"></script>
+  <script src="src/tour.js?v=35"></script>
+  <script src="src/kick.js?v=35"></script>
+  <script src="src/main.js?v=35"></script>
 </body>
 </html>

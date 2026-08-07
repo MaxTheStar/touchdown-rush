@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — Session 2: 7-on-7, the snap, run OR pass
+// TOUCHDOWN FUN — Session 2: 7-on-7, the snap, run OR pass
 // ------------------------------------------------------------
 // Real football math: 1 yard = 10 pixels.
 // The field runs top-to-bottom. Max's team (MAX FC, blue) drives
@@ -126,7 +126,7 @@ const TIME_KICKOFF    = 8;     // the kickoff + your return
 // When a quarter ends, the game cuts to a TV-style break: the score so far,
 // then an ANIMATED commercial — a real little TV spot with moving parts.
 // The commercials live in src/ads.js (every sponsor is still 100% made up).
-// HALFTIME follows real NFL rules — see the notes on startBreak() below.
+// HALFTIME follows real football rules — see the notes on startBreak() below.
 const BREAK_MIN_MS = 1200;      // the break can't be tapped away for this long (so it registers)
 
 // ---- Instant replay — after you score, watch it again in slow motion! -----
@@ -613,6 +613,8 @@ function snap(time) {
   G.hasPassed = false;
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
+  G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
+  G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
   G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
   // Read out what the defense is doing — a blitz is always called (fair
@@ -1248,10 +1250,27 @@ function nearBlocker(d) {
 // ============================================================
 function checkTackle() {
   const c = G.ballCarrier.s;
+  // 💪 STIFF ARM: right after you shrug a guy off, you get a brief free run so
+  // the same defender can't instantly re-tackle you.
+  if (G.scene.time.now < G.stiffUntil) return;
   for (const d of defense) {
     if (Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y) < TACKLE_DIST) {
-      // A hard tackle sometimes knocks the ball loose = FUMBLE!
-      if (Math.random() < FUMBLE_CHANCE) fumble();
+      // 💪 STIFF ARM (shop): a chance to break the FIRST tackle of the play —
+      // shove this tackler back and keep on running.
+      if (!G.stiffUsed && window.TDShop && Math.random() < TDShop.stiffChance()) {
+        G.stiffUsed = true;
+        G.stiffUntil = G.scene.time.now + 500;      // ~half a second of free running
+        const ang = Math.atan2(d.s.y - c.y, d.s.x - c.x);
+        d.s.x += Math.cos(ang) * 28;                // knock him off you (past tackle range)
+        d.s.y += Math.sin(ang) * 28;
+        if (window.TDSound) TDSound.sting('td');
+        sayComment(pick(['💪 STIFF ARM!', 'Shrugs him off!', 'Breaks the tackle!']));
+        return;
+      }
+      // A hard tackle sometimes knocks the ball loose = FUMBLE! 🔒 IRON GRIP
+      // (shop) makes that much rarer.
+      const grip = window.TDShop ? TDShop.gripFactor() : 0;
+      if (Math.random() < FUMBLE_CHANCE * (1 - grip)) fumble();
       else endPlay('tackle');
       return;
     }
@@ -1324,6 +1343,7 @@ function endPlay(result, customMsg) {
     big = true;
     if (window.TDSound) TDSound.sting('td');   // 🎺 the touchdown fanfare!
     if (window.TDShop)  TDShop.earn(10);       // 🪙 touchdowns pay 10 coins
+    if (window.TDProgress) TDProgress.addXP(12);  // 📈 …and 12 XP toward your team's next level
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
@@ -1444,6 +1464,7 @@ function onKickDone(result) {
     msg = 'EXTRA POINT!  +1';
     if (window.TDSound) TDSound.sting('td');
     if (window.TDShop)  TDShop.earn(2);        // 🪙 extra points pay 2 coins
+    if (window.TDProgress) TDProgress.addXP(3);   // 📈 +3 XP
   } else if (G.kickKind === 'xp') {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else if (result.mode === 'fg' && result.made) {
@@ -1451,6 +1472,7 @@ function onKickDone(result) {
     msg = 'FIELD GOAL!  +3';
     if (window.TDSound) TDSound.sting('td');
     if (window.TDShop)  TDShop.earn(5);        // 🪙 field goals pay 5 coins
+    if (window.TDProgress) TDProgress.addXP(6);   // 📈 +6 XP
   } else if (result.mode === 'fg') {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else {
@@ -2001,6 +2023,7 @@ function resolveRedPass(wr, x, y) {
 function startPickSix(picker, x, y) {
   if (window.TDSound) TDSound.sting('td');
   if (window.TDShop)  TDShop.earn(3);        // 🪙 takeaways pay 3 coins
+  if (window.TDProgress) TDProgress.addXP(8);   // 📈 a takeaway is worth 8 XP
   G.cpu = null;                              // their drive is over
   G.dpassTarget = null;
   G.ballCarrier = picker;
@@ -2124,9 +2147,11 @@ function cpuDriveEnd(kind, customMsg) {
   else if (kind === 'safety')    { big = true; msg = customMsg || 'SAFETY!  YOU +2';
                                    G.score += 2;                          // 🛑 the 2 points are YOURS
                                    if (window.TDSound) TDSound.sting('td');
-                                   if (window.TDShop) TDShop.earn(3); }   // 🪙 a takeaway-ish reward
+                                   if (window.TDShop) TDShop.earn(3);
+                                   if (window.TDProgress) TDProgress.addXP(8); }   // 🪙📈 a takeaway-ish reward
   else                           { big = true; msg = customMsg || 'TURNOVER — YOUR BALL!';
-                                   if (window.TDShop) TDShop.earn(3); }   // 🪙 takeaways pay 3
+                                   if (window.TDShop) TDShop.earn(3);
+                                   if (window.TDProgress) TDProgress.addXP(8); }   // 🪙📈 takeaways pay coins + XP
 
   G.oppScore += pts;
   updateHUD();
@@ -2165,8 +2190,8 @@ function takeYourBall() {
 // ------------------------------------------------------------
 // A little TV-style break between quarters: the score so far, a word from our
 // sponsors (all sponsors are 100% imaginary and extremely silly), and "tap to
-// continue". Halftime adds a note about the real NFL rule for who gets the
-// ball next. The break can't be tapped away for the first BREAK_MIN_MS, so a
+// continue". Halftime adds a note about who gets the ball next (the team that
+// didn't get the opening kickoff). The break can't be tapped away for the first BREAK_MIN_MS, so a
 // stray tap doesn't blow right through it.
 // ============================================================
 function startBreak(kind, resume) {
@@ -2211,9 +2236,9 @@ function buildBreakOverlay(kind) {
   O.adLabel = mk(232, 'COMMERCIAL BREAK', 13, '#aab4c8');
   if (window.TDAds) O.ad = TDAds.play(s);   // O.ad.destroy() runs at cleanup
 
-  // Halftime: teach the real-football rule for who gets the ball next.
+  // Halftime: explain who gets the ball to start the second half.
   if (kind === 'half') {
-    O.rule = mk(530, 'Real NFL rules: you took the opening kickoff,\nso the ' +
+    O.rule = mk(530, 'You took the opening kickoff,\nso the ' +
                      G.oppTeam.name + ' get the ball\nto start the second half.',
                 14, '#8fd0ff');
   }
@@ -2240,6 +2265,15 @@ function endGame() {
   // 🪙 the game check: +25 for a win, +5 for a good try (before the FINAL
   // screen is built, so it can show everything you earned today).
   if (window.TDShop) TDShop.earn(G.score > G.oppScore ? 25 : 5);
+  // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
+  // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
+  // remember what to show on the FINAL screen below.
+  G.xpEarned = 0; G.leveledTo = 0;
+  if (window.TDProgress) {
+    TDProgress.addXP(G.score > G.oppScore ? 40 : 15);
+    G.xpEarned  = TDProgress.gameXP();
+    G.leveledTo = TDProgress.claimLevelUps();   // the new level if we leveled up, else 0
+  }
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons
@@ -2287,12 +2321,29 @@ function buildGameOverOverlay() {
 
   // 🪙 Payday! Show the coins this game earned (spend them in the shop).
   if (window.TDShop && TDShop.gameEarnings() > 0) {
-    O.coins = s.add.text(270, 554, '🪙 +' + TDShop.gameEarnings() + ' COINS EARNED', {
+    O.coins = s.add.text(270, 548, '🪙 +' + TDShop.gameEarnings() + ' COINS EARNED', {
       fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffe066',
       stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
   }
 
-  O.again = s.add.text(270, 600, G.seasonGame ? 'tap for your season →' : 'tap to play again', {
+  // 📈 XP earned this game — it feeds your team's level.
+  if (G.xpEarned > 0) {
+    O.xp = s.add.text(270, 574, '⭐ +' + G.xpEarned + ' XP', {
+      fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#9be86a',
+      stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
+  }
+
+  // 🎉 LEVEL UP! A big pulsing line + a burst of stars — your team just got better.
+  if (G.leveledTo) {
+    O.levelup = s.add.text(270, 602,
+      'LEVEL UP!  Lv ' + G.leveledTo + (window.TDProgress ? ' — ' + TDProgress.title() : ''), {
+      fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#7bd88f',
+      stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(52).setScale(0);
+    s.tweens.add({ targets: O.levelup, scale: 1, duration: 480, ease: 'Back.Out' });
+    if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '⭐', 'LEVEL ' + G.leveledTo + '!');
+  }
+
+  O.again = s.add.text(270, G.leveledTo ? 646 : 622, G.seasonGame ? 'tap for your season →' : 'tap to play again', {
     fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#8fd0ff',
     stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
   s.tweens.add({ targets: O.again, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
@@ -2391,6 +2442,7 @@ function enterMenu() {
   renderMenu();
   syncDiffButtons();   // highlight the current difficulty
   if (window.TDShop)  TDShop.onMenu();           // 🪙 coin count + a daily gift if one's ready
+  if (window.TDProgress) TDProgress.onMenu();    // 📈 refresh the team level + XP bar
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
   if (window.TDTour)  TDTour.maybeStart('menu');  // 🎓 first-visit menu tour (waits for popups)
 }
@@ -2477,6 +2529,15 @@ function beginGame(team, opp, isSeason) {
   G.myOff = tilt(mr.off);  G.myDef = tilt(mr.def);
   G.oppOff = tilt(orr.off); G.oppDef = tilt(orr.def);
 
+  // 📈 Player progression: your leveled-up team plays a little stronger — a
+  // gentle, CAPPED edge on YOUR offense & defense only (never the opponent's),
+  // stacked on top of the ⭐ team ratings above. At level 1 it's exactly 1.0
+  // (no change), growing to +10% at the highest levels.
+  if (window.TDProgress) {
+    const lvlBoost = TDProgress.boost();
+    G.myOff *= lvlBoost; G.myDef *= lvlBoost;
+  }
+
   // Fresh scoreboard & game clock for a brand-new game.
   G.score = 0; G.oppScore = 0;
   G.quarter = 1; G.clock = QUARTER_SECONDS;
@@ -2485,6 +2546,7 @@ function beginGame(team, opp, isSeason) {
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
+  if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
 
   // Paint both teams onto their players.
   makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);
@@ -2766,7 +2828,7 @@ function startNextPlay() {
   if (t === 'gameover') { endGame(); return; }
 
   if (t === 'halftime') {
-    // REAL NFL RULES at the half: you fielded the game-opening kickoff, so the
+    // REAL FOOTBALL RULES at the half: you fielded the game-opening kickoff, so the
     // OTHER team gets the ball to start the second half — and a drive never
     // carries across halftime (whatever you had going is over).
     startBreak('half', startCpuDrive);

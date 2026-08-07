@@ -1,4 +1,4 @@
-# 🏈 Touchdown Rush — Dev Log (where we left off)
+# 🏈 Touchdown Fun — Dev Log (where we left off)
 
 A quick "control room" note for whoever opens this repo next (probably future
 Max, or Claude helping Max). The player-facing story lives in the README; this
@@ -8,14 +8,23 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.10 — cache-buster is `?v=30` in `index.html`.
+- **Version:** v1.14 — cache-buster is `?v=35` in `index.html`.
+- **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
+  *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
+  `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
+  namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
+  saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-07-30.
+- **Last updated:** 2026-08-06.
 
-## ✅ Sync status — in sync
+## ✅ Sync status — v1.11 + v1.12 in progress (NOT pushed yet)
 
-Local `main` and `origin/main` are in sync through v1.10 (🎓 step-by-step tutorial `src/tour.js`,
-clearer 🌍 world tracker, UI de-clutter). v1.9 = ⭐ ratings/turnovers/pick-sixes. GitHub Pages
+v1.11 (🗑 removed the Premium Pass + ✨ coin celebration) and v1.12 (🎁 bigger 14-day daily
+rewards + 🛍 more Pro Shop gear to level 10 + confirmed the 🏈 pick-six extra point already
+works) are **committed locally only if you've run `git commit`, and NOT pushed** unless you've
+run `git push origin main`. Everything through v1.10 (🎓 step-by-step tutorial `src/tour.js`,
+clearer 🌍 world tracker, UI de-clutter) is already live.
+v1.9 = ⭐ ratings/turnovers/pick-sixes. GitHub Pages
 rebuilds the live site within a minute or two of each push. The earlier push
 blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
@@ -40,9 +49,9 @@ rebuilds the live site within a minute or two.
   - 🛍 **Pro Shop** — 4 upgrades × 3 levels: Speed Cleats, Turbo Dash, Sticky Gloves,
     Catch Energy. Effects are read live during play by `main.js`.
   - 🎁 **Daily Rewards** — 7-day streak calendar; days 3 & 7 grant exclusive uniforms
-    (GALAXY, GOLD RUSH) that then appear in the team menu.
-  - ⭐ **Premium Pass** — a clearly-labeled *pretend* $1.99 unlock: bigger daily rewards +
-    premium-only uniforms (NEON ICE, BLACK DIAMOND).
+    (GALAXY, GOLD RUSH) that then appear in the team menu. *(Grown to 14 days in v1.12.)*
+  - ⭐ **Premium Pass** — *(REMOVED in v1.11 — the game can't take real money, so all rewards
+    are free now. Its two uniforms, NEON ICE & BLACK DIAMOND, became free daily rewards in v1.12.)*
   - 🌍 **World tracker** moved to a side panel on the menu (off the game field).
 - **v1.4 — 3D field view + a nicer-looking field** (this iteration — `index.html` + `main.js`):
   - 🎥 **3D / 2D view toggle** — the new cyan **3D** button (top-right, next to Mute) tilts
@@ -172,8 +181,11 @@ rebuilds the live site within a minute or two.
     buttons — they start at canvas y≈546, bars sit above); control switches to the nearest defender
     with hysteresis; pick-six enters the return state controlling the picker; turnover spots computed
     + consumed both ways; open-field catch/INT on a bad throw. No console errors.
-  - ⚠️ NOTE for next time: a pick-six TD currently skips its own extra-point kick (it goes through the
-    kickoff-return TD path) — fine, but noting it in case Max wants the PAT added.
+  - ✅ UPDATE (v1.12): the pick-six extra point turned out to ALREADY work — a return TD goes through
+    `checkTouchdown()` → `endPlay('touchdown')`, which sets `G.pendingXP`, so the dead-ball handler
+    (and `endReplay`) kick the extra point exactly like a normal TD. Verified in-browser by stepping
+    the real `update()` loop through a staged pick-six: TD → +6 → (replay) → XP kick, both the
+    replay and no-replay paths. This earlier "skips the PAT" note was stale.
 - **v1.10 — 🎓 Step-by-step tutorial, clearer tracker, UI de-clutter** (new `src/tour.js`):
   - 🎓 **Step tutorial (replaces the wall-of-text HOW TO)** — `src/tour.js` = `window.TDTour`. Short
     "coach-mark" tours (`menu` / `offense` / `defense`), each shown ONCE (localStorage `tdr-tour-*`):
@@ -200,6 +212,94 @@ rebuilds the live site within a minute or two.
     project with a payment provider + their own business account.
   - 🧪 Verified in-browser: all 3 tours trigger + step through + mark seen (menu 5 steps, offense 4,
     defense 3); ring spotlights the right buttons; tracker relabeled; no console errors.
+- **v1.11 — 🗑 Removed the Premium Pass + ✨ coin celebration** (this iteration — `src/shop.js` +
+  `index.html`):
+  - 💸 **Premium Pass fully removed.** Max asked to take it out because the game can't collect real
+    money yet — so we deleted it everywhere instead of leaving a pretend checkout. Gone: the
+    `#premium-modal` overlay + all `.prem-*`/`.day-prem` CSS in `index.html`; the `premium` state,
+    `buyPremium()`, the daily "gold row" (`pCoins`/`pUniform` fields, the second cell row, the
+    `#daily-premium` strip, the `prem-buy`/`prem-no` wiring) in `shop.js`. The **normal free daily
+    rewards are untouched** (day 3 = GALAXY, day 7 = GOLD RUSH). The `tdr-premium` localStorage key
+    is now unused (left in place; harmless). NEON ICE (`ICE`) + BLACK DIAMOND (`BLK`) were
+    premium-only, so **nobody new earns them right now** — they're kept defined in `UNIFORMS` so
+    anyone who already owns them keeps wearing them, and they're the obvious things to hand out for
+    free when we build "Bigger daily rewards" (see the draft board).
+  - ✨ **Coin celebration (the first draft-board pick, "really easy").** New `celebrate(originEl,
+    emoji, labelText)` in `shop.js`: spawns a `#coin-fx` layer at `z-index: 200` (above the
+    pop-ups), sprays 12 emoji that fly up/out along per-particle `--dx/--dy` CSS vars (`@keyframes
+    coinFly`), floats a big `+N 🪙` / `LEVEL N!` label (`coinLabel`), and bumps `#coin-chip`
+    (`chipBump`). Fired from `claim()` (coins, `+N 🪙`) and `buy()` (the gear's own icon, `LEVEL N!`
+    — called BEFORE `renderShop()` so the tapped button still exists to spray from). Respects
+    `prefers-reduced-motion` (keeps a gentle label, drops the flying coins). Pure sparkle — never
+    touches game state or saved coins.
+  - 🧪 Verify plan: daily modal shows a single free row (no gold row); CLAIM sprays coins + `+N 🪙`
+    and bumps the counter; buying gear sprays the item icon + `LEVEL N!`; no `premium`/`prem-*`
+    left in code (only a history comment in `shop.js`); no console errors.
+- **v1.12 — 🎁 Bigger daily rewards + 🛍 more Pro Shop gear (to level 10) + 🏈 pick-six PAT confirmed**
+  (this iteration — `src/shop.js`, `src/main.js`, `index.html`):
+  - 🎁 **Daily rewards grew from 7 → 14 days** (`DAILY` in `shop.js`). Days 1–7 are unchanged; days
+    8–14 add climbing coin gifts and **three more free uniforms**: a brand-new 🔥 **LAVA** (`LAV`,
+    day 10), plus **NEON ICE** (`ICE`, day 12) and **BLACK DIAMOND** (`BLK`, day 14 finale) — the two
+    ex-"premium" uniforms **re-homed as free rewards** (they were orphaned when the pass was removed
+    in v1.11). Day 14 (100🪙 + BLACK DIAMOND) is the new grand finale. `claimableDay()` now wraps at
+    `DAILY.length` instead of a hardcoded 7. The calendar CSS (`repeat(7,1fr)`) flows to 2 rows on its
+    own; index.html subtitle/legend updated ("day 14 is the BIG one", "uniforms on days 3, 7, 10, 12 &
+    14"). Verified: 14 cells, uniforms on the right days, no layout overflow (420px card, 2 rows).
+  - 🛍 **Pro Shop max level 3 → 10, and two NEW items.** `MAX_LEVEL = 10`; `PRICES` is now a 10-step
+    climb `[25,40,60,85,115,150,190,235,285,350]`. Each item's fixed 3-string `lvl` array was replaced
+    by a `next(L)` label function (kept in sync with the perk math), and the shelf shows `Lv N/10`
+    instead of dots. **Perks were re-tuned so level 10 is a sensible ceiling** (not 3.3× the old L3):
+    cleats `1+0.02·lvl` (L10 +20% run), turbo `{15,15,55}·lvl`, gloves `0.02·lvl` (L10 ±20%), energy
+    `500+180·lvl` ms. Two NEW gear items, both wired into `checkTackle` in `main.js`: 💪 **STIFF ARM**
+    (`stiffChance()=0.04·lvl`, L10 = 40% to break the FIRST tackle of a play — shoves the tackler 28px
+    clear and gives a ~500ms free run via `G.stiffUntil`; once per down, reset in `snap()` via
+    `G.stiffUsed`) and 🔒 **IRON GRIP** (`gripFactor()=0.09·lvl`, main.js uses `FUMBLE_CHANCE*(1-grip)`,
+    L10 = 90% fewer fumbles). Both exposed on `window.TDShop`. `gear` default now includes `stiff`/`grip`
+    (old saves lazily default them to 0 via `gear[id]||0`, so it's backward-compatible).
+  - 🏈 **Pick-six extra point** — investigated and confirmed it ALREADY works (see the v1.9 note update
+    above); no code change was needed, so none was made (avoids a double-PAT bug).
+  - 🧪 Verified in-browser (stepping the real `update()` loop + driving `checkTackle` with a staged
+    tackle and a stubbed RNG): shop buys 1→10 with escalating prices, `speedMult` scales 1.02→1.20, MAX!
+    caps at 10 and a further tap is a no-op; STIFF ARM breaks a tackle (stays live, shoves the defender
+    past `TACKLE_DIST`, sets the free-run window); IRON GRIP turns a would-be fumble roll into a clean
+    tackle; a NO-perk player still tackles/fumbles exactly as before (regression check); pick-six → XP
+    in both the replay and no-replay paths; no console errors.
+- **v1.13 — ✏️ Renamed the game to "Touchdown Fun"** (this iteration — display strings only):
+  - Changed every place a PLAYER sees the name: the `<title>` + `apple-mobile-web-app-title` meta +
+    the big `<h1>` logo + the review-box placeholder in `index.html`, the tutorial welcome line in
+    `src/tour.js`, plus the titles of `README.md`, `kick.html`, `dashboard.html` and the friendly
+    `// TOUCHDOWN FUN —` header comment atop each `src/*.js`.
+  - **Left the plumbing alone on purpose:** the repo/folder name, the `maxthestar.github.io/touchdown-rush`
+    web address, the `tdr-` localStorage save keys, and the Abacus world-counter namespace
+    `touchdown-rush-maxthestar` are UNCHANGED — renaming any of them would break the live link, erase
+    everyone's saved coins/uniforms/daily streak, or reset the worldwide counters to zero.
+  - Cache-buster bumped `?v=33 → ?v=34` (and `dashboard.html`'s `stats.js?v=21 → 22`). 🧪 Verified live
+    in the browser: tab title "Touchdown Fun 🏈", logo "🏈 TOUCHDOWN FUN", app-title meta "Touchdown Fun",
+    review placeholder updated, all 8 scripts at `?v=34`, no console errors.
+- **v1.14 — 📈 Player progression (your team levels up as you play)** (this iteration — new
+  `src/progress.js` = `window.TDProgress`, plus `index.html` + `src/main.js` + one `shop.js` export):
+  - ⭐ **XP from playing** — main.js banks XP right next to every coin reward: TD +12, FG +6, extra
+    point +3, any takeaway (INT / safety / turnover) +8, and at `endGame` a big **+40 for a win / +15
+    for a loss**. `addXP()` never pops anything mid-play — it just saves the XP (localStorage `tdr-xp`,
+    lifetime total) and refreshes the menu bar if it's showing.
+  - 🎚 **Team level curve** — `derive()` turns lifetime XP into a level: `xpToClear(L) = 100 + (L-1)*50`
+    (L1→2 = 100 XP, then +50 each level). Titles climb with level: **ROOKIE → STARTER → PRO → ALL-PRO
+    → SUPERSTAR → LEGEND → HALL OF FAME** (`titleFor`). Levels are unbounded.
+  - 💪 **The reward is balanced** — `boost() = 1 + min(level-1, 20) * 0.005`: **1.0 at level 1, capped at
+    +10% by level 21** and never higher. `beginGame` multiplies **only YOUR** `G.myOff`/`G.myDef` by it
+    (never the opponent's), stacked on top of the ⭐ team-ratings tilt. Small on purpose so the game
+    stays fair. Leveling up also pays **25 coins per level gained** (`claimLevelUps`, called from `endGame`).
+  - 🎚 **Menu bar** — a new `#xp-bar` strip sits under the top-left money row (menu only): a green **LVL N**
+    badge, the title, `into / need XP`, and an animated fill bar. `TDProgress.onMenu()` (from `enterMenu`)
+    refreshes it. The **FINAL screen** now shows `⭐ +N XP` and, on a level-up, a pulsing **LEVEL UP! Lv N —
+    TITLE** with a ⭐ celebration (reuses `TDShop.celebrate`, newly exported from shop.js).
+  - 🔌 Load order gained `progress.js` (after `shop.js`, since it uses `TDShop.earn`/`celebrate` and
+    `TDStats.shared`). All script tags bumped `?v=34 → ?v=35`.
+  - 🧪 Verified in-browser (zeroed `tdr-xp`, walked the curve, then restored the local save): fresh = L1
+    ROOKIE 0/100 boost 1.0; +100 XP → exactly L2 (0/150, boost 1.005); +700 → L5 PRO 100/300 (33% bar),
+    gameXP 800; `claimLevelUps` from L1→L5 returned 5 and paid +100 coins (25×4); a second claim was a
+    no-op (0 coins). Boost caps: L21 = 1.10, L142 = still 1.10. Menu bar renders + is visible; all scripts
+    at `?v=35`; no console errors.
 
 ## 🗂 File map (who does what)
 
@@ -209,14 +309,15 @@ rebuilds the live site within a minute or two.
 | `src/main.js` | The Phaser game: field, players, plays, defense, kickoffs, HUD, replay, team menu. |
 | `src/kick.js` | The field-goal/punt/extra-point kick mini-game. **Loads before main.js** (main uses `KickGame`). |
 | `src/sound.js` | Live chiptune soundtrack (oscillators). API: `window.TDSound`. |
-| `src/shop.js` | Coins, Pro Shop, Daily Rewards, Premium. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
+| `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
+| `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
 | `src/season.js` | 🏆 Season mode: league, standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
 | `src/tour.js` | 🎓 The step-by-step tutorial (coach marks). API: `window.TDTour` (`maybeStart`/`start`/`active`). |
 | `src/ads.js` | Animated TV-break commercials. |
 | `dashboard.html` | Private dev dashboard (world numbers + on-device reviews). Not linked from the game. |
 
-Script load order matters: `stats → sound → shop → season → ads → tour → kick → main`.
+Script load order matters: `stats → sound → shop → progress → season → ads → tour → kick → main`.
 
 ## 🧰 Conventions
 
@@ -228,18 +329,20 @@ Script load order matters: `stats → sound → shop → season → ads → tour
 
 ## 💾 Persistence (localStorage keys)
 
-`tdr-coins`, `tdr-gear`, `tdr-daily`, `tdr-premium`, `tdr-owned-uniforms`, `tdr-trk`,
+`tdr-coins`, `tdr-gear`, `tdr-daily`, `tdr-owned-uniforms`, `tdr-trk`,
 `tdr-games`, `tdr-reviews`, `tdr-country`, `tdr-counted-player`, `tdr-counted-geo`,
 `tdr-known-countries`, `tdr-review-asked`, `tdr-view` (3D or 2D field view),
 `tdr-season` (the whole in-progress season), `tdr-titles` (all-time Max Bowl wins),
-`tdr-maxwell` (👑 the superstar-defender toggle), `tdr-seen-howto` (has the tutorial popped once).
+`tdr-maxwell` (👑 the superstar-defender toggle), `tdr-seen-howto` (has the tutorial popped once),
+`tdr-xp` (📈 lifetime XP — your team level is derived from it).
 
 ## 📝 Notes & limitations
 
-- **Premium is pretend by design.** A static GitHub Pages game can't take real money — that
-  needs a payment provider (Stripe / App Store / Play) *and* a grown-up's business account.
-  The checkout says so honestly and unlocks for free. If real payments are ever wanted, that's
-  a backend + payment-provider project, not a front-end tweak.
+- **No real money — every reward is free.** The old pretend Premium Pass was removed in v1.11.
+  A static GitHub Pages game can't take real money anyway (that needs a payment provider —
+  Stripe / App Store / Play — *and* a grown-up's business account), so all daily rewards are
+  simply free. If real payments are ever wanted, that's a backend + payment-provider project,
+  not a front-end tweak.
 - **Reviews stay on the device** they were written on (no shared database yet).
 - **Browser-preview screenshots time out** on the WebGL canvas; verify changes via live
   DOM/JS state (`window.TDShop`, `__td.G`, element `innerText`) instead.
@@ -254,14 +357,17 @@ python3 -m http.server 8055
 
 ## 🔮 Next up (ideas for the next cycle)
 
-- **Touchdown replays on defensive stops** — the brains are now smart on BOTH sides (your offense +
-  coverage in v1.6, the CPU offense + your AI teammates' man/zone in v1.8), so the remaining polish
-  here is showing the instant replay after a big defensive stop, and maybe CPU formations.
-- Still on the difficulty ladder: **two-player pass-and-play** (the other v1.6 finalist), a **drafted
-  skill play**, weather/night games, player progression. (👑 Maxwell shipped in v1.7.)
-- Maxwell follow-ups if wanted: give him custom art (a crown on the chibi), let him jump routes he
-  didn't start near, or make him a whole boss TEAM instead of one player.
-- **Seasons**, a **"Max Bowl,"** and **drafting players**.
-- More shop items and more daily-reward uniforms; a little coins-fly animation and a
-  "cha-ching" sound when you buy or claim.
-- Maybe a real shared backend someday (leaderboards, cross-device reviews).
+The 🏈 **Add-On Draft Board** (a chart Max keeps) ranks features easiest → hardest. **Built so far:**
+✨ coin celebration (v1.11), 🎁 bigger daily rewards + 🛍 more Pro Shop gear + 🏈 pick-six PAT (v1.12),
+✏️ renamed the game to **Touchdown Fun** (v1.13), 📈 **player progression** (v1.14 — Max chose this one).
+**Still on the board, roughly easiest → hardest:**
+
+- **🎥 Replay the big defensive stops** — the replay camera already exists (used on scores); point it
+  at a huge tackle too. The brains are smart on BOTH sides now (v1.6 + v1.8).
+- **🌧️ Weather & night games**, then **📋 CPU offense formations** (teach the red team the formation
+  system your team already uses).
+- **🎩 A drafted trick play** (e.g. a flea-flicker you unlock). *(📈 player progression is now DONE — v1.14.)*
+- **🎮 Two-player pass-and-play** (share the screen) — the leading difficulty-ladder finalist.
+- **🌍 Online leaderboards / a real shared backend** (needs a server; the hardest one).
+- Maxwell follow-ups if wanted: custom art (a crown on the chibi), let him jump routes he didn't start
+  near, or make him a whole boss TEAM instead of one player.

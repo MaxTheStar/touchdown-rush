@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — sound.js: the SOUNDTRACK 🎵 (all made of math!)
+// TOUCHDOWN FUN — sound.js: the SOUNDTRACK 🎵 (all made of math!)
 // ------------------------------------------------------------
 // There are no music files here. The whole soundtrack is PLAYED
 // LIVE by your browser using the Web Audio API — little electronic

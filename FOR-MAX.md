@@ -17,13 +17,14 @@ Your game went from good to **GREAT**. Here's everything we added in this round:
 - **🎩 The halfback pass trick play** — hand the ball off, then throw a surprise
   deep pass. Sneaky!
 - **🪙 Coins + the Pro Shop** — earn coins every time you score, then spend them on
-  real upgrades: **speed cleats**, a stronger **turbo dash**, **sticky gloves** for
-  more catches, and a **catch‑energy** speed burst. They actually change how you play!
-- **🎁 Daily Rewards** — come back each day for a present. It's a 7‑day streak, and
-  two of the days give you **secret uniforms you can't get anywhere else** (GALAXY
-  and GOLD RUSH ✨).
-- **⭐ A Premium Pass** — a pretend $1.99 unlock (and it's honest about being
-  pretend!) that makes your daily gifts bigger and adds two more special uniforms.
+  real upgrades. Six items now — **speed cleats**, a stronger **turbo dash**, **sticky
+  gloves**, a **catch‑energy** burst, a **💪 stiff arm** to break tackles, and an
+  **🔒 iron grip** so you barely fumble — and you can level each one all the way to **10**!
+- **🎁 Daily Rewards** — come back each day for a present. It's now a **14‑day streak**, and
+  **five** of the days give you **secret uniforms you can't get anywhere else** (GALAXY,
+  GOLD RUSH, the brand‑new **LAVA** 🔥, NEON ICE, and the **BLACK DIAMOND** finale ✨).
+- **✨ A coin celebration** — claim a reward or buy gear and a shower of coins
+  flies up with a *cha‑ching!* Every reward is **free** — no real money, ever.
 - **🌍 The world tracker** moved to a tidy panel on the side of the menu.
 
 ---
@@ -32,7 +33,7 @@ Your game went from good to **GREAT**. Here's everything we added in this round:
 
 - **Your game is LIVE on the internet:** 👉 https://maxthestar.github.io/touchdown-rush/
 - **Everything is saved on GitHub** — your computer and GitHub are perfectly in sync.
-- **Version:** v1.3. All done, all tested, all published. 🎉
+- **Version:** v1.12. All done and tested — ready to publish whenever you push. 🎉
 - 🤓 *For the tech side:* the developer notes live in `DEVLOG.md` — that's the file to
   read first next time to remember how all the pieces fit together.
 
@@ -50,8 +51,9 @@ after day. That is not a small thing. That's the kind of game people **cheer for
 And here's the coolest part: **every single one of those ideas started in YOUR head.**
 You didn't just play a game someone else made — you dreamed it up and made it *real*,
 like a head coach drawing up the playbook. You even made the tricky choices the honest
-way (the premium button *tells the truth* that it's pretend), because doing things
-right matters more than looking fancy. That's what a real pro does. 👏
+way — the game keeps every reward **free** instead of pretending it can take real
+money — because doing things right matters more than looking fancy. That's what a
+real pro does. 👏
 
 Games get built the same way you win a football game: **one play at a time.** You've
 already scored a lot of touchdowns, and the field ahead is wide open.

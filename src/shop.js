@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — shop.js: 🪙 COINS, the 🛍 PRO SHOP & 🎁 DAILY REWARDS
+// TOUCHDOWN FUN — shop.js: 🪙 COINS, the 🛍 PRO SHOP & 🎁 DAILY REWARDS
 // ------------------------------------------------------------
 // This file is the game's locker room — everything you OWN lives here:
 //
@@ -15,13 +15,9 @@
 //   🎁 DAILY REWARDS — come back every day and claim a present. The
 //      week is 7 days; days 3 and 7 hold EXCLUSIVE uniforms you can't
 //      get anywhere else. Miss a day and the week starts over — that's
-//      what makes it a streak!
-//
-//   ⭐ THE PREMIUM PASS ($1.99) — makes every daily reward bigger and
-//      adds two premium-only uniforms. The checkout is PRETEND on
-//      purpose: a homemade web game can't take real money (that needs
-//      a payment company and a grown-up's business account), so the
-//      button says so honestly and just unlocks it.
+//      what makes it a streak! Every reward is FREE — there's no paid
+//      pass, because a homemade web game can't take real money (that
+//      needs a payment company and a grown-up's business account).
 //
 // Everything saves through the same store/load helpers stats.js uses,
 // so your coins and gear are still yours tomorrow (on this device).
@@ -43,6 +39,10 @@
   const UNIFORMS = {
     GLX: { abbr: 'GLX', name: 'GALAXY',        jersey: 0x3b1e6e, helmet: 0x9b4dff, special: true },
     GLD: { abbr: 'GLD', name: 'GOLD RUSH',     jersey: 0xc9a227, helmet: 0xffe066, special: true },
+    // 🔥 LAVA — a brand-new free uniform, earned on day 10 of the daily calendar.
+    LAV: { abbr: 'LAV', name: 'LAVA',          jersey: 0x7a1206, helmet: 0xff6a1a, special: true },
+    // NEON ICE and BLACK DIAMOND used to be "premium" prizes. Now that the paid
+    // pass is gone, they're FREE daily rewards again (day 12 and the day-14 finale).
     ICE: { abbr: 'ICE', name: 'NEON ICE',      jersey: 0x0b6f8a, helmet: 0x4de3ff, special: true },
     BLK: { abbr: 'BLK', name: 'BLACK DIAMOND', jersey: 0x101014, helmet: 0x2ee6c8, special: true },
     // 🏆 The gold CHAMPIONS uniform — you can ONLY get this by winning the
@@ -50,44 +50,62 @@
     CHMP: { abbr: 'CHMP', name: 'CHAMPIONS',   jersey: 0x8a6d1a, helmet: 0xffd700, special: true },
   };
 
-  // ---- 🎁 The 7-day reward calendar ---------------------------------------
-  // coins/uniform = what EVERYONE gets. pCoins/pUniform = the EXTRA gold-row
-  // stuff premium players get ON TOP. Day 7 is the big one on purpose.
+  // ---- 🎁 The 14-day reward calendar --------------------------------------
+  // coins/uniform = what EVERYONE gets, every day, for FREE. Five days hand out
+  // an exclusive uniform (days 3, 7, 10, 12 & 14); the coins climb as your streak
+  // grows, and day 14 is the grand-finale jackpot. Keep the streak alive — miss a
+  // day and it starts back at day 1!
   const DAILY = [
-    { coins: 10, pCoins: 15 },                                      // day 1
-    { coins: 15, pCoins: 20 },                                      // day 2
-    { coins: 10, uniform: 'GLX', pCoins: 15, pUniform: 'ICE' },     // day 3 🎽
-    { coins: 20, pCoins: 25 },                                      // day 4
-    { coins: 25, pCoins: 30 },                                      // day 5
-    { coins: 30, pCoins: 35 },                                      // day 6
-    { coins: 50, uniform: 'GLD', pCoins: 50, pUniform: 'BLK' },     // day 7 🎽🎉
+    { coins: 10 },                    // day 1
+    { coins: 15 },                    // day 2
+    { coins: 10, uniform: 'GLX' },    // day 3  🎽 GALAXY
+    { coins: 20 },                    // day 4
+    { coins: 25 },                    // day 5
+    { coins: 30 },                    // day 6
+    { coins: 50, uniform: 'GLD' },    // day 7  🎽 GOLD RUSH
+    { coins: 30 },                    // day 8
+    { coins: 35 },                    // day 9
+    { coins: 40, uniform: 'LAV' },    // day 10 🎽 LAVA (brand new!)
+    { coins: 45 },                    // day 11
+    { coins: 50, uniform: 'ICE' },    // day 12 🎽 NEON ICE
+    { coins: 60 },                    // day 13
+    { coins: 100, uniform: 'BLK' },   // day 14 🎽🎉 BLACK DIAMOND — the finale!
   ];
 
   // ---- 🛍 The shop shelves ------------------------------------------------
-  // Every item has 3 levels; each level costs more than the last.
-  // The actual gameplay math lives in the perk functions further down —
-  // `lvl` here is just the label the shop shows for the NEXT level.
-  const PRICES = [30, 60, 100];
+  // Every item now goes all the way to LEVEL 10 — keep buying the same gear and
+  // it keeps getting stronger. Each level costs more than the last (PRICES[0] is
+  // the price of level 1, PRICES[9] the price of level 10). The real gameplay
+  // math lives in the perk functions further down; `next(L)` is just the label
+  // the shop shows for the level you'd reach with the NEXT purchase.
+  const MAX_LEVEL = 10;
+  const PRICES = [25, 40, 60, 85, 115, 150, 190, 235, 285, 350];
   const ITEMS = [
     { id: 'cleats', icon: '👟', name: 'SPEED CLEATS',
       blurb: 'Faster feet every step you take',
-      lvl: ['+4% run speed', '+8% run speed', '+12% run speed'] },
+      next: L => '+' + (2 * L) + '% run speed' },
     { id: 'turbo',  icon: '⚡', name: 'TURBO DASH',
       blurb: 'Swipe-dashes hit harder & recharge quicker',
-      lvl: ['dash +30 speed', 'dash +60 speed', 'dash +90 speed'] },
+      next: L => 'dash +' + (15 * L) + ' speed' },
     { id: 'gloves', icon: '🧤', name: 'STICKY GLOVES',
       blurb: 'Passes stick — more catches, fewer drops',
-      lvl: ['+4% catching', '+8% catching', '+12% catching'] },
+      next: L => '+' + (2 * L) + '% catching' },
     { id: 'energy', icon: '🔋', name: 'CATCH ENERGY',
       blurb: 'Every clean catch = a burst of speed',
-      lvl: ['1.2s speed burst', '1.6s speed burst', '2.0s speed burst'] },
+      next: L => ((500 + 180 * L) / 1000).toFixed(1) + 's speed burst' },
+    // ---- NEW gear (v1.12) --------------------------------------------------
+    { id: 'stiff',  icon: '💪', name: 'STIFF ARM',
+      blurb: 'Shrug off the first tackler and keep running',
+      next: L => (4 * L) + '% to break a tackle' },
+    { id: 'grip',   icon: '🔒', name: 'IRON GRIP',
+      blurb: 'Hold the ball tight — way fewer fumbles',
+      next: L => '−' + (9 * L) + '% fumbles' },
   ];
 
   // ---- What you own (loaded from last time) -------------------------------
   let coins   = load('coins', 0);
-  let gear    = load('gear', { cleats: 0, turbo: 0, gloves: 0, energy: 0 });
+  let gear    = load('gear', { cleats: 0, turbo: 0, gloves: 0, energy: 0, stiff: 0, grip: 0 });
   let daily   = load('daily', { day: 0, last: '' });  // day = last day claimed (1-7)
-  let premium = load('premium', false);
   let owned   = load('owned-uniforms', []);           // abbrs, e.g. ['GLX']
 
   let earnedThisGame = 0;   // shown on the FINAL screen ("🪙 +42 COINS")
@@ -114,25 +132,94 @@
   }
 
   // ============================================================
-  // 💪 THE PERKS — main.js calls these mid-play to apply your gear
+  // ✨ THE COIN CELEBRATION — a happy little spray when you win stuff
+  // ------------------------------------------------------------
+  // This is pure sparkle. It spawns a handful of emoji that fly up and
+  // fade, plus a floating "+50 🪙" label, and then cleans itself up. It
+  // NEVER touches the game or your saved coins — so it can't break a
+  // thing. We fire it when you CLAIM a daily reward or BUY some gear.
   // ============================================================
-  // Speed cleats: multiply your run speed (level 3 = 12% faster).
-  function speedMult() { return 1 + 0.04 * gear.cleats; }
+  function celebrate(originEl, emoji, labelText) {
+    // Where does the spray start? The button you just tapped (or, if we
+    // can't find it, a little above the middle of the screen).
+    const box = (originEl && originEl.getBoundingClientRect) ? originEl.getBoundingClientRect() : null;
+    const cx  = box ? box.left + box.width  / 2 : window.innerWidth  / 2;
+    const cy  = box ? box.top  + box.height / 2 : window.innerHeight * 0.4;
 
-  // Turbo dash: how much STRONGER a swipe-dash is (added to the base
+    // A see-through layer that sits ON TOP of the pop-ups so the coins
+    // actually show over the shop / daily card (made once, then reused).
+    let layer = $('coin-fx');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.id = 'coin-fx';
+      document.body.appendChild(layer);
+    }
+
+    // The floating "+50 🪙" (or "LEVEL 2!") that rises up and fades away.
+    const label = document.createElement('div');
+    label.className = 'fx-label';
+    label.textContent = labelText;
+    label.style.left = cx + 'px';
+    label.style.top  = cy + 'px';
+    layer.appendChild(label);
+    label.addEventListener('animationend', () => label.remove());
+
+    // Give the little coin counter a happy bump too.
+    const chip = $('coin-chip');
+    if (chip) { chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump'); }
+
+    // If this device asked for "reduce motion", we stop here — you still
+    // get the label + the counter, just not the flying-coins party.
+    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (calm) return;
+
+    // A dozen coins spraying up and out in random directions, each one
+    // told (via CSS variables) exactly where to fly.
+    for (let i = 0; i < 12; i++) {
+      const p = document.createElement('div');
+      p.className = 'fx-coin';
+      p.textContent = emoji;
+      p.style.left = cx + 'px';
+      p.style.top  = cy + 'px';
+      p.style.setProperty('--dx', ((Math.random() * 2 - 1) * 130).toFixed(0) + 'px');
+      p.style.setProperty('--dy', (-(70 + Math.random() * 150)).toFixed(0) + 'px');
+      p.style.animationDelay = (Math.random() * 100).toFixed(0) + 'ms';
+      layer.appendChild(p);
+      p.addEventListener('animationend', () => p.remove());
+    }
+  }
+
+  // ============================================================
+  // 💪 THE PERKS — main.js calls these mid-play to apply your gear
+  // ------------------------------------------------------------
+  // Every perk scales with its gear LEVEL (0–10). The numbers below are tuned
+  // so a maxed item (level 10) is a real edge without breaking the game.
+  // ============================================================
+  // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
+  function speedMult() { return 1 + 0.02 * gear.cleats; }
+
+  // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
   function dashBoost() {
-    return { speed: 30 * gear.turbo, time: 40 * gear.turbo, cooldown: 150 * gear.turbo };
+    return { speed: 15 * gear.turbo, time: 15 * gear.turbo, cooldown: 55 * gear.turbo };
   }
 
-  // Sticky gloves: nudge the catch chances (added to the base chances).
+  // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   function gloveBoost() {
-    return { catchBonus: 0.04 * gear.gloves, dropCut: 0.04 * gear.gloves };
+    return { catchBonus: 0.02 * gear.gloves, dropCut: 0.02 * gear.gloves };
   }
 
-  // Catch energy: how long the after-catch speed burst lasts (0 = not owned).
-  function energyMs() { return gear.energy ? 800 + 400 * gear.energy : 0; }
+  // 🔋 Catch energy: how long the after-catch speed burst lasts (0 = not owned).
+  function energyMs() { return gear.energy ? 500 + 180 * gear.energy : 0; }
   const ENERGY_MULT = 1.25;   // the burst makes you 25% faster
+
+  // 💪 Stiff arm: the chance to break the FIRST tackle of a play (level 10 = 40%).
+  // main.js checks this in checkTackle and, on a hit, shoves the tackler off.
+  function stiffChance() { return 0.04 * gear.stiff; }
+
+  // 🔒 Iron grip: how much we CUT the fumble chance (a fraction of it). Level 10
+  // = 0.9, i.e. 90% fewer fumbles. main.js multiplies FUMBLE_CHANCE by (1 - this).
+  function gripFactor() { return 0.09 * gear.grip; }
 
   // ============================================================
   // 🛍 THE PRO SHOP screen
@@ -145,16 +232,15 @@
 
     box.innerHTML = ITEMS.map(it => {
       const level = gear[it.id] || 0;
-      const pips = '●'.repeat(level) + '○'.repeat(3 - level);
-      const maxed = level >= 3;
+      const maxed = level >= MAX_LEVEL;
       const price = PRICES[level];
       const canBuy = !maxed && coins >= price;
       return `
         <div class="shop-row">
           <div class="shop-icon">${it.icon}</div>
           <div class="shop-info">
-            <div class="shop-name">${it.name} <span class="shop-pips">${pips}</span></div>
-            <div class="shop-blurb">${maxed ? it.blurb : 'Next: ' + it.lvl[level]}</div>
+            <div class="shop-name">${it.name} <span class="shop-pips">Lv ${level}/${MAX_LEVEL}</span></div>
+            <div class="shop-blurb">${maxed ? it.blurb : 'Next: ' + it.next(level + 1)}</div>
           </div>
           <div class="shop-buy ${maxed ? 'maxed' : canBuy ? '' : 'poor'}" data-item="${it.id}">
             ${maxed ? 'MAX!' : price + ' 🪙'}
@@ -166,18 +252,23 @@
     box.querySelectorAll('.shop-buy[data-item]').forEach(btn => {
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
-        buy(btn.dataset.item);
+        buy(btn.dataset.item, btn);
       });
     });
   }
 
-  function buy(id) {
+  function buy(id, originEl) {
     const level = gear[id] || 0;
-    if (level >= 3) return;                    // already maxed out
+    if (level >= MAX_LEVEL) return;            // already maxed out
     if (!spend(PRICES[level])) return;         // can't afford it (button was gray anyway)
     gear[id] = level + 1;
     store('gear', gear);
     if (window.TDSound) TDSound.sting('td');   // 🎺 cha-ching!
+    // 🎉 Spray the item's own icon and shout the new level. We do this BEFORE
+    // renderShop() redraws the shelves — otherwise the button we're spraying
+    // from would already be gone.
+    const item = ITEMS.find(x => x.id === id);
+    celebrate(originEl, item ? item.icon : '🪙', 'LEVEL ' + gear[id] + '!');
     renderShop();
   }
 
@@ -193,11 +284,11 @@
 
   // Which day can you claim right now?
   //   0  = you already claimed today — come back tomorrow!
-  //   1  = a fresh week (first visit ever, or the streak broke)
-  //   2+ = you claimed yesterday, so the streak continues (7 wraps to 1)
+  //   1  = a fresh streak (first visit ever, or the streak broke)
+  //   2+ = you claimed yesterday, so the streak continues (day 14 wraps to 1)
   function claimableDay() {
     if (daily.last === dateKey(0)) return 0;
-    return (daily.last === dateKey(1)) ? (daily.day % 7) + 1 : 1;
+    return (daily.last === dateKey(1)) ? (daily.day % DAILY.length) + 1 : 1;
   }
 
   function claim() {
@@ -205,16 +296,15 @@
     if (!day) return;
     const r = DAILY[day - 1];
 
-    earn(r.coins + (premium ? r.pCoins : 0));
-    earnedThisGame -= r.coins + (premium ? r.pCoins : 0);  // a gift, not game winnings
+    earn(r.coins);
+    earnedThisGame -= r.coins;  // a gift, not game winnings
 
-    // Uniforms! (premium players also get the gold-row one)
+    // Uniforms! Days 3 and 7 hand one out.
     const newUnis = [];
     const grant = abbr => {
       if (abbr && !owned.includes(abbr)) { owned.push(abbr); newUnis.push(abbr); }
     };
     grant(r.uniform);
-    if (premium) grant(r.pUniform);
     store('owned-uniforms', owned);
 
     daily = { day, last: dateKey(0) };
@@ -222,6 +312,8 @@
     if (window.TDSound) TDSound.sting(day === 7 ? 'win' : 'td');
     paintChip();
     renderDaily();
+    // 🎉 Coins fly up from the CLAIM button with a big "+N 🪙"!
+    celebrate($('daily-claim'), '🪙', '+' + r.coins + ' 🪙');
 
     // A new uniform? Jump the team menu right to it so you can try it on!
     if (newUnis.length && window.TDMenu) {
@@ -253,7 +345,6 @@
         <div class="${cls}">
           <div class="day-num">${claimed ? '✓' : 'DAY ' + d}</div>
           <div class="day-free">${r.uniform ? uniChip(r.uniform) : '🪙' + r.coins}</div>
-          <div class="day-prem">${r.pUniform ? uniChip(r.pUniform) : '+🪙' + r.pCoins}</div>
         </div>`;
     }).join('');
 
@@ -268,35 +359,6 @@
         btn.classList.add('done');
       }
     }
-
-    // The premium strip under the calendar.
-    const p = $('daily-premium');
-    if (p) {
-      p.innerHTML = premium
-        ? '<div class="prem-on">⭐ PREMIUM PASS ACTIVE — the gold row is yours every day!</div>'
-        : '<div class="prem-btn" id="prem-open">⭐ PREMIUM PASS · $1.99<span>unlock the gold row — bigger rewards every day</span></div>';
-      const open = $('prem-open');
-      if (open) open.addEventListener('pointerdown', e => {
-        e.preventDefault(); closeOv('daily-modal'); openOv('premium-modal');
-      });
-    }
-  }
-
-  // ============================================================
-  // ⭐ THE PREMIUM PASS — a PRETEND checkout, and proud of it
-  // ------------------------------------------------------------
-  // Real money needs a real payment company (Stripe, the App Store...)
-  // and a grown-up's business account — a hobby web game has neither.
-  // Charging kids for real without one would be wrong (and impossible
-  // here anyway), so the checkout tells the truth and unlocks for free.
-  // ============================================================
-  function buyPremium() {
-    premium = true;
-    store('premium', premium);
-    if (window.TDSound) TDSound.sting('win');
-    closeOv('premium-modal');
-    openOv('daily-modal');    // straight back to the calendar — now with gold!
-    renderDaily();
   }
 
   // ============================================================
@@ -342,8 +404,6 @@
     onTap('shop-close',  () => closeOv('shop-modal'));
     onTap('daily-close', () => closeOv('daily-modal'));
     onTap('daily-claim', claim);
-    onTap('prem-buy',    buyPremium);
-    onTap('prem-no',     () => { closeOv('premium-modal'); openOv('daily-modal'); });
     paintChip();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUp);
@@ -366,11 +426,13 @@
     startGame: () => { earnedThisGame = 0; },
     gameEarnings: () => earnedThisGame,
     // gear perks (read by main.js during plays)
-    speedMult, dashBoost, gloveBoost, energyMs, ENERGY_MULT,
+    speedMult, dashBoost, gloveBoost, energyMs, ENERGY_MULT, stiffChance, gripFactor,
     // uniforms you've unlocked (the menu adds them to the team list)
     unlockedUniforms: () => owned.map(a => UNIFORMS[a]).filter(Boolean),
     grantUniform,
     // menu hook
     onMenu,
+    // ✨ the celebration spray — progress.js reuses it for a LEVEL UP! party
+    celebrate,
   };
 })();

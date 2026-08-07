@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — tour.js: the friendly STEP-BY-STEP tutorial
+// TOUCHDOWN FUN — tour.js: the friendly STEP-BY-STEP tutorial
 // ------------------------------------------------------------
 // Nobody wants to read a giant wall of rules! So instead we teach the game a
 // LITTLE at a time: a small card pops up, points at ONE thing, you tap "Next",
@@ -17,12 +17,13 @@
 
   // Each tour is a list of steps. A step teaches ONE thing:
   //   text   — the friendly one-liner
-  //   target — (optional) the id of an on-screen button to spotlight with a ring
-  //   place  — (optional) 'center' just floats the card (for stuff drawn on the field)
+  //   target — the id of an on-screen button to frame with the neon-yellow box
+  //   place  — (optional) 'center' just floats the card (only if there's nothing
+  //            on-screen to box). We try to give EVERY step a box to point at.
   const TOURS = {
     menu: [
-      { text: "👋 Welcome to Touchdown Rush! Use the ◀ ▶ arrows to pick your team.", target: 'tm-next' },
-      { text: "⭐ Every team has Offense &amp; Defense star ratings — some are better at scoring, some at stopping you!", place: 'center' },
+      { text: "👋 Welcome to Touchdown Fun! Use the ◀ ▶ arrows to pick your team.", target: 'tm-next' },
+      { text: "⭐ Each team has Offense &amp; Defense star ratings — tap ◀ ▶ to flip through and compare!", target: 'tm-prev' },
       { text: "🎚️ Choose how tough the game is: EASY, MEDIUM, or HARD.", target: 'tm-diff' },
       { text: "🛍️ SHOP for gear · 🎁 DAILY for a free gift · 🏆 SEASON for a whole league.", target: 'menu-meta' },
       { text: "▶️ When you're ready, tap PLAY. Have fun out there, coach!", target: 'tm-play' },
@@ -34,9 +35,9 @@
       { text: "🤝 Or tap HAND to give the ball to your running back and run it up the middle.", target: 'btn-hand' },
     ],
     defense: [
-      { text: "🛡️ Now you're on DEFENSE! You control the player with the YOU tag.", place: 'center' },
-      { text: "💥 Chase whoever has the ball and bump into them to make the TACKLE.", place: 'center' },
-      { text: "🙌 Snag their pass and it's a PICK — then run it all the way back to score!", place: 'center' },
+      { text: "🛡️ Now you're on DEFENSE! You're the player with the YOU tag — move with these arrows.", target: 'dpad' },
+      { text: "💥 Chase whoever has the ball with the arrows and bump into them to make the TACKLE.", target: 'dpad' },
+      { text: "🙌 Snag their pass for a PICK, then run it all the way back with the arrows to score!", target: 'dpad' },
     ],
   };
 
@@ -53,7 +54,7 @@
     return false;
   }
 
-  // Build the card + spotlight ring once, then reuse them.
+  // Build the card + the neon-yellow spotlight box once, then reuse them.
   function build() {
     if (ui) return ui;
     const back = document.createElement('div'); back.className = 'tour-back';
@@ -91,7 +92,7 @@
       u.dots.appendChild(d);
     }
 
-    // Spotlight the target button (if any) and keep the card off of it.
+    // Frame the target button with the neon-yellow box, and keep the card off of it.
     const el = step.target ? document.getElementById(step.target) : null;
     const r  = el ? el.getBoundingClientRect() : null;
     if (r && r.width && r.height) {
@@ -134,6 +135,10 @@
     setTimeout(show, n === 'menu' ? 800 : 150);
   }
   function maybeStart(n) { start(n, false); }
+
+  // If the screen changes size or flips (rotate the iPad, resize the window), the
+  // buttons move — so re-place the neon box + card to keep hugging the right one.
+  window.addEventListener('resize', () => { if (active()) show(); });
 
   // Re-arm every tour so they'll all pop up again — the 📖 HOW TO button uses
   // this, so tapping it shows the menu tour now AND makes the offense/defense

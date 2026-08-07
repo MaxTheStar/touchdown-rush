@@ -1,5 +1,5 @@
 // ============================================================
-// TOUCHDOWN RUSH — season.js: 🏆 SEASON MODE & THE MAX BOWL
+// TOUCHDOWN FUN — season.js: 🏆 SEASON MODE & THE MAX BOWL
 // ------------------------------------------------------------
 // Quick Game is ONE game against a random team. SEASON MODE is a whole journey:
 // you and 7 other teams make an 8-team LEAGUE. You play a 6-game schedule, and
