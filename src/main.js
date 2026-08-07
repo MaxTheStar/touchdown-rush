@@ -324,6 +324,8 @@ const G = {
   replayText: null,     // the blinking "📺 INSTANT REPLAY" title
   replayHint: null,     // the little "tap to skip" hint
   replayRing: null,     // the glowing spotlight under the ball carrier
+  replayTitle: null,    // 🎥 the headline for THIS replay (null = "📺 INSTANT REPLAY")
+  replayThen: null,     // 🎥 what to do after the film (a defensive-stop replay sets this)
 };
 
 let offense = [];  // 7 blue players (objects, see makePlayer)
@@ -1705,6 +1707,7 @@ function updateDefensePlay(time) {
   updateRedTeam(elapsed);
   updateBlueTeammates();
   updateBall();
+  recordReplayFrame();        // 🎥 film the defensive play too, for a big-stop replay
   updateHUD();
   if (G.state !== 'dlive') return;   // ball in the air (or the play just ended)
   if (redCheckTouchdown()) return;
@@ -2107,9 +2110,27 @@ function redPlayEnd(result, customMsg, byYou) {
     return;
   }
 
-  G.state = 'ddead';
-  G.deadUntil = G.scene.time.now + 1500;
-  showBanner(msg, false);
+  // What normally happens after a stop: hold a beat on the "STUFFED!" banner,
+  // then line up their next down.
+  const finishStop = () => {
+    G.state = 'ddead';
+    G.deadUntil = G.scene.time.now + 1500;
+    showBanner(msg, false);
+  };
+
+  // 🎥 A BIG defensive stop earns an instant replay! If you dropped them for no
+  //    gain (or a loss, or a straight-up sack) and we filmed enough of it, roll the
+  //    slow-mo first — THEN show the banner and set up their next play. (Tune the
+  //    `gain <= 0` line if you want replays to be rarer or more common.)
+  const bigStop = result === 'tackle' && gain <= 0 && G.replay.length >= REPLAY_MIN;
+  if (bigStop) {
+    const sack = G.ballCarrier === defense[0] && gain < 0;
+    G.replayTitle = sack ? '🎥  BIG SACK!' : (gain < 0 ? '🎥  TACKLE FOR LOSS!' : '🎥  BIG STOP!');
+    G.replayThen  = finishStop;
+    startReplay();
+  } else {
+    finishStop();
+  }
 }
 
 // Between red plays: settle the clock/quarter (same boundaries as your
@@ -2739,7 +2760,7 @@ function buildReplayOverlay() {
   bars.fillRect(0, 720 - 64, 540, 64);
   G.replayBars = bars;
 
-  G.replayText = s.add.text(270, 32, '📺  INSTANT REPLAY', {
+  G.replayText = s.add.text(270, 32, G.replayTitle || '📺  INSTANT REPLAY', {
     fontFamily: 'Arial Black, Arial', fontSize: '26px',
     color: '#ffe066', stroke: '#000', strokeThickness: 5
   }).setOrigin(0.5).setScrollFactor(0).setDepth(42);
@@ -2812,7 +2833,11 @@ function endReplay() {
     if (G[k]) { G[k].destroy(); G[k] = null; }
   }
   G.replayHoldUntil = 0;
-  // Pick up exactly where the touchdown left off: kick the extra point.
+  G.replayTitle = null;                        // back to the default title next time
+  // 🎥 A defensive-stop replay stashed "what to do next" — run it and we're done.
+  const then = G.replayThen; G.replayThen = null;
+  if (then) { then(); return; }
+  // Otherwise this was a SCORE replay: pick up exactly where the touchdown left off.
   if (G.pendingXP) startExtraPoint();
   else startNextPlay();
 }

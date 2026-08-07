@@ -191,9 +191,11 @@ review database is a future level!).
       Fill the bar and your **team level** goes up — from **ROOKIE** all the way to **HALL OF FAME** —
       which makes your team a little stronger *and* pays a coin bonus. Watch the green level bar on
       the menu, and win games to climb faster.
-- [ ] **Next up (the Add-On Draft Board):** replay the big defensive stops, weather & night
-      games, computer-offense formations, a drafted trick play, two-player pass-and-play, and
-      someday online leaderboards.
+- [x] **🎥 v1.15 — Instant replay for BIG defensive stops!** Sack the quarterback or stuff the runner
+      for no gain and you'll see it again in slow motion, with a **"BIG SACK!"** / **"TACKLE FOR LOSS!"**
+      title — not just after touchdowns anymore. (Tap to skip it.)
+- [ ] **Next up (the Add-On Draft Board):** weather & night games, computer-offense formations,
+      a drafted trick play, two-player pass-and-play, and someday online leaderboards.
 
 ## The team
 

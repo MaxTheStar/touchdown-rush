@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.14 — cache-buster is `?v=35` in `index.html`.
+- **Version:** v1.15 — cache-buster is `?v=36` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,20 +17,20 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-06.
 
-## ✅ Sync status — v1.11 + v1.12 in progress (NOT pushed yet)
+## ✅ Sync status — v1.11–v1.14 are LIVE; v1.15 is built locally (NOT pushed yet)
 
-v1.11 (🗑 removed the Premium Pass + ✨ coin celebration) and v1.12 (🎁 bigger 14-day daily
-rewards + 🛍 more Pro Shop gear to level 10 + confirmed the 🏈 pick-six extra point already
-works) are **committed locally only if you've run `git commit`, and NOT pushed** unless you've
-run `git push origin main`. Everything through v1.10 (🎓 step-by-step tutorial `src/tour.js`,
-clearer 🌍 world tracker, UI de-clutter) is already live.
-v1.9 = ⭐ ratings/turnovers/pick-sixes. GitHub Pages
-rebuilds the live site within a minute or two of each push. The earlier push
-blocker is **resolved**: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
-fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) was added to the
-MaxTheStar GitHub account, and `ssh -T git@github.com` now returns "Hi MaxTheStar!".
-Normal workflow from here: commit, then `git push origin main`, and GitHub Pages
-rebuilds the live site within a minute or two.
+On **2026-08-06** everything through **v1.14** was committed and pushed (`git push origin main`,
+commit `6daef38`) and is now **live** at maxthestar.github.io/touchdown-rush — that's v1.11 (🗑 Premium
+Pass removed + ✨ coin celebration), v1.12 (🎁 14-day daily rewards + 🛍 Pro Shop to level 10 + 🏈
+pick-six PAT), v1.13 (✏️ renamed to Touchdown Fun), and v1.14 (📈 player progression). **v1.15**
+(🎥 replay the big defensive stops) is **built + verified locally but NOT pushed yet** — waiting on
+Max's go-ahead, same as always.
+The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
+fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
+account, `ssh -T git@github.com` returns "Hi MaxTheStar!", and GitHub Pages rebuilds the live site
+within a minute or two of each push. Normal workflow: commit, then `git push origin main`.
+(Heads-up: GitHub Pages' CDN can serve a stale copy for a minute — verify the live site with a
+cache-busting query like `…/index.html?cb=1`.)
 
 ## 🎮 What's built (feature state)
 
@@ -300,6 +300,31 @@ rebuilds the live site within a minute or two.
     gameXP 800; `claimLevelUps` from L1→L5 returned 5 and paid +100 coins (25×4); a second claim was a
     no-op (0 coins). Boost caps: L21 = 1.10, L142 = still 1.10. Menu bar renders + is visible; all scripts
     at `?v=35`; no console errors.
+- **v1.15 — 🎥 Replay the big defensive stops** (this iteration — all in `src/main.js`; cache-buster
+  `?v=35 → ?v=36`):
+  - 🎬 **The replay system is now reusable.** It used to only fire after YOU score. Two new `G` fields make
+    it general: `G.replayTitle` (the headline — `buildReplayOverlay` shows it, defaulting to
+    "📺 INSTANT REPLAY") and `G.replayThen` (a callback for "what to do after the film"). `endReplay` now
+    runs `G.replayThen` if set (then clears both), otherwise falls back to the old score flow
+    (`startExtraPoint`/`startNextPlay`) unchanged — a purely additive change, so scoring replays are untouched.
+  - 🎥 **Film the defense too.** `updateDefensePlay` now calls `recordReplayFrame()` every frame (it only ran
+    on your offense + kickoffs before), so a defensive series has footage. `redSnap` already reset `G.replay`.
+    During a D play the carrier is a red player, so the filmed `ci` is −1 and the spotlight ring falls back to
+    the ball (already handled in `applyReplayFrame`).
+  - 🛑 **The trigger** lives at the end of `redPlayEnd`: a `bigStop` is `result === 'tackle' && gain <= 0 &&
+    G.replay.length >= REPLAY_MIN`. On a big stop it sets `G.replayTitle` (🎥 BIG SACK! if it's the QB behind
+    the line, 🎥 TACKLE FOR LOSS! for any other loss, 🎥 BIG STOP! for a no-gainer), stashes the normal
+    `finishStop` (banner → `ddead` → `defenseNextPlay`) as `G.replayThen`, and rolls `startReplay()`. Not a big
+    stop, or too little film → it just calls `finishStop()` directly (no replay). `setupDefensePlay` re-establishes
+    the camera afterward, so the hand-off back to the next down is clean.
+  - 🧪 Verified in-browser by driving the real functions: (1) the reusable machinery — synthetic film +
+    custom title + a `replayThen` sentinel → `startReplay` shows the custom title, `updateReplay` advances at
+    0.45×, and `endReplay` runs the continuation + cleans up every overlay/flag. (2) `recordReplayFrame`
+    yields a defensive frame (`ci === -1`). (3) `redPlayEnd` staged four ways: a QB sacked behind the line →
+    replay "BIG SACK!", an RB stuffed at the line → replay "TACKLE FOR LOSS!", a normal downfield gain → NO
+    replay (→ `ddead`), and a big stop with only 5 frames of film → NO replay. Fresh-tab boot: no console
+    errors. (The overlay's *text* can't render in the frozen headless canvas, but it's the identical
+    `buildReplayOverlay` the shipped score-replay already uses, so it renders on a real device.)
 
 ## 🗂 File map (who does what)
 
@@ -359,11 +384,10 @@ python3 -m http.server 8055
 
 The 🏈 **Add-On Draft Board** (a chart Max keeps) ranks features easiest → hardest. **Built so far:**
 ✨ coin celebration (v1.11), 🎁 bigger daily rewards + 🛍 more Pro Shop gear + 🏈 pick-six PAT (v1.12),
-✏️ renamed the game to **Touchdown Fun** (v1.13), 📈 **player progression** (v1.14 — Max chose this one).
+✏️ renamed the game to **Touchdown Fun** (v1.13), 📈 **player progression** (v1.14 — Max chose this one),
+🎥 **replay the big defensive stops** (v1.15).
 **Still on the board, roughly easiest → hardest:**
 
-- **🎥 Replay the big defensive stops** — the replay camera already exists (used on scores); point it
-  at a huge tackle too. The brains are smart on BOTH sides now (v1.6 + v1.8).
 - **🌧️ Weather & night games**, then **📋 CPU offense formations** (teach the red team the formation
   system your team already uses).
 - **🎩 A drafted trick play** (e.g. a flea-flicker you unlock). *(📈 player progression is now DONE — v1.14.)*
