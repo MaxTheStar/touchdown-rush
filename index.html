@@ -293,7 +293,7 @@
       border-radius: 16px; box-shadow: 0 3px 10px rgba(0,0,0,.4);
     }
     .tm-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
-    #tm-prev, #tm-next { top: 46%; width: 66px; height: 66px; }
+    #tm-prev, #tm-next { top: 40%; width: 66px; height: 66px; }
     #tm-prev { left: max(16px, env(safe-area-inset-left)); }
     #tm-next { right: max(16px, env(safe-area-inset-right)); }
     #tm-play {
@@ -316,12 +316,88 @@
     .tm-diff-row { display: flex; gap: 8px; }
     .diff-btn {
       -webkit-tap-highlight-color: transparent; touch-action: none;
-      color: #fff; font: 800 16px "Arial Black", Arial;
+      color: #fff; font: 800 16px "Arial Black", Arial; white-space: nowrap;
       padding: 8px 15px; border-radius: 12px;
       background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.45);
     }
     .diff-btn.sel { background: rgba(255,214,10,0.5); border-color: #ffd60a; }
     .diff-btn:active { transform: scale(0.94); }
+    /* This is a PORTRAIT game (the field is tall). In landscape the canvas scales up
+       and the team card sits lower, so the little section labels would crowd it — hide
+       just the labels there (the EASY/MEDIUM/HARD + 👑/🌦 buttons speak for themselves).
+       Portrait keeps every label for maximum clarity. */
+    @media (orientation: landscape) {
+      body.menu .tm-diff-lab { display: none; }
+      /* Landscape viewports are short, so the two button rows would push up into the
+         ratings card. Compacting them a touch lifts the whole stack's top clear of the
+         card while keeping it comfortably above the PLAY button. (Portrait, the game's
+         main orientation, keeps the full-size buttons.) */
+      body.menu #tm-diff { gap: 4px; }
+      body.menu #tm-diff .diff-btn { padding: 4px 13px; font-size: 13px; line-height: 1.2; }
+    }
+
+    /* 📱 Touchdown Fun is a TALL, up-and-down (portrait) game. On a PHONE turned
+       sideways the field + menu have nowhere to fit and would overlap, so instead we
+       show a friendly "turn your phone" screen. This only kicks in on a SHORT sideways
+       screen (a phone) — tablets (taller than 500px) and normal portrait never see it,
+       they get the real game. */
+    #rotate-hint { display: none; }
+    @media (orientation: landscape) and (max-height: 500px) {
+      #rotate-hint {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        position: fixed; inset: 0; z-index: 999; gap: 14px; text-align: center;
+        padding: 20px; background: #0a1020; color: #fff;
+      }
+      #rotate-hint .rh-emoji { font-size: 64px; animation: rh-spin 2.4s ease-in-out infinite; }
+      #rotate-hint .rh-title { font: 800 26px "Arial Black", Arial; color: #ffe066; letter-spacing: 1px; }
+      #rotate-hint .rh-sub { font: 700 16px Arial; color: #cfe3ff; max-width: 420px; line-height: 1.4; }
+    }
+    /* the phone emoji tips over and back, like "turn me this way" */
+    @keyframes rh-spin { 0%, 55%, 100% { transform: rotate(0deg); } 28% { transform: rotate(-90deg); } }
+    @media (prefers-reduced-motion: reduce) { #rotate-hint .rh-emoji { animation: none; } }
+
+    /* ---- 🌦 Weather overlay: a see-through layer painted over the field --------
+       It sits ABOVE the canvas (z-index 9) but BELOW the buttons (10+) and the
+       HUD (14), and only shows in-game (never on the menu). See weather.js. */
+    #weather-fx { position: fixed; inset: 0; z-index: 9; pointer-events: none; display: none; overflow: hidden; }
+    body:not(.menu).wx-active #weather-fx { display: block; }
+
+    /* 🌙 NIGHT — dim the stadium with a cool vignette */
+    body.wx-night #weather-fx {
+      background: radial-gradient(120% 95% at 50% 28%, rgba(10,16,40,0.30), rgba(2,4,14,0.70) 100%);
+    }
+
+    /* 🌧️ RAIN — a gray tint plus streaks sliding down the screen */
+    body.wx-rain #weather-fx { background: rgba(22,30,48,0.24); }
+    body.wx-rain #weather-fx::before, body.wx-rain #weather-fx::after {
+      content: ""; position: absolute; inset: -30%;
+      background-image: repeating-linear-gradient(102deg,
+        transparent 0 7px, rgba(200,220,255,0.30) 7px, rgba(200,220,255,0.30) 8px);
+      animation: wx-rain 0.55s linear infinite;
+    }
+    body.wx-rain #weather-fx::after { opacity: 0.55; animation-duration: 0.8s; }
+    @keyframes wx-rain { from { transform: translate(0,0); } to { transform: translate(-40px, 150px); } }
+
+    /* ❄️ SNOW — a soft white tint plus drifting flakes */
+    body.wx-snow #weather-fx { background: rgba(210,222,240,0.12); }
+    body.wx-snow #weather-fx::before, body.wx-snow #weather-fx::after {
+      content: ""; position: absolute; inset: -30%;
+      background-image:
+        radial-gradient(2.5px 2.5px at 20px 30px,  #fff, transparent),
+        radial-gradient(2px 2px   at 70px 90px,  #fff, transparent),
+        radial-gradient(2.5px 2.5px at 130px 50px, #fff, transparent),
+        radial-gradient(1.8px 1.8px at 180px 120px,#fff, transparent),
+        radial-gradient(2px 2px   at 110px 170px, #fff, transparent);
+      background-size: 220px 220px;
+      animation: wx-snow 7s linear infinite;
+    }
+    body.wx-snow #weather-fx::after { opacity: 0.7; animation-duration: 11s; background-position: 60px 40px; }
+    @keyframes wx-snow { from { transform: translateY(0); } to { transform: translateY(220px); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.wx-rain #weather-fx::before, body.wx-rain #weather-fx::after,
+      body.wx-snow #weather-fx::before, body.wx-snow #weather-fx::after { animation: none; }
+    }
 
     /* The HAND button dims + goes dead when you're too far from the RB to hand off */
     #btn-hand.off { opacity: 0.3; pointer-events: none; }
@@ -386,8 +462,8 @@
 
     /* ---- 🪙 The menu's money row: coins + SHOP + DAILY (top-left) -------- */
     #menu-meta {
-      position: fixed; z-index: 40; display: none; gap: 7px;
-      left: max(12px, env(safe-area-inset-left));
+      position: fixed; z-index: 40; display: none; gap: 6px;
+      left: max(10px, env(safe-area-inset-left));
       top: max(12px, env(safe-area-inset-top));
     }
     body.menu #menu-meta { display: flex; }
@@ -398,13 +474,21 @@
     }
     .meta-btn {
       -webkit-tap-highlight-color: transparent; touch-action: none;
-      width: 50px; height: 44px; border-radius: 12px;
+      width: 46px; height: 44px; border-radius: 12px;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
       color: #fff; font: 800 16px "Arial Black", Arial;
     }
     .meta-btn small { font-size: 8px; letter-spacing: 0.5px; margin-top: 1px; }
     .meta-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
+    /* On a really narrow phone, shrink the row a touch so all six chips
+       (coins + TEAM + SEASON + SHOP + DAILY + HOW TO) stay on one line. */
+    @media (max-width: 380px) {
+      #menu-meta { gap: 5px; }
+      .meta-btn { width: 42px; font-size: 15px; }
+      .meta-btn small { font-size: 7px; }
+      #coin-chip { padding: 0 8px; font-size: 14px; }
+    }
 
     /* ---- 📈 Team level + XP bar (sits just under the money row) ---------- */
     #xp-bar {
@@ -481,6 +565,77 @@
     .se-champ { font: 800 16px "Arial Black", Arial; color: #ffe066; margin: 12px 0; line-height: 1.4; }
     .se-champ span { font: 12px Arial; color: #fff; }
     .se-titles { color: #ffe066; font: 700 12px Arial; margin-top: 8px; }
+
+    /* ---- 🏟 MY TEAM (draft.js) — roster, the draft & trades ---- */
+    .dr-tabs { display: flex; gap: 6px; margin: 2px 0 10px; }
+    .dr-tab { flex: 1; padding: 8px 4px; border-radius: 10px; cursor: pointer;
+      font: 800 12px "Arial Black", Arial; color: #aab4c8;
+      background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.12); }
+    .dr-tab.on { color: #ffe066; background: rgba(255,214,10,0.16); border-color: rgba(255,214,10,0.6); }
+    .dr-tab:active { transform: scale(0.97); }
+    .dr-coins { font: 800 13px "Arial Black", Arial; color: #ffe066; margin: 2px 0 8px; }
+
+    .dr-team { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 2px 0 4px; }
+    .dr-team-ovr { font: 900 46px "Arial Black", Arial; line-height: 1;
+      display: flex; flex-direction: column; align-items: center; }
+    .dr-team-ovr span { font: 800 9px "Arial Black", Arial; color: #8fb0d8; letter-spacing: 1px; margin-top: 2px; }
+    .dr-team-sd { text-align: left; font: 13px Arial; color: #dfe6f2; line-height: 1.7; }
+    .dr-team-sd b { font-family: "Arial Black", Arial; }
+    .dr-boost { font: 12px Arial; color: #b6f0c6; margin-bottom: 10px; }
+    .dr-boost b { color: #7bd88f; }
+
+    .dr-list { display: flex; flex-direction: column; gap: 6px; }
+    .dr-row { display: flex; align-items: center; gap: 8px; text-align: left; }
+    .dr-list > .dr-row { background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px 8px; }
+    .dr-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; padding: 6px 8px; }
+    .dr-pos { display: flex; flex-direction: column; align-items: center; width: 34px; font-size: 15px; }
+    .dr-pos b { font: 800 10px "Arial Black", Arial; color: #8fb0d8; }
+    .dr-main { flex: 1; min-width: 0; }
+    .dr-name { font: 800 14px "Arial Black", Arial; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dr-sub { font: 10px Arial; color: #93a0b8; margin-top: 1px; }
+    .dr-ovr { font: 900 22px "Arial Black", Arial; min-width: 46px; text-align: right; }
+    .dr-trait { display: inline-block; font: 800 9px "Arial Black", Arial; color: #0b1220;
+      background: #ffd60a; border-radius: 6px; padding: 1px 5px; margin-left: 4px; white-space: nowrap; }
+    .dr-trait.dr-unk { color: #cdd6e6; background: rgba(255,255,255,0.12); }
+
+    .dr-rowbtns { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .dr-vs { font: 11px Arial; color: #93a0b8; margin-right: auto; }
+    .dr-vs b { color: #dfe6f2; }
+    .dr-mini { -webkit-tap-highlight-color: transparent; touch-action: none;
+      padding: 7px 11px; border-radius: 9px; cursor: pointer;
+      font: 800 12px "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.35); }
+    .dr-mini.yes { background: rgba(255,214,10,0.28); border-color: rgba(255,214,10,0.7); color: #ffe066; }
+    .dr-mini:active { transform: scale(0.95); }
+    .dr-up { color: #7bd88f; font-weight: 800; }
+    .dr-dn { color: #ff7b7b; font-weight: 800; }
+    .dr-eq { color: #c6cede; font-weight: 800; }
+
+    .dr-hint { font: 12px/1.4 Arial; color: #93a0b8; margin-top: 10px; }
+    .dr-intro { font: 13px/1.5 Arial; color: #dfe6f2; margin: 2px 2px 10px; text-align: left; }
+    .dr-cap { font: 800 13px "Arial Black", Arial; color: #ffe066; margin: 4px 0 8px; }
+    .dr-actions { margin-top: 6px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    .dr-clock { font: 800 13px "Arial Black", Arial; color: #fff; background: rgba(255,214,10,0.16);
+      border: 1px solid rgba(255,214,10,0.5); border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+    .dr-clock b { color: #ffe066; }
+    .dr-logbox { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; text-align: left; }
+    .dr-log { font: 11px Arial; color: #aab4c8; padding: 1px 0; }
+
+    .dr-offers { display: flex; flex-direction: column; gap: 10px; }
+    .dr-offer { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 12px; padding: 8px; }
+    .dr-offer-h { font: 800 12px "Arial Black", Arial; color: #8fd0ff; margin-bottom: 6px; text-align: left; }
+    .dr-offer-body { display: flex; flex-direction: column; gap: 6px; }
+    .dr-lab { font: 800 9px "Arial Black", Arial; letter-spacing: .5px; margin-bottom: 2px; text-align: left; }
+    .dr-get { color: #7bd88f; }
+    .dr-give { color: #ffb0b0; }
+    .dr-offer-foot { font: 11px Arial; color: #c6cede; margin: 6px 0 2px; text-align: left; }
+    .dr-flash { font: 800 12px "Arial Black", Arial; color: #ffcf6b; background: rgba(255,120,120,0.14);
+      border: 1px solid rgba(255,160,90,0.5); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
 
     /* ---- 🛍 Shop shelves ---- */
     #shop-coins { font: 800 17px "Arial Black", Arial; color: #ffe066; margin-bottom: 10px; }
@@ -564,6 +719,15 @@
 </head>
 <body>
   <h1>🏈 TOUCHDOWN FUN</h1>
+  <!-- 🌦 Weather overlay (rain / snow / night) — painted over the field in-game; see weather.js -->
+  <div id="weather-fx"></div>
+  <!-- 📱 "Turn your phone" screen — only shows on a phone held sideways (short landscape);
+       Touchdown Fun is a tall portrait game. Tablets & portrait never see this. See the CSS. -->
+  <div id="rotate-hint">
+    <div class="rh-emoji">📱</div>
+    <div class="rh-title">TURN YOUR PHONE</div>
+    <div class="rh-sub">🏈 Touchdown Fun plays tall! Rotate your phone up-and-down to start.</div>
+  </div>
   <div class="controls">
     <kbd>SPACE</kbd> hike &nbsp;·&nbsp; <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> run &nbsp;·&nbsp;
     <kbd>1</kbd> <kbd>2</kbd> pass to WR &nbsp;·&nbsp; <kbd>3</kbd> pass to RB &nbsp;·&nbsp;
@@ -596,6 +760,7 @@
   <!-- 🪙 Coins + SHOP + DAILY buttons (top-left, menu only — see shop.js) -->
   <div id="menu-meta">
     <div id="coin-chip">🪙&nbsp;<b id="coin-amt">0</b></div>
+    <div class="meta-btn" id="open-team">🏟<small>TEAM</small></div>
     <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
@@ -619,10 +784,12 @@
       <div class="diff-btn sel" id="diff-medium" data-diff="medium">MEDIUM</div>
       <div class="diff-btn" id="diff-hard" data-diff="hard">HARD</div>
     </div>
-    <!-- 👑 Optional superstar-defender challenge -->
-    <div class="tm-diff-lab" style="margin-top:6px">SUPERSTAR CHALLENGE</div>
+    <!-- 👑 Superstar-defender challenge + 🌦 weather share ONE compact row, so the
+         menu stack stays short and never crowds the team card above it. -->
+    <div class="tm-diff-lab" style="margin-top:5px">CHALLENGE &amp; WEATHER</div>
     <div class="tm-diff-row">
-      <div class="diff-btn" id="toggle-maxwell">👑 FACE MAXWELL</div>
+      <div class="diff-btn" id="toggle-maxwell">👑 MAXWELL</div>
+      <div class="diff-btn" id="cycle-weather">🌦 AUTO</div>
     </div>
   </div>
 
@@ -695,6 +862,16 @@
     </div>
   </div>
 
+  <!-- 🏟 MY TEAM — draft, scout & trade your own star players.
+       draft.js fills #team-body (three tabs: ROSTER / DRAFT / TRADE). -->
+  <div class="ov" id="team-modal">
+    <div class="ov-card">
+      <div class="ov-title">🏟 MY TEAM</div>
+      <div id="team-body"></div>
+      <div class="ov-btn" id="team-close">CLOSE</div>
+    </div>
+  </div>
+
   <!-- 🛍 THE PRO SHOP — spend your coins on gear. shop.js fills the shelves. -->
   <div class="ov" id="shop-modal">
     <div class="ov-card">
@@ -748,16 +925,18 @@
   <!-- Phaser 3: the open-source game engine doing the heavy lifting -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
-       The ?v=5 on the end is a "cache buster": bump it by 1 every time we ship a
-       change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=36"></script>
-  <script src="src/sound.js?v=36"></script>
-  <script src="src/shop.js?v=36"></script>
-  <script src="src/progress.js?v=36"></script>
-  <script src="src/season.js?v=36"></script>
-  <script src="src/ads.js?v=36"></script>
-  <script src="src/tour.js?v=36"></script>
-  <script src="src/kick.js?v=36"></script>
-  <script src="src/main.js?v=36"></script>
+       The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
+       a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
+  <script src="src/stats.js?v=40"></script>
+  <script src="src/sound.js?v=40"></script>
+  <script src="src/shop.js?v=40"></script>
+  <script src="src/progress.js?v=40"></script>
+  <script src="src/weather.js?v=40"></script>
+  <script src="src/season.js?v=40"></script>
+  <script src="src/draft.js?v=40"></script>
+  <script src="src/ads.js?v=40"></script>
+  <script src="src/tour.js?v=40"></script>
+  <script src="src/kick.js?v=40"></script>
+  <script src="src/main.js?v=40"></script>
 </body>
 </html>

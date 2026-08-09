@@ -290,6 +290,7 @@ const G = {
   timeouts: 3,          // YOUR timeouts left this half (3 per half, like real football)
   clockStopped: false,  // a called timeout stops the clock for the very next play
   formation: 0,         // which offensive FORMATION you're lined up in (index into FORMATIONS)
+  dformation: -1,       // 🧩 which RED (CPU) offense formation is on the field (index into RED_FORMATIONS; -1 = none yet)
   maxwell: false,       // 👑 is the superstar defender "MAXWELL" switched on for this game?
   starLabel: null,      // the floating "MAXWELL 👑" nametag over the superstar defender
 
@@ -468,7 +469,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, resolveFumble, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -1272,12 +1273,16 @@ function checkTackle() {
       // A hard tackle sometimes knocks the ball loose = FUMBLE! 🔒 IRON GRIP
       // (shop) makes that much rarer.
       const grip = window.TDShop ? TDShop.gripFactor() : 0;
-      if (Math.random() < FUMBLE_CHANCE * (1 - grip)) fumble();
+      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble()) fumble();
       else endPlay('tackle');
       return;
     }
   }
 }
+
+// 🌦 Weather makes the ball slippery — more fumbles in rain/snow (1.0 = normal
+// in clear/night). Both fumble checks below multiply their odds by this.
+function wxFumble() { return window.TDWeather ? TDWeather.fumbleMult() : 1; }
 
 // The ball pops loose! Show a big "FUMBLE!!!" for suspense, make the ball
 // bounce free, then a moment later decide who dives on it.
@@ -1600,6 +1605,29 @@ function startCpuDrive() {
   setupDefensePlay();
 }
 
+// 🧩 RED (CPU) OFFENSE FORMATIONS (v1.17) — the red team used to line up the exact
+// same way every single snap. Now it comes out in different looks, just like YOUR
+// team can. These mirror your FORMATIONS into the red half of the field: their WRs
+// sit just above the line (placed at L - 14) and their RB a little deeper (L - rby).
+// Each look also LEANS run-or-pass (the `pass` chance), so a sharp defender can learn
+// to READ it — I-FORM smells like a run, TRIPS/SPREAD lean pass. (Their linemen don't
+// move; real offensive linemen stay put no matter the formation.)
+const RED_FORMATIONS = [
+  { name: 'SPREAD',  wr1: 55,  wr2: 478, rbx: 266, rby: 84,  pass: 0.62 },  // two wide, RB behind the QB
+  { name: 'TRIPS R', wr1: 360, wr2: 470, rbx: 150, rby: 66,  pass: 0.70 },  // both WRs stacked right, RB left
+  { name: 'TRIPS L', wr1: 63,  wr2: 173, rbx: 416, rby: 66,  pass: 0.70 },  // both WRs stacked left, RB right
+  { name: 'I-FORM',  wr1: 150, wr2: 383, rbx: 266, rby: 112, pass: 0.34 },  // tight, RB deep — a run look
+];
+
+// Pick the red team's next formation — never the same one twice in a row (just like
+// the playbook avoids back-to-back concepts). Remembers it in G.dformation.
+function pickRedFormation() {
+  let i = Phaser.Math.Between(0, RED_FORMATIONS.length - 1);
+  if (i === G.dformation) i = (i + 1) % RED_FORMATIONS.length;
+  G.dformation = i;
+  return RED_FORMATIONS[i];
+}
+
 // Line up one red play: their offense faces DOWN the field, your defense
 // meets them, and the snap comes by itself a moment later.
 function setupDefensePlay() {
@@ -1614,26 +1642,33 @@ function setupDefensePlay() {
   if (referee) referee.setVisible(true);
   if (routeGfx) routeGfx.clear();
 
-  // The RED offense lines up (upside-down mirror of your formation):
-  place(defense[0], 266, L - 60);   // their QB
-  place(defense[1], 266, L - 84);   // their RB, behind him
-  place(defense[2], 55,  L - 14);   // their left receiver (runs a slant)
-  place(defense[3], 478, L - 14);   // their right receiver (runs a streak)
-  place(defense[4], 226, L - 16);   // their line
+  // The RED offense lines up in this play's FORMATION (🧩 v1.17) — an upside-down
+  // mirror of the same look system your team uses. Pick it, place their skill guys,
+  // and remember each one's snap spot so his route mirrors off the side he lined up on.
+  const rf = pickRedFormation();
+  place(defense[0], 266, L - 60);         // their QB (always under center)
+  place(defense[1], rf.rbx, L - rf.rby);  // their RB — spot depends on the formation
+  place(defense[2], rf.wr1, L - 14);      // their WR #1
+  place(defense[3], rf.wr2, L - 14);      // their WR #2
+  place(defense[4], 226, L - 16);         // their line (stays put — linemen don't shift)
   place(defense[5], 266, L - 16);
   place(defense[6], 306, L - 16);
   defense[1].startY = defense[1].s.y; defense[1].startX = defense[1].s.x;   // their RB
-  defense[2].startY = defense[2].s.y; defense[2].startX = defense[2].s.x;   // their left WR
-  defense[3].startY = defense[3].s.y; defense[3].startX = defense[3].s.x;   // their right WR
+  defense[2].startY = defense[2].s.y; defense[2].startX = defense[2].s.x;   // their WR #1
+  defense[3].startY = defense[3].s.y; defense[3].startX = defense[3].s.x;   // their WR #2
 
-  // YOUR defense lines up to meet them — YOU are the middle linebacker:
-  place(offense[0], 266, L + 46);   // YOU (the YOU tag floats over you)
-  place(offense[4], 246, L + 16);   // your rushers, on their line
+  // YOUR defense lines up to MATCH their look — the cover men travel with their
+  // receivers (a hair inside, giving up the sideline not the middle), so a TRIPS
+  // set really does overload one side of your defense the way it should.
+  const inside = x => x + (x < 266 ? 6 : -6);
+  const rbGuardX = rf.rbx === 266 ? 226 : (rf.rbx < 266 ? rf.rbx + 40 : rf.rbx - 40);
+  place(offense[0], 266, L + 46);              // YOU (the YOU tag floats over you) — middle linebacker
+  place(offense[4], 246, L + 16);              // your rushers, on their line
   place(offense[5], 286, L + 16);
-  place(offense[6], 326, L + 46);   // an AI linebacker beside you
-  place(offense[2], 60,  L + 28);   // covering their left receiver
-  place(offense[3], 473, L + 28);   // covering their right receiver
-  place(offense[1], 206, L + 40);   // watching their RB out of the backfield
+  place(offense[6], 326, L + 46);              // an AI linebacker beside you
+  place(offense[2], inside(rf.wr1), L + 28);   // covering their WR #1
+  place(offense[3], inside(rf.wr2), L + 28);   // covering their WR #2
+  place(offense[1], rbGuardX,       L + 40);   // watching their RB out of the backfield
 
   referee.setPosition(410, L - 90);
 
@@ -1646,6 +1681,7 @@ function setupDefensePlay() {
   G.scene.cameras.main.startFollow(defense[0].s, true, 0.12, 0.12);
   updateBall();
   updateHUD();
+  sayComment('🔴 They come out in ' + rf.name + '!');   // 🧩 read the look before the snap!
   if (window.TDTour) TDTour.maybeStart('defense');   // 🎓 first-time-on-defense tour
 }
 
@@ -1653,8 +1689,12 @@ function setupDefensePlay() {
 // the same way a real defense does: by watching what they do.
 function redSnap(time) {
   G.snapTime = time;
+  // 🧩 The formation leans the call (v1.17): I-FORM smells run, TRIPS/SPREAD lean
+  // pass. Falls back to the plain RED_PASS_CHANCE if there's no formation somehow.
+  const rf = RED_FORMATIONS[G.dformation];
+  const passChance = (rf && rf.pass != null) ? rf.pass : RED_PASS_CHANCE;
   G.cpu.play = {
-    type: Math.random() < RED_PASS_CHANCE ? 'pass' : 'run',
+    type: Math.random() < passChance ? 'pass' : 'run',
     handed: false, thrown: false,
     throwAt: 0.8 + Math.random() * 0.8,   // pass plays let it fly at a random moment
   };
@@ -2055,7 +2095,7 @@ function redCheckTackle() {
   const c = G.ballCarrier.s;
   for (const o of offense) {
     if (Phaser.Math.Distance.Between(o.s.x, o.s.y, c.x, c.y) < TACKLE_DIST) {
-      if (Math.random() < RED_FUMBLE) {
+      if (Math.random() < RED_FUMBLE * wxFumble()) {
         if (window.TDSound) TDSound.sting('td');
         // You recover their fumble — YOUR drive starts right at this spot.
         G.turnoverSpotYou = Phaser.Math.Clamp(Math.round(100 - redYardsFromGoal(c.y)), 1, 99);
@@ -2411,36 +2451,45 @@ function buildTeamMenu(scene) {
   M.bg = scene.add.graphics().setScrollFactor(0).setDepth(90);
   M.bg.fillStyle(0x0a1020, 1); M.bg.fillRect(0, 0, 540, 720);
 
-  M.title = scene.add.text(mid, 70, 'CHOOSE YOUR TEAM',
-    { fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#ffe066',
+  M.title = scene.add.text(mid, 56, 'CHOOSE YOUR TEAM',
+    { fontFamily: 'Arial Black, Arial', fontSize: '25px', color: '#ffe066',
       stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
   // The huge 3-letter team code (SEA, PIT, ...).
-  M.abbr = scene.add.text(mid, 150, '', { fontFamily: 'Arial Black, Arial',
-    fontSize: '70px', color: '#ffffff', stroke: '#000', strokeThickness: 8 })
+  M.abbr = scene.add.text(mid, 120, '', { fontFamily: 'Arial Black, Arial',
+    fontSize: '64px', color: '#ffffff', stroke: '#000', strokeThickness: 8 })
     .setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
   // Two little color bars = a peek at the uniform (jersey color + helmet color).
   M.swatch = scene.add.graphics().setScrollFactor(0).setDepth(93);
 
   // The preview player, wearing the team you're looking at (texture 'blue').
-  M.preview = scene.add.sprite(mid, 340, 'blue').setScale(5)
+  M.preview = scene.add.sprite(mid, 300, 'blue').setScale(4.5)
     .setScrollFactor(0).setDepth(94);
 
-  // The team's name under the player.
-  M.name = scene.add.text(mid, 470, '', { fontFamily: 'Arial Black, Arial',
-    fontSize: '40px', color: '#ffffff', stroke: '#000', strokeThickness: 6 })
+  // 🧾 A tidy info CARD that groups the team's name + ratings so they read as ONE
+  // clear block (before, the three lines were crammed together and overlapped).
+  // It's the same for every team, so we draw it once, behind the words (depth 92:
+  // above the dark background, below the text at depth 94).
+  M.card = scene.add.graphics().setScrollFactor(0).setDepth(92);
+  M.card.fillStyle(0x152238, 0.96); M.card.fillRoundedRect(66, 384, 408, 152, 16);
+  M.card.lineStyle(2, 0xffffff, 0.16); M.card.strokeRoundedRect(66, 384, 408, 152, 16);
+
+  // The team's name, across the top of the card.
+  M.name = scene.add.text(mid, 408, '', { fontFamily: 'Arial Black, Arial',
+    fontSize: '34px', color: '#ffffff', stroke: '#000', strokeThickness: 5 })
     .setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
   // The headline line: the team's OVERALL rating + what it's best at (or, for an
   // unlocked uniform, its "exclusive" brag). Sits just under the team name.
-  M.note = scene.add.text(mid, 497, '', {
+  M.note = scene.add.text(mid, 450, '', {
     fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffd60a', align: 'center',
     stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
-  // ⭐ Offense / defense star bars, tucked in above the DIFFICULTY buttons.
-  M.ratingBars = scene.add.text(mid, 524, '', { fontFamily: 'Arial, sans-serif',
-    fontSize: '13px', color: '#ffffff', align: 'center', lineSpacing: 2,
+  // ⭐ Offense / defense star bars — BIGGER now (17px, roomy line spacing) so nobody
+  // has to squint. The number sits right before the stars: "OFFENSE  6/10  ★★★★★★☆☆☆☆".
+  M.ratingBars = scene.add.text(mid, 500, '', { fontFamily: 'Arial, sans-serif',
+    fontSize: '17px', color: '#ffffff', align: 'center', lineSpacing: 6,
     stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
   G.menu = M;
@@ -2450,7 +2499,7 @@ function buildTeamMenu(scene) {
 // Show or hide all the menu pieces at once.
 function setMenuVisible(v) {
   const M = G.menu; if (!M) return;
-  for (const o of [M.bg, M.title, M.abbr, M.swatch, M.preview, M.name, M.note, M.ratingBars]) o.setVisible(v);
+  for (const o of [M.bg, M.title, M.abbr, M.swatch, M.card, M.preview, M.name, M.note, M.ratingBars]) o.setVisible(v);
 }
 
 // Open the menu (start it on the Seahawks — team #0).
@@ -2484,14 +2533,15 @@ function renderMenu() {
   G.menu.note.setText(t.special ? '⭐ EXCLUSIVE UNIFORM!'
                                 : 'OVERALL ' + r.overall + '/10  ·  BEST AT ' + r.specialty);
   G.menu.note.setColor(t.special ? '#ffe066' : '#ffd60a');
-  G.menu.ratingBars.setText('🏈 OFFENSE  ' + stars10(r.off) + '  ' + r.off + '\n'
-                          + '🛡 DEFENSE  ' + stars10(r.def) + '  ' + r.def);
+  G.menu.ratingBars.setText('🏈 OFFENSE  ' + r.off + '/10  ' + stars10(r.off) + '\n'
+                          + '🛡 DEFENSE  ' + r.def + '/10  ' + stars10(r.def));
 
-  // Two color bars: jersey on top, helmet under it.
+  // Two color bars = a peek at the uniform (jersey on top, helmet under it), tucked
+  // just below the big team code.
   const g = G.menu.swatch; g.clear();
-  g.fillStyle(t.jersey, 1); g.fillRoundedRect(180, 210, 180, 12, 4);
-  g.fillStyle(t.helmet, 1); g.fillRoundedRect(180, 226, 180, 12, 4);
-  g.lineStyle(2, 0xffffff, 0.5); g.strokeRoundedRect(180, 210, 180, 28, 4);
+  g.fillStyle(t.jersey, 1); g.fillRoundedRect(180, 168, 180, 12, 4);
+  g.fillStyle(t.helmet, 1); g.fillRoundedRect(180, 184, 180, 12, 4);
+  g.lineStyle(2, 0xffffff, 0.5); g.strokeRoundedRect(180, 168, 180, 28, 4);
 }
 
 // Flip to the next/previous team (wraps around the list).
@@ -2559,6 +2609,15 @@ function beginGame(team, opp, isSeason) {
     G.myOff *= lvlBoost; G.myDef *= lvlBoost;
   }
 
+  // 🏟 MY TEAM: your drafted/traded roster gives another gentle, CAPPED edge —
+  // your offense stars lift YOUR offense, your defense stars lift YOUR defense
+  // (never the opponent's). A brand-new 60-overall team is exactly 1.0; a maxed
+  // one tops out at +8% per unit. Same "growing edge, not an auto-win" spirit.
+  if (window.TDDraft) {
+    const rb = TDDraft.boost();
+    G.myOff *= rb.off; G.myDef *= rb.def;
+  }
+
   // Fresh scoreboard & game clock for a brand-new game.
   G.score = 0; G.oppScore = 0;
   G.quarter = 1; G.clock = QUARTER_SECONDS;
@@ -2589,6 +2648,8 @@ function beginGame(team, opp, isSeason) {
   if (window.TDStats) TDStats.recordGameStart();
 
   if (window.TDSound) TDSound.setMode('game');   // 🎵 kick the music into gear
+  // 🌦 Pick this game's weather (rain / snow / night / clear) and announce it.
+  if (window.TDWeather) { const wx = TDWeather.forGame(); if (wx) sayComment(wx); }
   startKickoff();   // the game opens with a kickoff for you to return
 }
 

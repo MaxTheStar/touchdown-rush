@@ -8,23 +8,27 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.15 — cache-buster is `?v=36` in `index.html`.
+- **Version:** v1.19 — cache-buster is `?v=40` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-06.
+- **Last updated:** 2026-08-09.
 
-## ✅ Sync status — v1.11–v1.14 are LIVE; v1.15 is built locally (NOT pushed yet)
+## ✅ Sync status — v1.11–v1.15 were LIVE; v1.16–v1.19 pushed 2026-08-09 (this commit)
 
-On **2026-08-06** everything through **v1.14** was committed and pushed (`git push origin main`,
-commit `6daef38`) and is now **live** at maxthestar.github.io/touchdown-rush — that's v1.11 (🗑 Premium
-Pass removed + ✨ coin celebration), v1.12 (🎁 14-day daily rewards + 🛍 Pro Shop to level 10 + 🏈
-pick-six PAT), v1.13 (✏️ renamed to Touchdown Fun), and v1.14 (📈 player progression). **v1.15**
-(🎥 replay the big defensive stops) is **built + verified locally but NOT pushed yet** — waiting on
-Max's go-ahead, same as always.
+Everything through **v1.15** was already committed, pushed, and **live** at
+maxthestar.github.io/touchdown-rush. On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and then
+**v1.15** (🎥 replay the big defensive stops) was pushed too (commit `047623a`). On **2026-08-09** the
+next four shipped together in one push: **v1.16** (🌦 weather & night games), **v1.17** (🧩 CPU offense
+formations), **v1.18** (🧹 home-screen cleanup), and **v1.19** (🏟 MY TEAM — draft, scout & trade). So
+live now is v1.11 (🗑 Premium Pass removed + ✨ coin celebration), v1.12 (🎁 14-day daily rewards + 🛍 Pro
+Shop to level 10 + 🏈 pick-six PAT), v1.13 (✏️ renamed to Touchdown Fun), v1.14 (📈 player progression),
+v1.15 (🎥 replay), v1.16 (🌦 weather), v1.17 (🧩 CPU formations), v1.18 (🧹 menu cleanup), and v1.19
+(🏟 MY TEAM). *(An older note here said v1.15 was unpushed; that was stale — `git branch -r --contains
+047623a` confirms it's on origin/main.)*
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
 account, `ssh -T git@github.com` returns "Hi MaxTheStar!", and GitHub Pages rebuilds the live site
@@ -325,6 +329,115 @@ cache-busting query like `…/index.html?cb=1`.)
     replay (→ `ddead`), and a big stop with only 5 frames of film → NO replay. Fresh-tab boot: no console
     errors. (The overlay's *text* can't render in the frozen headless canvas, but it's the identical
     `buildReplayOverlay` the shipped score-replay already uses, so it renders on a real device.)
+- **v1.16 — 🌦 Weather & night games** (this iteration — new `src/weather.js` = `window.TDWeather`, plus
+  `index.html` + a light touch to `src/main.js`; cache-buster `?v=36 → ?v=37`):
+  - 🌦 **Every game now has weather.** `weather.js` picks a look at kickoff: on AUTO it's a weighted
+    surprise (40% ☀️ clear, 25% 🌙 night, 20% 🌧️ rain, 15% ❄️ snow); or you lock one in. `forGame()`
+    (called from `beginGame`) applies it and returns a friendly announce line that main.js speaks through
+    `sayComment` ("🌧️ Rain is falling!", "🌙 Night game!"…). Saved in `localStorage` as `tdr-weather`.
+  - 🎨 **Pure atmosphere, painted over the field.** A see-through `#weather-fx` div (index.html) sits at
+    `z-index: 9` — above the canvas, below the buttons (10+) and HUD (14) — the same over-the-field trick
+    the 3D tilt uses. `apply(kind)` toggles body classes `wx-night` / `wx-rain` / `wx-snow` (+ `wx-active`);
+    CSS draws a night vignette, sliding rain streaks (two `::before/::after` layers at different speeds),
+    or drifting snow (radial-gradient flakes). It's gated `body:not(.menu).wx-active #weather-fx` so it only
+    shows **in-game, never on the menu** (`enterMenu` adds `.menu`, `beginGame` removes it). Honors
+    `prefers-reduced-motion` (freezes the rain/snow animation, keeps the tint). It never touches players or
+    physics.
+  - 🏈 **One gameplay bite — a slippery ball.** New `wxFumble()` in main.js returns `TDWeather.fumbleMult()`
+    (clear/night 1.0, **rain 1.5×, snow 1.7×**); both fumble rolls — yours in `checkTackle` and theirs in
+    `redCheckTackle` — multiply their odds by it, so wet/snowy games see a few more fumbles. Buy 🔒 IRON GRIP
+    in the Pro Shop to fight back (its `gripFactor` still stacks in front).
+  - 🎛 **The 🌦 WEATHER menu button** (`#cycle-weather`, under the 👑 Maxwell toggle) cycles AUTO → CLEAR →
+    NIGHT → RAIN → SNOW and shows the current pick; `cyclePref` saves it.
+  - 🔌 Load order gained `weather.js` (after `shop.js`/`progress.js`, before `season.js`, since it uses
+    `TDStats.shared` for storage). All script tags bumped `?v=36 → ?v=37`.
+  - 🧪 Verified in-browser (drove the real module): `TDWeather` exposes `forGame/fumbleMult/current/pref`;
+    cycling the button walks AUTO→CLEAR→NIGHT→RAIN→SNOW with the right labels and persists `tdr-weather`;
+    each kind applies the right body classes (clear = none; night/rain/snow = `wx-<kind>` + `wx-active`) and
+    the right fumble multiplier (1.0 / 1.0 / 1.5 / 1.7); the announce lines fire; and the overlay gating is
+    exact — `#weather-fx` computes `display:none` with `.menu` on the body and `display:block` without it.
+    Fresh-tab boot: no console errors.
+- **v1.17 — 🧩 CPU offense formations** (this iteration — all in `src/main.js`; cache-buster `?v=37 → ?v=38`):
+  - 🧩 **The red (CPU) offense now comes out in different FORMATIONS**, just like your team can. New
+    `RED_FORMATIONS` (SPREAD / TRIPS R / TRIPS L / I-FORM) mirrors your `FORMATIONS` into the red half of
+    the field (their WRs at `L - 14`, their RB a little deeper at `L - rby`). `pickRedFormation()` chooses one
+    each defensive down with **no back-to-back repeats** (like the playbook), remembered in `G.dformation`.
+    It used to always line up the exact same standard set (the "possible follow-up" the v1.8 note flagged).
+  - 🎯 **Your coverage lines up to match.** `setupDefensePlay` now places their skill players from the chosen
+    formation, records each one's snap spot (`startX/startY`) so his route still mirrors off the side he lined
+    up on, and **moves YOUR cover men across from their receivers** (a hair inside — `inside(x)`), plus shades
+    the RB spy toward the middle (`rbGuardX`). So a TRIPS set really overloads one side of your defense the way
+    it should, instead of leaving DBs stranded on empty grass.
+  - 🧠 **Read the look.** Each formation leans run-or-pass via a `pass` field, used in `redSnap` (falls back to
+    the plain `RED_PASS_CHANCE` if missing): **I-FORM ≈ 34% pass (a run look), SPREAD ≈ 62%, TRIPS ≈ 70%**. A
+    pre-snap announcer callout ("🔴 They come out in TRIPS RIGHT!") names the look so you can learn to read it.
+  - 🔌 No new file, no load-order change — it all rides in `main.js`. `RED_FORMATIONS`/`pickRedFormation` are
+    exposed on `window.__td` for console testing. Script tags bumped `?v=37 → ?v=38`.
+  - 🧪 Verified in-browser by driving the real functions (scene was live, so I stepped `setupDefensePlay` +
+    `redSnap` directly): `pickRedFormation` over 60 picks = **0 back-to-back repeats**, all 4 looks seen; over 8
+    staged defensive downs **every** position check passed — red WR1/WR2/RB land on the formation spots, `startX`
+    is recorded, and your DB1/DB2/RB-spy line up across from their men; route-mirror `sideOf` is right (TRIPS L →
+    both WRs left, TRIPS R → both right, SPREAD/I-FORM → split); and 400 sampled snaps gave pass rates I-FORM
+    0.28 / SPREAD 0.55 / TRIPS 0.74 — you can read the formation. Pristine-boot console: no errors.
+- **v1.18 — 🧹 Home-screen (team menu) cleanup** (this iteration — `src/main.js` team card + `index.html`
+  menu CSS/HTML; cache-buster `?v=38 → ?v=39`):
+  - 🧾 **The team card is now a real, grouped card.** The name + rating "note" + the offense/defense star
+    bars used to be crammed together and literally **overlapped** (measured: name↔note −8px, note↔bars −1px).
+    `buildTeamMenu` now draws a rounded `M.card` panel (depth 92, behind the text) and re-spaces the three
+    lines with comfortable gaps (name↔note +11, note↔bars +16, verified across all 32 teams; widest name
+    COMMANDERS and highest ratings KC both stay inside the card).
+  - 🔎 **Ratings are bigger and clearer** — the star bars went 13px → **17px** with roomy line spacing, and
+    the number now sits right before the stars: `🏈 OFFENSE  6/10  ★★★★★★☆☆☆☆`. No more squinting.
+  - 🎚 **The bottom control stack no longer collides with the card.** It had ballooned to three labelled
+    sections (DIFFICULTY / SUPERSTAR CHALLENGE / WEATHER) and, anchored to the viewport bottom, its top crept
+    up over the ratings. Now 👑 Maxwell + 🌦 Weather share **one compact row** under a single "CHALLENGE &
+    WEATHER" label (Maxwell shortened to `👑 MAXWELL`; `.diff-btn` got `white-space:nowrap` so labels never
+    wrap). The ◀▶ team arrows moved up (`top:46% → 40%`) to flank the PLAYER, not the card.
+  - 📱 **This is a portrait game, so portrait is the priority** and is now clean (phone + tablet). In
+    **landscape** the canvas scales up and the card sits lower, so a `@media (orientation: landscape)` rule
+    hides just the little section labels there — enough to keep the buttons off the ratings — while portrait
+    keeps every label for clarity.
+  - 🧪 Verified by screenshotting the real menu (this browser DOES paint the canvas — the old "screenshots
+    time out" note applied to a different preview tool): portrait mobile (375×812) and iPad landscape
+    (1024×768) both clean, no overlaps; COMMANDERS (widest name) fits; EASY/MEDIUM/HARD selection still
+    highlights; and a full play-through (PLAY → kickoff → defense) ran with the 🌧️ rain overlay showing and a
+    🧩 SPREAD CPU formation lined up — no JS console errors (only the harmless auto favicon/apple-touch-icon
+    404s, which pre-date this work).
+- **v1.19 — 🏟 MY TEAM: draft, scout & trade your own players** (this iteration — new `src/draft.js`,
+  `window.TDDraft`; `index.html` gets the 🏟 TEAM button + `#team-modal` + a `.dr-*` stylesheet; one line in
+  `main.js` `beginGame`; `spend` exposed on `TDShop`; cache-buster `?v=39 → ?v=40`):
+  - 📋 **Your own roster.** You now have **eight named starters** (QB, RB, WR, WR, TE, LB, CB, S), each with a
+    rating out of 99, sometimes a ⭐ **trait** (🚀 Speedster, 🎯 Cannon Arm, 🧲 Sure Hands, 🛡 Bruiser…), and the
+    school/team they came from. A brand-new team is all honest 60s (regenerated automatically if `tdr-roster`
+    is missing). Your **TEAM OVERALL** is the average, split into offense (first five) and defense (last three).
+  - 💪 **A better team plays tougher** — `boost()` returns `{off, def}` multipliers that `beginGame` stacks on
+    top of the ⭐ team ratings and 📈 level boost. A 60-overall unit is exactly 1.0; it climbs to **+8%** for a
+    maxed (99) unit — small, CAPPED, and **YOUR team only** (never the opponent's), same spirit as everything
+    else. Offense stars lift your offense, defense stars lift your defense.
+  - 🎯 **The DRAFT (a real snake draft).** Six teams (you + five computers, named from the NFL list) take turns
+    over three rounds in snake order (1→6, 6→1, 1→6), so you make **3 picks**. A 24-strong prospect class shows
+    up from fictional **schools** (STATE U, TECH, COASTAL…). Computer teams grab the best available before your
+    pick — grab your guy before they do! Each pick UPGRADES the weakest starter at that position (the button
+    teases the gain, e.g. `DRAFT ⬆+24`).
+  - 🔎 **Scouting = risk & reward.** A prospect's true rating is hidden as a fuzzy **range** (e.g. `81–94`) with
+    a `? ???` trait until you **scout** him for **12 🪙** (spent through `TDShop.spend`). The computer teams
+    already "know", so scouting lets you draft as smart as they do. Can't afford it → a friendly inline flash,
+    and you can still gamble on an unscouted pick.
+  - 🔁 **Trading.** The TRADE tab shows four offers from league (NFL) teams: you get one of their players for
+    one of yours, usually a small upgrade that costs coins (some deals **pay you**). Accept → the swap and coins
+    settle instantly; 🔄 NEW OFFERS reshuffles the block.
+  - 🔌 **How it wires in** — `draft.js` never touches Phaser. It reads coins via `TDShop`, saves through the
+    `TDStats.shared` helpers (`tdr-roster`), reads the team list lazily via `window.TDGame.nflAbbrs/teamByAbbr`,
+    and the whole pop-up runs on **one delegated click handler** on `#team-body` (so re-renders never re-wire).
+    `main.js` only gains the guarded `TDDraft.boost()` multiply in `beginGame`.
+  - 🧪 **Verified** end-to-end in the browser via live DOM/JS (canvas-free, so no screenshot timeouts): all nine
+    modules load with **no console errors**; the default roster generates + persists; a full draft ran (correct
+    snake order — CPU picks before/after your slot, on-the-clock banner, pick log, scouting spends 12🪙 and
+    reveals rating+trait, upgrade deltas, 3-pick completion recap); trades swap the roster and move coins the
+    right way (including a "you get coins" deal); the "not enough coins" guard flashes and refuses; the
+    `beginGame` boost math checks out exactly (SEA off/def × progression × roster boost, YOUR team only, no
+    error); season/shop/daily still open & close (no regressions); and the six-chip menu row fits one line at
+    375px with no XP-bar overlap.
 
 ## 🗂 File map (who does what)
 
@@ -336,13 +449,15 @@ cache-busting query like `…/index.html?cb=1`.)
 | `src/sound.js` | Live chiptune soundtrack (oscillators). API: `window.TDSound`. |
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
+| `src/weather.js` | 🌦 Weather & night games: the over-the-field rain/snow/night overlay, the slippery-ball fumble multiplier, and the menu picker. API: `window.TDWeather`. |
 | `src/season.js` | 🏆 Season mode: league, standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
+| `src/draft.js` | 🏟 MY TEAM: your roster, the NFL-style snake draft, scouting & trades. API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
 | `src/tour.js` | 🎓 The step-by-step tutorial (coach marks). API: `window.TDTour` (`maybeStart`/`start`/`active`). |
 | `src/ads.js` | Animated TV-break commercials. |
 | `dashboard.html` | Private dev dashboard (world numbers + on-device reviews). Not linked from the game. |
 
-Script load order matters: `stats → sound → shop → progress → season → ads → tour → kick → main`.
+Script load order matters: `stats → sound → shop → progress → weather → season → draft → ads → tour → kick → main`.
 
 ## 🧰 Conventions
 
@@ -356,10 +471,15 @@ Script load order matters: `stats → sound → shop → progress → season →
 
 `tdr-coins`, `tdr-gear`, `tdr-daily`, `tdr-owned-uniforms`, `tdr-trk`,
 `tdr-games`, `tdr-reviews`, `tdr-country`, `tdr-counted-player`, `tdr-counted-geo`,
-`tdr-known-countries`, `tdr-review-asked`, `tdr-view` (3D or 2D field view),
-`tdr-season` (the whole in-progress season), `tdr-titles` (all-time Max Bowl wins),
-`tdr-maxwell` (👑 the superstar-defender toggle), `tdr-seen-howto` (has the tutorial popped once),
-`tdr-xp` (📈 lifetime XP — your team level is derived from it).
+`tdr-known-countries`, `tdr-review-asked`, `tdr-muted` (🔇 sound on/off),
+`tdr-view` (3D or 2D field view), `tdr-season` (the whole in-progress season),
+`tdr-titles` (all-time Max Bowl wins), `tdr-maxwell` (👑 the superstar-defender toggle),
+`tdr-tour-*` (which 🎓 coach-mark tutorials you've already seen — this replaced the old
+`tdr-seen-howto` when v1.10 swapped the HOW TO modal for the step-by-step tour),
+`tdr-xp` (📈 lifetime XP — your team level is derived from it),
+`tdr-weather` (🌦 your weather pick: auto / clear / night / rain / snow),
+`tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
+team of honest 60s is regenerated automatically if it's ever missing).
 
 ## 📝 Notes & limitations
 
@@ -385,13 +505,17 @@ python3 -m http.server 8055
 The 🏈 **Add-On Draft Board** (a chart Max keeps) ranks features easiest → hardest. **Built so far:**
 ✨ coin celebration (v1.11), 🎁 bigger daily rewards + 🛍 more Pro Shop gear + 🏈 pick-six PAT (v1.12),
 ✏️ renamed the game to **Touchdown Fun** (v1.13), 📈 **player progression** (v1.14 — Max chose this one),
-🎥 **replay the big defensive stops** (v1.15).
+🎥 **replay the big defensive stops** (v1.15), 🌦 **weather & night games** (v1.16),
+🧩 **CPU offense formations** (v1.17), 🏟 **MY TEAM — draft, scout & trade players** (v1.19 — Max chose
+this one; the big "keep 'em coming back" collection loop).
 **Still on the board, roughly easiest → hardest:**
 
-- **🌧️ Weather & night games**, then **📋 CPU offense formations** (teach the red team the formation
-  system your team already uses).
-- **🎩 A drafted trick play** (e.g. a flea-flicker you unlock). *(📈 player progression is now DONE — v1.14.)*
+- **🎩 A drafted trick play** — e.g. a flea-flicker you unlock and call once a game. (The engine already lets
+  anyone behind the line throw — the v1.1 "halfback pass" — so a double-pass has a head start.)
 - **🎮 Two-player pass-and-play** (share the screen) — the leading difficulty-ladder finalist.
 - **🌍 Online leaderboards / a real shared backend** (needs a server; the hardest one).
+- 🏟 **MY TEAM follow-ups** now that the roster exists: wire the ⭐ traits to real gameplay nudges (a
+  🚀 Speedster actually faster, 🎯 Cannon Arm throws farther); show your drafted QB/RB names on the field;
+  a yearly "draft day" tied to Season mode; or player growth (young picks level up as you play).
 - Maxwell follow-ups if wanted: custom art (a crown on the chibi), let him jump routes he didn't start
   near, or make him a whole boss TEAM instead of one player.

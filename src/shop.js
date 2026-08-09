@@ -422,7 +422,7 @@
   // ---- What the rest of the game may use ----------------------------------
   window.TDShop = {
     // coins
-    earn, coins: () => coins,
+    earn, spend, coins: () => coins,
     startGame: () => { earnedThisGame = 0; },
     gameEarnings: () => earnedThisGame,
     // gear perks (read by main.js during plays)
