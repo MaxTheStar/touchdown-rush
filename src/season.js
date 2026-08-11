@@ -46,17 +46,34 @@
     return arr;
   }
 
-  // Round-robin schedule (the "circle method"): everyone plays everyone once.
-  // With 8 teams that's 7 rounds of 4 games each; we use the first 6 as weeks.
-  function roundRobin(teams) {
-    const n = teams.length, arr = teams.slice(), rounds = [];
+  // ---- 📅 NFL-STYLE SCHEDULE (v1.20) -------------------------------------
+  // The real NFL splits into DIVISIONS and every team plays its division rivals
+  // TWICE — once at home, once away. We do the same: the 8-team league is two
+  // divisions of 4, and your 6-game season is a home-and-away round robin inside
+  // YOUR division (each of your 3 rivals, twice). The other division plays its
+  // own 6 games the same way, so all 8 teams have a full 6-game record. It lands
+  // in exactly 6 weeks of 4 games — the same shape the rest of the season expects.
+  //
+  // One "leg" is a plain circle-method round robin (each team plays every other
+  // once); we play a second leg with home/away flipped to get the rivalry rematch.
+  function divisionRoundRobin(teams) {
+    const n = teams.length, arr = teams.slice(), leg = [];
     for (let r = 0; r < n - 1; r++) {
       const pairs = [];
       for (let i = 0; i < n / 2; i++) pairs.push([arr[i], arr[n - 1 - i]]);
-      rounds.push(pairs);
+      leg.push(pairs);
       arr.splice(1, 0, arr.pop());   // rotate everyone except the first team
     }
-    return rounds;
+    const rematch = leg.map(round => round.map(([a, b]) => [b, a]));   // flip home/away
+    return leg.concat(rematch);      // 6 rounds of 2 games (a 4-team home-and-away)
+  }
+
+  // Zip the two divisions together so each WEEK has all 4 games (2 per division).
+  function nflSchedule(divA, divB) {
+    const a = divisionRoundRobin(divA), b = divisionRoundRobin(divB);
+    const weeks = [];
+    for (let w = 0; w < a.length; w++) weeks.push([...a[w], ...b[w]]);
+    return weeks;                    // 6 weeks × 4 games
   }
 
   // Who does `abbr` play in a given week? (scans that week's 4 games)
@@ -107,15 +124,27 @@
     if (!youAbbr || !window.TDGame) return;
     const others = shuffle(TDGame.nflAbbrs().filter(a => a !== youAbbr)).slice(0, LEAGUE - 1);
     const league = [youAbbr, ...others];
+    // 📅 Two divisions of four (NFL style): YOUR division is you + the first three
+    // others; the other four form the second division.
+    const divA = [youAbbr, others[0], others[1], others[2]];
+    const divB = [others[3], others[4], others[5], others[6]];
     const power = {}; league.forEach(a => power[a] = 48 + Math.floor(Math.random() * 25));   // 48–72
     const rec = {}; league.forEach(a => rec[a] = { w: 0, l: 0, pf: 0, pa: 0 });
     S = {
-      v: 1, you: youAbbr, league, power, rec,
-      schedule: roundRobin(league).slice(0, REG_WEEKS),
+      v: 1, you: youAbbr, league, divA, divB, power, rec,
+      schedule: nflSchedule(divA, divB).slice(0, REG_WEEKS),
       week: 1, phase: 'regular', results: [],
       seeds: null, semi: null, yourSemiOpp: null, yourBowlOpp: null, champion: null
     };
     save();
+  }
+
+  // Which division is a team in? ('YOUR DIVISION' for yours, else 'OTHER').
+  function divisionOf(abbr) {
+    if (!S) return '';
+    if (S.divA && S.divA.includes(abbr)) return 'A';
+    if (S.divB && S.divB.includes(abbr)) return 'B';
+    return '';
   }
 
   // ---- The playoffs ------------------------------------------------------
@@ -225,11 +254,13 @@
       const r = S.rec[a], diff = r.pf - r.pa;
       const me = a === S.you ? ' se-me' : '';
       const line = i === 3 ? ' se-line' : '';   // the top-4 PLAYOFF cutoff line
-      return `<tr class="se-row${me}${line}"><td>${i + 1}</td><td class="se-ab">${a}</td>` +
+      const dv = divisionOf(a);                 // 📅 which division a team is in
+      const dvCell = dv ? `<td><b style="color:${dv === 'A' ? '#ffd60a' : '#8fd0ff'}">${dv}</b></td>` : '<td></td>';
+      return `<tr class="se-row${me}${line}"><td>${i + 1}</td><td class="se-ab">${a}</td>${dvCell}` +
              `<td>${r.w}-${r.l}</td><td>${diff > 0 ? '+' : ''}${diff}</td></tr>`;
     }).join('');
-    return `<div class="se-cap">STANDINGS <small>(top 4 make the playoffs)</small></div>` +
-           `<table class="se-tab"><tr class="se-h"><td></td><td>TEAM</td><td>W-L</td><td>DIFF</td></tr>${rows}</table>`;
+    return `<div class="se-cap">STANDINGS <small>(top 4 make the playoffs · 2 divisions)</small></div>` +
+           `<table class="se-tab"><tr class="se-h"><td></td><td>TEAM</td><td>DIV</td><td>W-L</td><td>DIFF</td></tr>${rows}</table>`;
   }
 
   function scheduleHTML() {
@@ -242,7 +273,7 @@
       else if (S.phase === 'regular' && w === S.week) { cls = 'se-now'; sub = 'NEXT'; }
       chips += `<div class="se-wk ${cls}"><div class="se-wk-t">${top}</div><div class="se-wk-s">${sub}</div></div>`;
     }
-    return `<div class="se-cap">YOUR SCHEDULE</div><div class="se-sched">${chips}</div>`;
+    return `<div class="se-cap">YOUR SCHEDULE <small>(division rivals, home &amp; away)</small></div><div class="se-sched">${chips}</div>`;
   }
 
   function playoffHTML() {
@@ -266,7 +297,8 @@
       const you = window.TDGame ? TDGame.currentMenuTeamAbbr() : null;
       body.innerHTML =
         `<div class="se-intro">Start a whole season with <b>${you ? teamName(you) : 'your team'}</b>!<br>` +
-        `Play ${REG_WEEKS} games, climb an 8-team league, and win your way to the <b>🏆 MAX BOWL</b>.</div>` +
+        `Just like the NFL, the 8-team league splits into two divisions and you play your ` +
+        `<b>division rivals twice</b> (home &amp; away) — ${REG_WEEKS} games — then chase the <b>🏆 MAX BOWL</b>.</div>` +
         titleShelf();
       playBtn.textContent = 'START SEASON';
       return;

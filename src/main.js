@@ -197,7 +197,14 @@ const TEAM_RATINGS = {
   MIN: { off: 8,  def: 7 },  ATL: { off: 7,  def: 5 },  CAR: { off: 5,  def: 6 },
   NO:  { off: 7,  def: 6 },  TB:  { off: 7,  def: 8 },  ARI: { off: 6,  def: 5 },
   LAR: { off: 7,  def: 8 },  SF:  { off: 8,  def: 9 },
+  MXW: { off: 10, def: 10 },   // 👑 MAXWELL — the boss team, maxed out on purpose
 };
+
+// 👑 MAXWELL — the BOSS TEAM. Not a normal NFL team and not pickable as YOUR
+// team; he only ever shows up as the toughest possible OPPONENT (turn on the
+// 👑 button on the menu to challenge him). Gold-and-black villain colors, maxed
+// ratings, a superstar free safety, and a whole-team strength buff in beginGame.
+const MAXWELL_TEAM = { abbr: 'MXW', name: 'MAXWELL', jersey: 0xFFC637, helmet: 0x0A0A0A, boss: true };
 
 // Look up a team's ratings (defaults to a balanced 5/5 for the unlockable
 // uniforms, which aren't real NFL teams). overall = the average, out of 10.
@@ -291,8 +298,15 @@ const G = {
   clockStopped: false,  // a called timeout stops the clock for the very next play
   formation: 0,         // which offensive FORMATION you're lined up in (index into FORMATIONS)
   dformation: -1,       // 🧩 which RED (CPU) offense formation is on the field (index into RED_FORMATIONS; -1 = none yet)
-  maxwell: false,       // 👑 is the superstar defender "MAXWELL" switched on for this game?
+  maxwell: false,       // 👑 menu toggle: do you WANT to face the Maxwell boss team? (saved)
+  bossGame: false,      // 👑 is THIS game actually against Maxwell? (drives the boss AI + buff)
   starLabel: null,      // the floating "MAXWELL 👑" nametag over the superstar defender
+
+  // ---- v1.20: 🎩 the once-a-game TRICK PLAY (flea flicker) ----
+  trickAvailable: true, // 🎩 can you still call your one trick play this game?
+  trickArmed: false,    // you tapped 🎩 pre-snap — the coming snap is the trick
+  trickActive: false,   // the trick is running RIGHT NOW (defense is fooled)
+  trickBiteUntil: 0,    // time until which the defense "bites" on the fake (ms)
 
   // ---- v1.9: team-rating strength tilt (all default to 1 = neutral) ----
   myOff: 1, myDef: 1,   // YOUR team's offense/defense multipliers (from teamRating)
@@ -469,7 +483,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -620,6 +634,21 @@ function snap(time) {
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
   G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
+
+  // 🎩 If you armed the trick play, THIS snap is the flea flicker: the defense
+  // "bites" on the fake run for a beat (see updateDefense), springing a receiver
+  // open deep. It's a one-per-game special, so we spend it here.
+  if (G.trickArmed) {
+    G.trickArmed = false;
+    G.trickAvailable = false;
+    G.trickActive = true;
+    G.trickBiteUntil = time + TRICK_BITE_MS;
+    sayComment('🎩 The defense BITES on the fake!');
+  } else {
+    G.trickActive = false;
+  }
+  updateTrickBtn();
+
   // Read out what the defense is doing — a blitz is always called (fair
   // warning!), and the coverage is called out some of the time so you learn it.
   if (G.blitz) sayComment(pick(['BLITZ!!', "They're coming!", 'Pressure!']));
@@ -783,7 +812,7 @@ function resolvePass(wr, x, y) {
     const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, wx, wy);
     if (dd < nearestDef) { nearestDef = dd; nearestD = d; }
   }
-  const starThere = G.maxwell && nearestD === defense[6];   // 👑 is it Maxwell in coverage?
+  const starThere = G.bossGame && nearestD === defense[6];   // 👑 is it Maxwell in coverage?
 
   // A defender is right there — he either intercepts it or knocks it away.
   // Maxwell contests from a hair farther and picks it off a lot more often.
@@ -1148,7 +1177,17 @@ function updateDefense(elapsed) {
     }
 
     let tx, ty, speed = DEF_SPEED * boost;
-    const isStar = G.maxwell && d === defense[6];   // 👑 the superstar free safety
+    const isStar = G.bossGame && d === defense[6];   // 👑 the superstar free safety
+
+    // 🎩 FLEA FLICKER — for a beat after the snap the coverage (DBs + LBs) BITES
+    // on the fake, creeping up toward the line and slowing way down, so your deep
+    // receivers get a big head start. The pass rush (DL) isn't fooled, so you
+    // still have to get the deep shot off before it gets home.
+    if (G.trickActive && qbHasBall && d.role !== 'DL'
+        && G.scene.time.now < G.trickBiteUntil) {
+      steer(d.s, d.s.x, G.losY - 6, DEF_SPEED * boost * 0.32);
+      continue;
+    }
 
     if (!qbHasBall && G.state !== 'pass') {
       // Someone caught it (or is running it) — everyone hunts the ball, but at the
@@ -1693,8 +1732,10 @@ function redSnap(time) {
   // pass. Falls back to the plain RED_PASS_CHANCE if there's no formation somehow.
   const rf = RED_FORMATIONS[G.dformation];
   const passChance = (rf && rf.pass != null) ? rf.pass : RED_PASS_CHANCE;
+  // 🎮 In 2-player mode Player 2 RUNS the red offense (he has no throw button), so
+  // the red team always keeps it on the ground; otherwise the CPU mixes run & pass.
   G.cpu.play = {
-    type: Math.random() < passChance ? 'pass' : 'run',
+    type: G.twoPlayer ? 'run' : (Math.random() < passChance ? 'pass' : 'run'),
     handed: false, thrown: false,
     throwAt: 0.8 + Math.random() * 0.8,   // pass plays let it fly at a random moment
   };
@@ -1831,6 +1872,16 @@ function updateRedTeam(elapsed) {
     if (wr.s.y >= FIELD_LENGTH - ENDZONE - 8) vy = 0;   // don't run into their endzone wall
     wr.s.setVelocity(vx * G.oppOff, vy * G.oppOff);      // ⭐ the opponent's offense rating
     if (vx || vy) wr.s.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+  }
+
+  // 🎮 TWO-PLAYER: on the red team's drive, PLAYER 2 runs the red offense himself.
+  // He drives the ball-carrier with the top D-pad / WASD (the receivers above are
+  // his decoys); there's no AI drop-back, handoff, or pass, and Player 1 plays
+  // defense against him as usual. (controlP2Defender just drives a player with P2's
+  // inputs, so we reuse it here for the runner.)
+  if (G.twoPlayer) {
+    controlP2Defender(carrier);
+    return;
   }
 
   // Their RB on a RUN play comes back to the QB for the handoff.
@@ -2572,15 +2623,21 @@ function syncDiffButtons() {
     b.classList.toggle('sel', b.dataset.diff === G.difficulty));
 }
 
-// Tap PLAY (Quick Game): lock in your team and give the computer a random
-// OTHER team, then hand off to beginGame() to actually start.
+// Tap PLAY (Quick Game): lock in your team and give the computer an opponent,
+// then hand off to beginGame() to actually start.
 function startGameWithTeam() {
   if (G.state !== 'menu') return;
   const team = allTeams()[G.menuIndex];
-  // Pick a random OTHER team for the computer (always a real NFL team —
-  // your exclusive daily-reward uniforms are yours alone).
   let opp;
-  do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp === team);
+  if (G.maxwell) {
+    // 👑 BOSS BATTLE — you asked for it: your opponent is MAXWELL, the best team
+    // there is (unless you somehow chose Maxwell yourself; then fall back random).
+    opp = (team !== MAXWELL_TEAM) ? MAXWELL_TEAM : NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)];
+  } else {
+    // Pick a random OTHER team for the computer (always a real NFL team —
+    // your exclusive daily-reward uniforms are yours alone).
+    do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp === team);
+  }
   beginGame(team, opp, false);
 }
 
@@ -2591,6 +2648,7 @@ function beginGame(team, opp, isSeason) {
   G.team = team;
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
+  G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
 
   // ⭐ Turn each team's OFFENSE/DEFENSE ratings into a gentle speed tilt: a 5 is
   // neutral, a 10 is +7.5%, a 1 is −6%. So a great team really does play tougher,
@@ -2599,6 +2657,11 @@ function beginGame(team, opp, isSeason) {
   const tilt = v => 1 + (v - 5) * 0.015;
   G.myOff = tilt(mr.off);  G.myDef = tilt(mr.def);
   G.oppOff = tilt(orr.off); G.oppDef = tilt(orr.def);
+
+  // 👑 BOSS BUFF — Maxwell isn't just maxed ratings; his whole team gets an extra
+  // strength bump on BOTH sides of the ball, so he really is the toughest test in
+  // the game (on top of his 👑 superstar free safety, driven by G.bossGame).
+  if (G.bossGame) { G.oppOff *= 1.10; G.oppDef *= 1.10; }
 
   // 📈 Player progression: your leveled-up team plays a little stronger — a
   // gentle, CAPPED edge on YOUR offense & defense only (never the opponent's),
@@ -2624,6 +2687,7 @@ function beginGame(team, opp, isSeason) {
   G.overtime = false; G.gameOver = false;
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
+  G.trickAvailable = true; G.trickArmed = false; G.trickActive = false;   // 🎩 a fresh trick play each game
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
@@ -2642,6 +2706,7 @@ function beginGame(team, opp, isSeason) {
 
   setMenuVisible(false);
   document.body.classList.remove('menu');
+  document.body.classList.toggle('two-player', G.twoPlayer);   // 🎮 keep P2's D-pad in sync each game
 
   // Count this game on the WORLD player tracker (see src/stats.js) —
   // +1 game, and the very first game on a device adds its country flag.
@@ -2650,6 +2715,7 @@ function beginGame(team, opp, isSeason) {
   if (window.TDSound) TDSound.setMode('game');   // 🎵 kick the music into gear
   // 🌦 Pick this game's weather (rain / snow / night / clear) and announce it.
   if (window.TDWeather) { const wx = TDWeather.forGame(); if (wx) sayComment(wx); }
+  if (G.bossGame) sayComment('👑 BOSS BATTLE — it\'s MAXWELL! Can you beat the best?');
   startKickoff();   // the game opens with a kickoff for you to return
 }
 
@@ -3021,6 +3087,8 @@ function setupPlay(next) {
 
   // On 4th down, don't snap right away — first offer the choice:
   // go for it, or kick (a field goal if you're close, otherwise a punt).
+  G.trickActive = false; G.trickArmed = false;   // 🎩 fresh play — trick not armed yet
+
   if (G.down === 4) {
     G.state = 'decision';
     showFourthDownChoice();
@@ -3028,6 +3096,7 @@ function setupPlay(next) {
     G.state = 'presnap';
     if (window.TDTour) TDTour.maybeStart('offense');   // 🎓 first-snap offense tour
   }
+  updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
 
 // ============================================================
@@ -3067,9 +3136,10 @@ function setupTouchButtons() {
   bindTapEl('btn-view', toggleView);
   bindTapEl('btn-fs', toggleFullscreen);
 
-  // ⏱ Timeout + 🧩 Formation (in-game), and the menu HOW TO PLAY / Maxwell toggle
+  // ⏱ Timeout + 🧩 Formation + 🎩 Trick play (in-game), and the menu HOW TO / Maxwell toggle
   bindTapEl('btn-timeout', callTimeout);
   bindTapEl('btn-formation', cycleFormation);
+  bindTapEl('btn-trick', callTrick);
   bindTapEl('open-howto', () => { if (window.TDTour) { TDTour.reset(); TDTour.start('menu', true); } });  // 🎓 replay ALL tutorials
   bindTapEl('toggle-maxwell', toggleMaxwell);
 
@@ -3166,13 +3236,16 @@ function toggleFullscreen() {
   setTimeout(() => { if (window.game && game.scale) game.scale.refresh(); }, 300);
 }
 
-// ---- 👑 MAXWELL toggle (on the menu) --------------------------------------
-// Flip the superstar defender on/off for your games, and remember the choice.
+// ---- 👑 MAXWELL boss-battle toggle (on the menu) --------------------------
+// When it's ON, your next Quick Game opponent is MAXWELL — the boss team: maxed
+// ratings, a whole-team strength buff, and a 👑 superstar free safety. The best
+// team in the game. We just remember your choice; the swap happens in
+// startGameWithTeam(), and beginGame() flips on G.bossGame.
 function toggleMaxwell() {
   G.maxwell = !G.maxwell;
   try { localStorage.setItem('tdr-maxwell', G.maxwell ? '1' : '0'); } catch (e) {}
   updateMaxwellBtn();
-  if (G.maxwell) sayComment && sayComment('👑 Maxwell is IN the game!');
+  if (G.maxwell) sayComment && sayComment('👑 BOSS BATTLE ON — you take on MAXWELL next!');
 }
 function updateMaxwellBtn() {
   const b = document.getElementById('toggle-maxwell');
@@ -3181,6 +3254,35 @@ function updateMaxwellBtn() {
 function loadMaxwell() {
   try { G.maxwell = localStorage.getItem('tdr-maxwell') === '1'; } catch (e) {}
   updateMaxwellBtn();
+}
+
+// ---- 🎩 TRICK PLAY (once a game) ------------------------------------------
+// Tap 🎩 before the snap and the coming play becomes a FLEA FLICKER: all your
+// receivers take off deep, and when you snap it the defense "bites" on the fake
+// run for a beat — creeping toward the line — so somebody comes wide open deep.
+// You only get ONE a game, so save it for when you really need a big play!
+const TRICK_BITE_MS = 780;   // how long the defense stays fooled after the snap
+
+// Show the 🎩 button only before the snap, and only while you still have your
+// trick this game (and haven't already armed it for this snap).
+function updateTrickBtn() {
+  const ready = G.trickAvailable && !G.trickArmed && G.state === 'presnap';
+  document.body.classList.toggle('trick-ready', ready);
+  const b = document.getElementById('btn-trick');
+  if (b) b.classList.toggle('armed', G.trickArmed);
+}
+
+// Arm the trick for this snap: send everyone deep and redraw the preview so you
+// can see the new routes before you hike it.
+function callTrick() {
+  if (G.state !== 'presnap' || !G.trickAvailable || G.trickArmed) return;
+  G.trickArmed = true;
+  offense[2].route = 'streak';   // WR #1 — go deep
+  offense[3].route = 'streak';   // WR #2 — go deep
+  offense[1].route = 'wheel';    // RB slips out and up, too
+  drawRoutePreview();            // repaint the pre-snap route lines (now all deep)
+  updateTrickBtn();
+  sayComment('🎩 FLEA FLICKER armed — hike it!');
 }
 
 // A "hold" button: down = start moving, up/leave = stop.
@@ -3216,12 +3318,18 @@ function consume(action) {
   return false;
 }
 
-// Flip between "vs computer" (1P) and "friend plays defense" (2P).
+// Flip between 1-player (vs computer) and 2-player pass-and-play. In 2P a friend
+// uses the TOP D-pad: when YOU have the ball he plays a red defender trying to
+// stop you; when the RED team has the ball HE runs their offense and you play
+// defense. Whoever scores more wins — no computer!
 function toggleTwoPlayer() {
   G.twoPlayer = !G.twoPlayer;
   document.body.classList.toggle('two-player', G.twoPlayer);   // shows/hides P2's D-pad
   const btn = document.getElementById('btn-mode');
   if (btn) btn.textContent = G.twoPlayer ? '2P' : '1P';
+  sayComment && sayComment(G.twoPlayer
+    ? '🎮 2-PLAYER! Friend uses the top D-pad — take turns on offense!'
+    : '1-PLAYER — back to you vs the computer.');
 }
 
 // ---- 3D / 2D field view -----------------------------------------------------
@@ -3315,15 +3423,6 @@ function updateHUD() {
   const handBtn = document.getElementById('btn-hand');
   if (handBtn) handBtn.classList.toggle('off', !canHandOff());
 
-  // Float the "P2" tag over Player 2's defender (only in 2-player mode)
-  if (G.p2Label) {
-    if (G.twoPlayer && G.p2Defender) {
-      G.p2Label.setVisible(true).setPosition(G.p2Defender.s.x, G.p2Defender.s.y - 22);
-    } else {
-      G.p2Label.setVisible(false);
-    }
-  }
-
   // Scoreboard now shows BOTH teams' points — yours and the computer's.
   hud.score.setText(G.team
     ? `${G.team.abbr} ${G.score}  —  ${G.oppTeam.abbr} ${G.oppScore}`
@@ -3341,14 +3440,26 @@ function updateHUD() {
     if (onDefense) {
       const me = (G.myDefender || offense[0]).s;
       G.youLabel.setPosition(me.x, me.y - 22);
-      if (G.p2Label) G.p2Label.setVisible(false);   // P2 sits out the defense phase (for now)
     }
+  }
+
+  // 🎮 The "P2" tag in 2-player mode. On YOUR offense, Player 2 is the red
+  // DEFENDER (p2Defender); on the RED team's drive, Player 2 IS the red BALL-
+  // CARRIER he's running. Hidden any other time (and in 1-player).
+  if (G.p2Label) {
+    let p2guy = null;
+    if (G.twoPlayer) {
+      if (onDefense) { if (G.ballCarrier && defense.indexOf(G.ballCarrier) >= 0) p2guy = G.ballCarrier; }
+      else if (G.p2Defender) p2guy = G.p2Defender;
+    }
+    if (p2guy) G.p2Label.setVisible(true).setPosition(p2guy.s.x, p2guy.s.y - 22);
+    else G.p2Label.setVisible(false);
   }
 
   // 👑 Float the gold "MAXWELL" tag over the superstar — only while YOU'RE on
   // offense (that's when defense[6] is the CPU's ballhawk you're up against).
   if (G.starLabel) {
-    const showStar = G.maxwell && G.team && !onDefense && defense[6] && G.state !== 'kickoff';
+    const showStar = G.bossGame && G.team && !onDefense && defense[6] && G.state !== 'kickoff';
     G.starLabel.setVisible(!!showStar);
     if (showStar) G.starLabel.setPosition(defense[6].s.x, defense[6].s.y - 22);
   }

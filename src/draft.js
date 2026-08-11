@@ -45,7 +45,16 @@
   const party = (el, emoji, label) => { if (window.TDShop && TDShop.celebrate) TDShop.celebrate(el, emoji, label); };
   const sting = k => { if (window.TDSound && TDSound.sting) TDSound.sting(k); };
 
-  const SCOUT_COST = 12;   // 🪙 to reveal a prospect's true rating + trait
+  // 🪙 to reveal a prospect's true rating + trait — the better he might be, the
+  // MORE it costs to scout him. We can't see his real rating yet, so we price it
+  // off the middle of his shown range (his "projected" grade). Stars are pricey!
+  function scoutCost(p) {
+    const proj = Math.round((p.lo + p.hi) / 2);
+    if (proj >= 90) return 25;   // could be a superstar — scouts cost a fortune
+    if (proj >= 80) return 18;   // clearly a starter
+    if (proj >= 70) return 12;   // a solid prospect
+    return 8;                    // a project / depth guy
+  }
 
   // ============================================================
   // WHO'S ON THE TEAM — positions, names, traits, schools
@@ -273,7 +282,7 @@
   function scout(i) {
     const p = draft.board[i];
     if (!p || p.scouted) return;
-    if (!spend(SCOUT_COST)) { flash('Not enough coins to scout!'); return; }
+    if (!spend(scoutCost(p))) { flash('Not enough coins to scout this one!'); return; }
     p.scouted = true;
     paintCoins();
     render();
@@ -304,7 +313,8 @@
       return `<div class="dr-intro">It's <b>DRAFT DAY</b>! A new class of young stars just arrived from
         schools all over. <b>${DRAFT_TEAMS} teams</b> take turns picking in snake order — grab the best
         one before a computer team does. Each pick <b>upgrades a starter</b>.<br><br>
-        🔎 A prospect's true rating is hidden — <b>scout</b> him for <b>${SCOUT_COST} 🪙</b> to see it.</div>
+        🔎 A prospect's true rating is hidden — <b>scout</b> him to see it (<b>8–25 🪙</b>: the bigger the
+        star he might be, the more scouting costs).</div>
         ${coinLine()}
         <div class="dr-actions"><div class="ov-btn yes" data-act="startDraft">START DRAFT ▶</div></div>`;
     }
@@ -346,7 +356,7 @@
         const d = p.ovr - yours;
         gain = d > 0 ? `<span class="dr-up">⬆+${d}</span>` : d < 0 ? `<span class="dr-dn">⬇${d}</span>` : `<span class="dr-eq">=</span>`;
       }
-      const scoutBtn = p.scouted ? '' : `<div class="dr-mini" data-act="scout" data-i="${i}">🔎 ${SCOUT_COST}🪙</div>`;
+      const scoutBtn = p.scouted ? '' : `<div class="dr-mini" data-act="scout" data-i="${i}">🔎 ${scoutCost(p)}🪙</div>`;
       return `<div class="dr-item">
           ${playerRow(p)}
           <div class="dr-rowbtns">
@@ -382,9 +392,10 @@
       // Their player: usually a touch better than yours (−2 .. +12).
       const inOvr = Math.min(99, Math.max(50, mine.player.ovr + rint(-2, 12)));
       const incoming = makePlayer(pos, inOvr, inOvr, { from: abbr, scouted: true });
-      // Coins to even it up: the better their guy is, the more you chip in.
-      const diff = incoming.ovr - mine.player.ovr;
-      const coin = Math.max(-20, Math.round(diff * 8) + (incoming.trait ? 10 : 0));
+      // Coins to even it up: priced off how GOOD their guy is (not just the
+      // upgrade), so a big star really costs a lot — plus extra for a ⭐ trait.
+      // A weak player they're dumping can even pay YOU a little (floored at −15).
+      const coin = Math.max(-15, Math.round((incoming.ovr - 60) * 2.5) + (incoming.trait ? 12 : 0));
       offers.push({ id: 'o' + k, teamName, abbr, incoming, giveIdx: mine.idx, coin });
     }
   }

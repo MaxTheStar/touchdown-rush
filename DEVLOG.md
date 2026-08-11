@@ -8,27 +8,24 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.19 — cache-buster is `?v=40` in `index.html`.
+- **Version:** v1.24 — cache-buster is `?v=41` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-09.
+- **Last updated:** 2026-08-10.
 
-## ✅ Sync status — v1.11–v1.15 were LIVE; v1.16–v1.19 pushed 2026-08-09 (this commit)
+## ✅ Sync status — v1.11–v1.24 are all LIVE (v1.20–v1.24 pushed 2026-08-10)
 
-Everything through **v1.15** was already committed, pushed, and **live** at
-maxthestar.github.io/touchdown-rush. On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and then
-**v1.15** (🎥 replay the big defensive stops) was pushed too (commit `047623a`). On **2026-08-09** the
-next four shipped together in one push: **v1.16** (🌦 weather & night games), **v1.17** (🧩 CPU offense
-formations), **v1.18** (🧹 home-screen cleanup), and **v1.19** (🏟 MY TEAM — draft, scout & trade). So
-live now is v1.11 (🗑 Premium Pass removed + ✨ coin celebration), v1.12 (🎁 14-day daily rewards + 🛍 Pro
-Shop to level 10 + 🏈 pick-six PAT), v1.13 (✏️ renamed to Touchdown Fun), v1.14 (📈 player progression),
-v1.15 (🎥 replay), v1.16 (🌦 weather), v1.17 (🧩 CPU formations), v1.18 (🧹 menu cleanup), and v1.19
-(🏟 MY TEAM). *(An older note here said v1.15 was unpushed; that was stale — `git branch -r --contains
-047623a` confirms it's on origin/main.)*
+Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
+On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
+v1.16–v1.19 shipped together (commit `094c34f`). On **2026-08-10** this batch shipped (cache-buster now
+`?v=41`) — **v1.20** (🎩 trick play — flea flicker), **v1.21** (🎮 two-player pass-and-play, finished),
+**v1.22** (👑 Maxwell is now a BOSS TEAM), **v1.23** (📅 NFL-style season scheduling — divisions + rivals
+twice), and **v1.24** (💰 better players cost more). *(The 🌍 online leaderboards idea was deleted from
+the board on Max's call — it needs a real backend and he didn't want it.)*
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
 account, `ssh -T git@github.com` returns "Hi MaxTheStar!", and GitHub Pages rebuilds the live site
@@ -438,6 +435,58 @@ cache-busting query like `…/index.html?cb=1`.)
     `beginGame` boost math checks out exactly (SEA off/def × progression × roster boost, YOUR team only, no
     error); season/shop/daily still open & close (no regressions); and the six-chip menu row fits one line at
     375px with no XP-bar overlap.
+- **v1.20 — 🎩 Trick play (the flea flicker)** (this iteration — all in `src/main.js` + `index.html`):
+  - 🎩 **Once a game**, a new `🎩 TRICK` button appears in the `#ingame-ctrls` row **before the snap** (only
+    while you still have it — `body.trick-ready`, toggled by `updateTrickBtn`). Tap it and `callTrick` sends all
+    your receivers deep (routes → `streak`/`streak`/`wheel`) and redraws the pre-snap preview.
+  - 🪤 At the snap (`snap`) the trick is spent (`G.trickAvailable=false`) and the **defense BITES**: for
+    `TRICK_BITE_MS` (780ms) every coverage defender (DBs + LBs, *not* the DL) creeps toward the line at 0.32×
+    speed (`updateDefense`), springing a receiver wide open deep. The pass rush is NOT fooled, so you still have
+    to get the deep shot off. Reset each play in `setupPlay` and each game in `beginGame`.
+  - 🧪 Verified via `__td`: the button shows only pre-snap-while-available; arming flips the routes to all-deep
+    and marks the button `armed`; the snap consumes the one use and opens the bite window; a fooled DB drives
+    straight at the LOS at 0.32× while the DL keeps rushing full speed; after the window it snaps back to normal
+    coverage. No console errors.
+- **v1.21 — 🎮 Two-player pass-and-play (finished)** (this iteration — `src/main.js`):
+  - The old 2P only let a friend play ONE red defender while you had the ball. Now it's **symmetric and
+    competitive, no computer**: Player 2 IS the red team. When YOU have the ball he plays a red defender
+    (`p2Defender`, unchanged); when the **RED team** has the ball **he RUNS their offense** with the top
+    D-pad / WASD, and you play defense. Whoever scores more wins.
+  - 🔌 How: in `updateRedTeam`, an early `if (G.twoPlayer) { controlP2Defender(carrier); return; }` hands the
+    red ball-carrier to Player 2 (reusing the P2 input handler) and skips the AI drop-back/handoff/juke/throw;
+    `redSnap` forces the red play to a **run** in 2P (P2 has no throw button); the red receivers still run their
+    routes as decoys. The `#dpad2` already survives the defense phase (`body.returning` only hides `#actions`).
+    The "P2" tag now floats over the red defender on your offense and over the red **carrier** on their drive.
+    `beginGame` re-syncs the `two-player` body class from `G.twoPlayer` each game.
+  - ⚠️ Every P2 change is gated behind `G.twoPlayer`, so the **1-player game is byte-for-byte unchanged** (verified:
+    same input drives the carrier at 215 in 2P, is ignored in 1P; red plays force-run in 2P, mix run/pass in 1P).
+- **v1.22 — 👑 Maxwell is now a BOSS TEAM** (this iteration — `src/main.js`):
+  - 👑 Maxwell used to be a superstar-safety toggle bolted onto any opponent. Now he's a whole **BOSS TEAM**:
+    a new `MAXWELL_TEAM` (`abbr:'MXW'`, gold-and-black, `boss:true`) with **maxed 10/10 ratings**
+    (`TEAM_RATINGS.MXW`), not pickable as your team. The menu 👑 toggle now means **"face the boss in Quick
+    Game"**: `startGameWithTeam` swaps your opponent to Maxwell when it's on.
+  - 💪 `beginGame` sets `G.bossGame = !!opp.boss` and, on top of the maxed rating tilt, gives Maxwell a **+10%
+    whole-team buff** (`oppOff/oppDef *= 1.10`). The 👑 superstar free safety AI (range, ballhawk, robber) now
+    keys off `G.bossGame` instead of the old menu flag, so it fires **only** when you're actually facing Maxwell.
+  - 🧪 Verified: toggle ON → opponent is MAXWELL (gold, MXW), `bossGame=true`, off/def = tilt(10)×1.10 = 1.1825
+    exactly; toggle OFF → normal random NFL opponent, `bossGame=false`. No errors.
+- **v1.23 — 📅 NFL-style season scheduling** (this iteration — `src/season.js`):
+  - 📅 The season used a plain 8-team round robin. Now, like the NFL, the league splits into **two divisions of
+    four** and you play your **division rivals twice — home and away** (`nflSchedule`/`divisionRoundRobin`: a
+    circle-method leg plus a home/away-flipped rematch leg = 6 rounds of 2 games). Zipped across both divisions
+    that's the same **6 weeks × 4 games** the rest of the season already expects, so standings/sims/playoffs are
+    untouched. `newSeason` stores `divA`/`divB`; the standings gain a color-coded **DIV** column, and the intro
+    + schedule captions explain it. (Old in-progress `tdr-season` saves still load & finish on their old schedule
+    — `divisionOf` guards missing `divA`.)
+  - 🧪 Verified: fresh season → divA = you + 3, divB = 4; you play your 3 rivals exactly 2× each, every game is
+    intra-division, all 8 teams play 6, 6 weeks × 4 games; a full 6-week + playoff run completes with no errors
+    and the DIV column renders.
+- **v1.24 — 💰 Better players cost more** (this iteration — `src/draft.js`):
+  - 💰 Getting stars is now pricier. **Scouting** is tiered by a prospect's projected grade (mid of his shown
+    range): `<70 → 8🪙, 70s → 12🪙, 80s → 18🪙, 90+ → 25🪙` (`scoutCost`, shown per-prospect on the button).
+    **Trades** are priced off the incoming player's absolute rating, not just the upgrade:
+    `coin = max(−15, round((ovr−60)×2.5) + (trait ? 12 : 0))` — a 90-overall costs ~75🪙+, a scrub can even pay
+    you. Verified: all four scout tiers appear and match the rule; trade coins climb with incoming overall.
 
 ## 🗂 File map (who does what)
 
@@ -450,8 +499,8 @@ cache-busting query like `…/index.html?cb=1`.)
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
 | `src/weather.js` | 🌦 Weather & night games: the over-the-field rain/snow/night overlay, the slippery-ball fumble multiplier, and the menu picker. API: `window.TDWeather`. |
-| `src/season.js` | 🏆 Season mode: league, standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
-| `src/draft.js` | 🏟 MY TEAM: your roster, the NFL-style snake draft, scouting & trades. API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
+| `src/season.js` | 🏆 Season mode: 2-division league (📅 NFL-style home-and-away divisional schedule, v1.23), standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
+| `src/draft.js` | 🏟 MY TEAM: your roster, the NFL-style snake draft, scouting & trades (💰 rating-priced, v1.24). API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
 | `src/tour.js` | 🎓 The step-by-step tutorial (coach marks). API: `window.TDTour` (`maybeStart`/`start`/`active`). |
 | `src/ads.js` | Animated TV-break commercials. |
@@ -502,20 +551,19 @@ python3 -m http.server 8055
 
 ## 🔮 Next up (ideas for the next cycle)
 
-The 🏈 **Add-On Draft Board** (a chart Max keeps) ranks features easiest → hardest. **Built so far:**
-✨ coin celebration (v1.11), 🎁 bigger daily rewards + 🛍 more Pro Shop gear + 🏈 pick-six PAT (v1.12),
-✏️ renamed the game to **Touchdown Fun** (v1.13), 📈 **player progression** (v1.14 — Max chose this one),
-🎥 **replay the big defensive stops** (v1.15), 🌦 **weather & night games** (v1.16),
-🧩 **CPU offense formations** (v1.17), 🏟 **MY TEAM — draft, scout & trade players** (v1.19 — Max chose
-this one; the big "keep 'em coming back" collection loop).
-**Still on the board, roughly easiest → hardest:**
+The 🏈 **Add-On Draft Board** (a chart Max keeps) ranked features easiest → hardest — and as of v1.24
+**every pick on it is now built.** ✨ coin celebration (v1.11), 🎁 daily rewards + 🛍 Pro Shop + 🏈 pick-six
+(v1.12), ✏️ Touchdown Fun rename (v1.13), 📈 progression (v1.14), 🎥 replay big stops (v1.15), 🌦 weather
+(v1.16), 🧩 CPU formations (v1.17), 🏟 MY TEAM draft/scout/trade (v1.19), 🎩 trick play (v1.20), 🎮 two-player
+(v1.21), 👑 Maxwell boss team (v1.22), 📅 NFL-style scheduling (v1.23), 💰 pricier stars (v1.24). The
+🌍 online-leaderboards pick was **deleted** on Max's call (needs a real backend; not wanted right now).
 
-- **🎩 A drafted trick play** — e.g. a flea-flicker you unlock and call once a game. (The engine already lets
-  anyone behind the line throw — the v1.1 "halfback pass" — so a double-pass has a head start.)
-- **🎮 Two-player pass-and-play** (share the screen) — the leading difficulty-ladder finalist.
-- **🌍 Online leaderboards / a real shared backend** (needs a server; the hardest one).
-- 🏟 **MY TEAM follow-ups** now that the roster exists: wire the ⭐ traits to real gameplay nudges (a
-  🚀 Speedster actually faster, 🎯 Cannon Arm throws farther); show your drafted QB/RB names on the field;
-  a yearly "draft day" tied to Season mode; or player growth (young picks level up as you play).
-- Maxwell follow-ups if wanted: custom art (a crown on the chibi), let him jump routes he didn't start
-  near, or make him a whole boss TEAM instead of one player.
+**Fresh ideas for whenever Max wants more (the board's wide open):**
+
+- 🏟 **MY TEAM follow-ups**: wire the ⭐ traits to real gameplay nudges (a 🚀 Speedster actually faster,
+  🎯 Cannon Arm throws farther); show your drafted QB/RB names on the field; a yearly "draft day" tied to
+  Season mode; or player growth (young picks level up as you play).
+- 📅 **Season deepening**: seed the playoffs by division (division winners get a bye), or drop the 👑 Maxwell
+  boss team into the league as the team to beat for the Max Bowl.
+- 🎩 **More trick plays**: a second unlock (double-pass / hook-and-lateral), or earn extra trick uses.
+- 🎮 **Two-player extras**: let Player 2 throw (a second action button) so the red offense can pass too.

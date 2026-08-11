@@ -177,6 +177,11 @@
     body.menu #ingame-ctrls,
     body.kicking #ingame-ctrls,
     body.returning #ingame-ctrls { display: none !important; }
+    /* 🎩 The trick-play button only appears BEFORE the snap, and only while you
+       still have your one trick this game (main.js toggles body.trick-ready). */
+    #btn-trick { display: none; background: rgba(255,214,10,0.22); border-color: rgba(255,214,10,0.7); }
+    body.trick-ready #btn-trick { display: flex; }
+    #btn-trick.armed { background: rgba(255,214,10,0.6); border-color: #ffd60a; }
 
     /* 👑 The Maxwell toggle lights up gold when he's switched on. */
     #toggle-maxwell.on { background: rgba(255,214,10,0.5); border-color: #ffd60a; color: #fff; }
@@ -803,6 +808,7 @@
   <div id="ingame-ctrls">
     <div class="btn" id="btn-timeout">⏱<small>3</small></div>
     <div class="btn" id="btn-formation">🧩<small>SPREAD</small></div>
+    <div class="btn" id="btn-trick">🎩<small>TRICK</small></div>
   </div>
 
   <!-- The scoreboard HUD. Lives in the DOM (not on the tilted canvas) so it
@@ -927,16 +933,16 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=40"></script>
-  <script src="src/sound.js?v=40"></script>
-  <script src="src/shop.js?v=40"></script>
-  <script src="src/progress.js?v=40"></script>
-  <script src="src/weather.js?v=40"></script>
-  <script src="src/season.js?v=40"></script>
-  <script src="src/draft.js?v=40"></script>
-  <script src="src/ads.js?v=40"></script>
-  <script src="src/tour.js?v=40"></script>
-  <script src="src/kick.js?v=40"></script>
-  <script src="src/main.js?v=40"></script>
+  <script src="src/stats.js?v=41"></script>
+  <script src="src/sound.js?v=41"></script>
+  <script src="src/shop.js?v=41"></script>
+  <script src="src/progress.js?v=41"></script>
+  <script src="src/weather.js?v=41"></script>
+  <script src="src/season.js?v=41"></script>
+  <script src="src/draft.js?v=41"></script>
+  <script src="src/ads.js?v=41"></script>
+  <script src="src/tour.js?v=41"></script>
+  <script src="src/kick.js?v=41"></script>
+  <script src="src/main.js?v=41"></script>
 </body>
 </html>
