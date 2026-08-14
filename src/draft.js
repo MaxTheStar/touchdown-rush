@@ -1,32 +1,39 @@
 // ============================================================
-// TOUCHDOWN FUN — draft.js: 🏟 MY TEAM (draft, scout & trade players!)
+// TOUCHDOWN FUN — draft.js: 🏟 MY TEAM (draft, trade, salaries & rivals!)
 // ------------------------------------------------------------
 // Until now every team was the same seven chibi players. This file gives you a
-// ROSTER of your very own STAR players — and three fun ways to make it better:
+// ROSTER of your very own STAR players — and lots of fun ways to make it better:
 //
 //   📋 YOUR ROSTER — eight starters (a QB, a runner, two receivers, a tight end,
 //      and three defenders). Each has a rating out of 99, sometimes a special
-//      ⭐ TRAIT (🚀 Speedster, 🎯 Cannon Arm…), and the school/team they came
-//      from. Your TEAM OVERALL is the average — and a better team really does
-//      play a little tougher (main.js reads boost() in beginGame, capped at +8%,
-//      split into offense & defense, YOUR team only — same gentle idea as the
-//      ⭐ team ratings and 📈 level boost).
+//      ⭐ TRAIT (🚀 Speedster, 🎯 Cannon Arm…), a school/team they came from, and
+//      now a 💵 SALARY too (better players get paid more!). Your TEAM OVERALL is
+//      the average — and a better team really does play a little tougher (main.js
+//      reads boost() in beginGame, capped at +8%, split into offense & defense).
 //
-//   🎯 THE DRAFT — just like the real NFL Draft! A new class of young stars from
-//      schools all over shows up, and SIX teams (you + five computers) take turns
-//      picking in a "snake" order. Grab the best player before a computer team
-//      snaps him up. Every pick UPGRADES one of your starters.
+//   📅 DRAFT DAY — the draft is a real EVENT now, not something you can do every
+//      single day. It happens on a set Draft Day; after you draft, the next one is
+//      a week away and the tab shows a friendly countdown. Big picks feel big!
+//
+//   🎯 THE DRAFT — just like the real NFL Draft! A new class of young stars shows
+//      up and SIX teams (you + five computers) take turns picking in "snake" order.
+//      And now you can WHEEL AND DEAL on the clock: 🔼 trade up to grab an extra
+//      star now, or 🔽 trade down for coins + a pick later. Teams call YOU with pick
+//      swaps too.
 //
 //   🔎 SCOUTING — a prospect's true rating is HIDDEN (you only see a rough range)
-//      until you SCOUT him for a few 🪙 coins. The computer teams already know, so
-//      scouting helps you draft as smart as they do. Big risk-and-reward!
+//      until you SCOUT him for a few 🪙 coins. Big risk-and-reward!
 //
-//   🔁 TRADING — teams around the league offer TRADES: you get one of their
-//      players for one of yours (sometimes with coins to even it out). Say yes to
-//      the ones that make your team better.
+//   🔁 TRADING — shop your roster around the league: swap one of your players for
+//      one of theirs (coins even it up).
 //
-// It saves your roster in the browser (localStorage tdr-roster) through the same
-// helpers everything else uses. main.js talks to us through window.TDDraft.
+//   📨 REQUESTS — rival teams come to YOU. When you build up stars, other teams
+//      send TRADE REQUESTS for them — a player (and usually coins) for your guy.
+//      Accept to cash in, or turn down the lowballs. A badge shows new ones.
+//
+// It saves your roster, the next Draft Day, and pending requests in the browser
+// (localStorage tdr-roster / tdr-draftday / tdr-requests) through the same helpers
+// everything else uses. main.js talks to us through window.TDDraft.
 // ============================================================
 (function () {
   'use strict';
@@ -46,8 +53,7 @@
   const sting = k => { if (window.TDSound && TDSound.sting) TDSound.sting(k); };
 
   // 🪙 to reveal a prospect's true rating + trait — the better he might be, the
-  // MORE it costs to scout him. We can't see his real rating yet, so we price it
-  // off the middle of his shown range (his "projected" grade). Stars are pricey!
+  // MORE it costs to scout him. We price it off the middle of his shown range.
   function scoutCost(p) {
     const proj = Math.round((p.lo + p.hi) / 2);
     if (proj >= 90) return 25;   // could be a superstar — scouts cost a fortune
@@ -57,16 +63,25 @@
   }
 
   // ============================================================
+  // 💵 SALARIES — better players get paid more
+  // ============================================================
+  // The team's whole "cap" is make-believe money in millions ($M). A 60-overall
+  // depth guy makes a little; a 90+ superstar makes a LOT. Traits pay a bonus.
+  // Curve: 60≈$2M, 70≈$7M, 80≈$14M, 90≈$23M, 99≈$33M. Smooth and easy to read.
+  const SALARY_CAP = 180;                       // friendly team payroll cap ($M)
+  function salaryOf(ovr, trait) {
+    const base = Math.max(1, Math.round(0.06 * Math.pow(Math.max(0, ovr - 50), 1.6)));
+    return base + (trait ? 2 : 0);              // stars with a ⭐ trait cost a bit more
+  }
+  const fmtSal = m => '$' + m + 'M';
+
+  // ============================================================
   // WHO'S ON THE TEAM — positions, names, traits, schools
   // ============================================================
-  // Your eight starting slots. Offense first (5), then defense (3). The two WR
-  // slots are why you'll sometimes see a receiver "battle" for a starting job.
   const SLOTS   = ['QB', 'RB', 'WR', 'WR', 'TE', 'LB', 'CB', 'S'];
   const OFF_END = 5;                          // roster[0..4] = offense, [5..7] = defense
   const POS_EMOJI = { QB: '🎯', RB: '🏃', WR: '🙌', TE: '🧱', LB: '🛡', CB: '🦅', S: '🚧' };
 
-  // Fun, made-up player names (nobody real — just cool football names). A wide
-  // mix of last names so every kind of kid sees a name that could be theirs.
   const FIRST = ['Max', 'Jax', 'Rico', 'Tank', 'Zeke', 'Blaze', 'Duke', 'Ace', 'Rex', 'Bo',
     'Cash', 'Colt', 'Nash', 'Gio', 'Leo', 'Milo', 'Theo', 'Cruz', 'Kai', 'Ty',
     'Deac', 'Bronx', 'Rome', 'Ziggy', 'Juno', 'Ravi', 'Omar', 'Kenji', 'Malik', 'Enzo'];
@@ -75,8 +90,6 @@
     'Reyes', 'Diaz', 'Okafor', 'Sato', 'Nakamura', 'Kim', 'Osei', 'Adeyemi', 'Bautista',
     'Ivanov', 'Ali', 'Rivera', 'Chen', 'Okoye', 'Santos', 'Mensah', 'Park'];
 
-  // The special ⭐ TRAITS a player can have (pure collection pride for now — the
-  // fun is chasing them). Keyed by an emoji so they read at a glance.
   const TRAITS = [
     { e: '🚀', n: 'SPEEDSTER' }, { e: '🎯', n: 'CANNON ARM' }, { e: '🧲', n: 'SURE HANDS' },
     { e: '🛡', n: 'BRUISER' },   { e: '⚡', n: 'PLAYMAKER' },   { e: '🧊', n: 'CLUTCH' },
@@ -84,8 +97,6 @@
     { e: '👑', n: 'CAPTAIN' },
   ];
 
-  // Fictional "schools" the draft prospects come from — the different teams you
-  // draft OUT of, just like colleges in the real NFL Draft.
   const SCHOOLS = ['STATE U', 'TECH', 'RIVERSIDE', 'MOUNTAIN', 'CENTRAL', 'COASTAL',
     'NORTHERN', 'VALLEY', 'LAKESIDE', 'SUNSET', 'IRONTON', 'PINE CREST', 'BAYVIEW',
     'GRAND CITY', 'FROSTBURG', 'DESERT'];
@@ -93,6 +104,7 @@
   // ---- Tiny random helpers ------------------------------------------------
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  const clampOvr = v => Math.min(99, Math.max(50, v));
   let idSeq = 1;
 
   // Build one player. `scouted` players show their real rating; unscouted
@@ -100,11 +112,8 @@
   function makePlayer(pos, minOvr, maxOvr, opts) {
     opts = opts || {};
     const ovr = rint(minOvr, maxOvr);
-    // Better players are likelier to carry a special trait.
     const traitChance = 0.18 + Math.max(0, ovr - 70) * 0.015;
     const trait = (Math.random() < traitChance) ? pick(TRAITS) : null;
-    // The "scouting range": a fuzzy window around the true rating, fixed per
-    // prospect (asymmetric so its middle doesn't give the answer away).
     const lo = Math.max(40, ovr - rint(4, 9));
     const hi = Math.min(99, ovr + rint(4, 9));
     return {
@@ -113,15 +122,14 @@
       pos, ovr, trait,
       from: opts.from || pick(SCHOOLS),
       scouted: opts.scouted !== false ? (opts.scouted === true) : false,
+      salary: salaryOf(ovr, trait),
       lo, hi,
     };
   }
 
   // ============================================================
-  // YOUR ROSTER — load, save, and the all-important TEAM OVERALL
+  // YOUR ROSTER — load, save, TEAM OVERALL and TEAM PAYROLL
   // ============================================================
-  // A brand-new team gets eight honest, middle-of-the-road starters (ratings in
-  // the 60s), so there's plenty of room to grow through the draft and trades.
   function freshRoster() {
     return SLOTS.map(pos => makePlayer(pos, 60, 70, { from: 'PRO', scouted: true }));
   }
@@ -131,23 +139,21 @@
     roster = freshRoster();
     saveRoster();
   } else {
-    // Old saves are trusted, but make sure every starter is "known".
-    roster.forEach(p => { p.scouted = true; });
+    // Old saves are trusted, but make sure every starter is "known" and has a salary.
+    roster.forEach(p => { p.scouted = true; if (p.salary == null) p.salary = salaryOf(p.ovr, p.trait); });
   }
   function saveRoster() { store('roster', roster); }
 
   const avg = list => Math.round(list.reduce((s, p) => s + p.ovr, 0) / list.length);
-  // Team overall, split into offense (the first five) and defense (the last three).
   function teamOverall() {
     const off = avg(roster.slice(0, OFF_END));
     const def = avg(roster.slice(OFF_END));
     return { off, def, ovr: avg(roster) };
   }
+  // Total payroll ($M) = everyone's salary added up.
+  function teamPayroll() { return roster.reduce((s, p) => s + (p.salary || 0), 0); }
 
   // ---- 💪 The boost main.js applies in beginGame --------------------------
-  // A 60-overall unit is exactly 1.0 (no boost). It climbs to +8% for a maxed
-  // (99) unit — small and CAPPED on purpose, stacked on top of the ⭐ team
-  // ratings and 📈 level boost, and only ever on YOUR team.
   function unitBoost(v) { return 1 + Math.min(Math.max((v - 60) / 39, 0), 1) * 0.08; }
   function boost() {
     const t = teamOverall();
@@ -155,7 +161,6 @@
   }
 
   // The weakest starter at a position (for WR that's the lower-rated of the two).
-  // Returns { idx, player } — the slot a new player at this position would take.
   function weakestAt(pos) {
     let best = -1;
     roster.forEach((p, i) => {
@@ -166,13 +171,37 @@
   }
 
   // ============================================================
-  // THE 🏟 MY TEAM SCREEN (a DOM pop-up with three tabs)
+  // 📅 DRAFT DAY — the draft is a real event, not an every-day thing
   // ============================================================
-  let view   = 'roster';   // 'roster' | 'draft' | 'trade'
-  let draft  = null;       // the in-progress draft (see startDraft)
-  let offers = null;       // the current trade offers (see makeOffers)
+  // We remember (in localStorage) the earliest time the NEXT draft may start.
+  // A brand-new player can draft right away; after each draft the next Draft Day
+  // is one week out. (Change DRAFT_COOLDOWN_DAYS to make the wait shorter/longer.)
+  const DRAFT_COOLDOWN_DAYS = 7;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const nextDraftAt = () => load('draftday', 0);      // 0 = wide open (never drafted)
+  const draftReady  = () => Date.now() >= nextDraftAt();
+  function setNextDraftDay() { store('draftday', Date.now() + DRAFT_COOLDOWN_DAYS * DAY_MS); }
 
-  // A colored rating chip — green for stars, down to gray for depth guys.
+  // "3d 4h" / "4h 20m" / "12m" — a friendly countdown to the next Draft Day.
+  function fmtCountdown(ms) {
+    if (ms <= 0) return 'now';
+    const d = Math.floor(ms / DAY_MS);
+    const h = Math.floor((ms % DAY_MS) / (60 * 60 * 1000));
+    const m = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${Math.max(1, m)}m`;
+  }
+
+  // ============================================================
+  // THE 🏟 MY TEAM SCREEN (a DOM pop-up with four tabs)
+  // ============================================================
+  let view   = 'roster';   // 'roster' | 'draft' | 'trade' | 'requests'
+  let draft  = null;       // the in-progress draft (see startDraft)
+  let offers = null;       // the current "shop around" trade offers (see makeOffers)
+  let requests = load('requests', []);   // incoming rival trade requests (persist)
+  function saveRequests() { store('requests', requests); }
+
   function ovrColor(v) {
     if (v >= 90) return '#ffd60a';
     if (v >= 80) return '#7bd88f';
@@ -187,11 +216,13 @@
   function playerRow(p, extra) {
     const shown = p.scouted ? `${p.ovr}` : `${p.lo}–${p.hi}`;
     const tr = p.scouted ? traitChip(p.trait) : `<span class="dr-trait dr-unk">❔ ???</span>`;
+    // Salary only shows once we truly know the player (scouted / on your team).
+    const sal = p.scouted ? `<span class="dr-sal">💵 ${fmtSal(p.salary)}</span>` : '';
     return `<div class="dr-row">
         <div class="dr-pos">${POS_EMOJI[p.pos] || ''}<b>${p.pos}</b></div>
         <div class="dr-main">
           <div class="dr-name">${p.name}</div>
-          <div class="dr-sub">from ${p.from} ${tr}</div>
+          <div class="dr-sub">from ${p.from} ${sal} ${tr}</div>
         </div>
         <div class="dr-ovr" style="color:${p.scouted ? ovrColor(p.ovr) : '#c6cede'}">${shown}</div>
         ${extra || ''}
@@ -199,8 +230,10 @@
   }
 
   function tabsHTML() {
+    const rq = requests.length;
+    const badge = rq ? ` <span class="dr-badge">${rq}</span>` : '';
     const tab = (id, label) => `<div class="dr-tab${view === id ? ' on' : ''}" data-act="tab" data-v="${id}">${label}</div>`;
-    return `<div class="dr-tabs">${tab('roster', '📋 ROSTER')}${tab('draft', '🎯 DRAFT')}${tab('trade', '🔁 TRADE')}</div>`;
+    return `<div class="dr-tabs">${tab('roster', '📋 ROSTER')}${tab('draft', '🎯 DRAFT')}${tab('trade', '🔁 TRADE')}${tab('requests', '📨 REQS' + badge)}</div>`;
   }
   function coinLine() {
     return `<div class="dr-coins">🪙 <b>${coins()}</b> coins</div>`;
@@ -219,18 +252,33 @@
         </div>
       </div>
       <div class="dr-boost">In games: <b>+${pctOff}%</b> offense · <b>+${pctDef}%</b> defense</div>`;
+
+    // 💵 Team payroll bar (used vs. the friendly cap).
+    const pay = teamPayroll();
+    const pct = Math.min(100, Math.round(pay / SALARY_CAP * 100));
+    const over = pay > SALARY_CAP;
+    const note = over
+      ? `⚠ ${fmtSal(pay - SALARY_CAP)} over the cap — trade a star to get under.`
+      : `${fmtSal(SALARY_CAP - pay)} under the cap — room for a big signing!`;
+    const payHTML = `<div class="dr-pay${over ? ' over' : ''}">
+        <div class="dr-pay-top"><span>💵 TEAM PAYROLL</span><b>${fmtSal(pay)}</b><span class="dr-pay-cap">/ ${fmtSal(SALARY_CAP)} cap</span></div>
+        <div class="dr-pay-bar"><i style="width:${pct}%"></i></div>
+        <div class="dr-pay-note">${note}</div>
+      </div>`;
+
     const rows = roster.map(p => playerRow(p)).join('');
-    return head + `<div class="dr-list">${rows}</div>` +
+    return head + payHTML + `<div class="dr-list">${rows}</div>` +
       `<div class="dr-hint">Draft young stars or trade to raise your overall — a better team plays tougher!</div>`;
   }
 
   // ---- 🎯 The DRAFT tab ---------------------------------------------------
-  const DRAFT_TEAMS = 6;    // you + five computer teams
-  const DRAFT_ROUNDS = 3;   // three of YOUR picks per draft day
-  const CLASS_SIZE = 24;    // prospects in the class (plenty for everyone)
+  const DRAFT_TEAMS  = 6;    // you + five computer teams
+  const DRAFT_ROUNDS = 3;    // three of YOUR picks per draft day
+  const CLASS_SIZE   = 24;   // prospects in the class (plenty for everyone)
+  const TRADE_UP_COST = 20;  // 🪙 to trade up (plus you give a future pick)
+  const TRADE_DOWN_PAY = 30; // 🪙 you get for trading down
 
   function startDraft() {
-    // Five computer teams, picked from the real NFL names (just for flavor).
     const names = (window.TDGame ? TDGame.nflAbbrs() : []).slice();
     for (let i = names.length - 1; i > 0; i--) { const j = rint(0, i); [names[i], names[j]] = [names[j], names[i]]; }
     const you = rint(1, DRAFT_TEAMS);                       // your draft slot (1..6)
@@ -247,17 +295,17 @@
       order.push(...line);
     }
 
-    // The class: a spread of prospects across every position, boom-or-bust.
     const board = [];
     for (let i = 0; i < CLASS_SIZE; i++) board.push(makePlayer(pick(SLOTS), 58, 96, { scouted: false }));
 
-    draft = { teams, you, order, ptr: 0, board, log: [], picks: [], done: false };
+    // bonus = extra picks to make right now (from trading up).
+    // callOffer = a CPU's "let me move up" proposal for your current pick.
+    draft = { teams, you, order, ptr: 0, board, log: [], picks: [], bonus: 0, callOffer: null, done: false };
     advanceDraft();      // let any computer teams ahead of you pick first
   }
 
-  // A computer team grabs a smart pick: usually the best available (by TRUE
-  // rating — they've done their homework), with a little randomness so it's not
-  // always the tippy-top. Removes him from the board and notes it in the log.
+  // A computer team grabs a smart pick: usually one of the best available (by
+  // TRUE rating), with a little randomness. Removes him and notes it in the log.
   function cpuPick(teamName) {
     if (!draft.board.length) return;
     const ranked = draft.board.slice().sort((a, b) => b.ovr - a.ovr);
@@ -266,16 +314,35 @@
     draft.log.unshift(`🤖 ${teamName} drafted ${p.pos} ${p.name} (${p.ovr})`);
   }
 
+  // How many more picks YOU still have coming after the one you're on now.
+  function futureMinePicks() {
+    let c = 0;
+    for (let i = draft.ptr + 1; i < draft.order.length; i++) if (draft.order[i] === draft.you) c++;
+    return c;
+  }
+  // A random computer team name (the "trade partner").
+  function randomCpuTeam() {
+    const cpus = draft.teams.filter(t => t !== 'YOU');
+    return cpus.length ? pick(cpus) : 'CPU';
+  }
+
+  // Sometimes, when you land on the clock, a team calls to trade UP into your pick.
+  function maybeCallOffer() {
+    if (draft.callOffer || !draft.board.length) return;
+    if (Math.random() < 0.35) draft.callOffer = { team: randomCpuTeam(), coin: rint(30, 60) };
+  }
+
   // Walk the pick order, letting computer teams pick, until it's YOUR turn (then
   // stop and let the screen wait for you) or the draft runs out of picks.
   function advanceDraft() {
     while (draft.ptr < draft.order.length) {
       const slot = draft.order[draft.ptr];
-      if (slot === draft.you) return;                 // your turn — wait for a tap
+      if (slot === draft.you) { maybeCallOffer(); return; }   // your turn — wait for a tap
       cpuPick(draft.teams[slot - 1]);
       draft.ptr++;
     }
-    draft.done = true;
+    // Out of picks — the draft is over. Lock in the next Draft Day.
+    if (!draft.done) { draft.done = true; setNextDraftDay(); }
   }
 
   // Scout a prospect: pay coins to reveal his true rating + trait.
@@ -293,6 +360,7 @@
   function draftPick(i) {
     const p = draft.board[i];
     if (!p || draft.done) return;
+    draft.callOffer = null;                           // acting ends any pending call
     const w = weakestAt(p.pos);
     const old = w ? w.player.ovr : 0;
     p.scouted = true;                                 // once he's yours, you know him
@@ -303,40 +371,105 @@
     const delta = p.ovr - old;
     draft.log.unshift(`✅ YOU drafted ${p.pos} ${p.name} (${p.ovr})${delta > 0 ? ' ⬆+' + delta : ''}`);
     if (delta > 0) { party($('team-body'), p.trait ? p.trait.e : '⭐', 'UPGRADE +' + delta + '!'); sting('td'); }
+    // A trade-up bonus pick keeps you on the clock; a normal pick moves the draft on.
+    if (draft.bonus > 0) draft.bonus--;
+    else { draft.ptr++; advanceDraft(); }
+    render();
+  }
+
+  // 🔼 TRADE UP — spend coins + your last upcoming pick to draft an EXTRA guy NOW.
+  function tradeUp() {
+    if (!draft || draft.done) return;
+    if (futureMinePicks() < 1) { flash('No future pick left to trade up with!'); return; }
+    if (!spend(TRADE_UP_COST)) { flash(`Need ${TRADE_UP_COST}🪙 to trade up.`); return; }
+    // Give up your LAST upcoming pick (remove it from the order)…
+    for (let i = draft.order.length - 1; i > draft.ptr; i--) {
+      if (draft.order[i] === draft.you) { draft.order.splice(i, 1); break; }
+    }
+    draft.bonus++;                                    // …and get an extra pick right now.
+    draft.callOffer = null;
+    paintCoins();
+    draft.log.unshift(`🔼 YOU traded up — extra pick now for ${TRADE_UP_COST}🪙 + a future pick`);
+    render();
+  }
+
+  // 🔽 TRADE DOWN — let a team pick now; you get coins + a pick at the very end.
+  function tradeDown(partnerFromCall, coinFromCall) {
+    if (!draft || draft.done) return;
+    const partner = partnerFromCall || randomCpuTeam();
+    const pay = coinFromCall || TRADE_DOWN_PAY;
+    earn(pay); paintCoins();
+    draft.order.push(draft.you);                      // your new pick at the end
+    draft.callOffer = null;
+    draft.log.unshift(`🔽 YOU traded down — ${partner} picks now; you get ${pay}🪙 + a late pick`);
+    cpuPick(partner);                                 // the partner uses your current pick
     draft.ptr++;
     advanceDraft();
     render();
   }
+  function acceptCall() { if (draft && draft.callOffer) tradeDown(draft.callOffer.team, draft.callOffer.coin); }
+  function declineCall() { if (draft) { draft.callOffer = null; render(); } }
 
   function draftHTML() {
+    // Not started yet — either LOCKED (waiting for Draft Day) or ready to go.
     if (!draft) {
+      if (!draftReady()) {
+        const left = fmtCountdown(nextDraftAt() - Date.now());
+        return `<div class="dr-lock">
+            <div class="dr-lock-em">📅</div>
+            <div class="dr-lock-h">DRAFT DAY IS SET</div>
+            <div class="dr-lock-sub">The next class of stars arrives in</div>
+            <div class="dr-lock-count">${left}</div>
+            <div class="dr-hint">Just like the real NFL, the draft only happens on Draft Day — not every day.
+              Keep playing games to earn 🪙 and scout in the meantime!</div>
+          </div>`;
+      }
       return `<div class="dr-intro">It's <b>DRAFT DAY</b>! A new class of young stars just arrived from
         schools all over. <b>${DRAFT_TEAMS} teams</b> take turns picking in snake order — grab the best
         one before a computer team does. Each pick <b>upgrades a starter</b>.<br><br>
-        🔎 A prospect's true rating is hidden — <b>scout</b> him to see it (<b>8–25 🪙</b>: the bigger the
-        star he might be, the more scouting costs).</div>
+        🔎 <b>Scout</b> a prospect to see his true rating (<b>8–25 🪙</b>). On the clock you can also
+        🔼 <b>trade up</b> or 🔽 <b>trade down</b> to wheel and deal!</div>
         ${coinLine()}
         <div class="dr-actions"><div class="ov-btn yes" data-act="startDraft">START DRAFT ▶</div></div>`;
     }
 
-    // Draft finished — a little recap of who you landed.
+    // Draft finished — a recap of who you landed, plus when the next one is.
     if (draft.done) {
       const got = draft.picks.length
         ? draft.picks.map(p => playerRow(p)).join('')
         : `<div class="dr-hint">No picks this time.</div>`;
+      const left = fmtCountdown(nextDraftAt() - Date.now());
       return `<div class="dr-cap">🎉 DRAFT COMPLETE — your haul:</div>
         <div class="dr-list">${got}</div>
+        <div class="dr-nextday">📅 Next Draft Day in <b>${left}</b></div>
         <div class="dr-actions">
           <div class="ov-btn yes" data-act="tab" data-v="roster">SEE MY TEAM</div>
-          <div class="ov-btn" data-act="newDraft">DRAFT AGAIN</div>
         </div>`;
     }
 
-    // You're on the clock. Show the round/pick, the recent picks, then the board.
+    // You're on the clock. Header counts picks dynamically (trades change the total).
     const round = Math.floor(draft.ptr / DRAFT_TEAMS) + 1;
     const myNum = draft.picks.length + 1;
+    const total = draft.picks.length + 1 + draft.bonus + futureMinePicks();
     const logHTML = draft.log.slice(0, 3).map(l => `<div class="dr-log">${l}</div>`).join('');
-    // Sort the board so it's easy to read: offense group, then defense, best first.
+
+    // A team is on the phone wanting to trade up into your pick?
+    const call = draft.callOffer ? `<div class="dr-call">
+        📞 <b>${draft.callOffer.team}</b> want to trade up for your pick — they'll pay <b>${draft.callOffer.coin}🪙</b> + you get a late pick.
+        <div class="dr-rowbtns">
+          <div class="dr-mini yes" data-act="acceptCall">TRADE DOWN ✅</div>
+          <div class="dr-mini" data-act="declineCall">KEEP PICK</div>
+        </div>
+      </div>` : '';
+
+    // Your own trade buttons.
+    const canUp = futureMinePicks() >= 1;
+    const tradeRow = `<div class="dr-trade-row">
+        <div class="dr-mini${canUp ? '' : ' off'}" data-act="tradeUp">🔼 TRADE UP <small>${TRADE_UP_COST}🪙+pick</small></div>
+        <div class="dr-mini" data-act="tradeDown">🔽 TRADE DOWN <small>+${TRADE_DOWN_PAY}🪙</small></div>
+      </div>`;
+
+    // Sort the board: offense group, then defense, best first.
     const idx = draft.board.map((p, i) => i);
     idx.sort((a, b) => {
       const ga = SLOTS.indexOf(draft.board[a].pos) < OFF_END ? 0 : 1;
@@ -350,7 +483,6 @@
       const p = draft.board[i];
       const w = weakestAt(p.pos);
       const yours = w ? w.player.ovr : 0;
-      // The DRAFT button teases the gain — but only once you've scouted him.
       let gain = '';
       if (p.scouted) {
         const d = p.ovr - yours;
@@ -367,18 +499,20 @@
         </div>`;
     }).join('');
 
-    return `<div class="dr-clock">🎯 ROUND ${round} · YOUR PICK ${myNum} OF ${DRAFT_ROUNDS} — <b>ON THE CLOCK!</b></div>
+    const clockLabel = draft.bonus > 0
+      ? `🎯 ROUND ${round} · BONUS PICK — <b>ON THE CLOCK!</b>`
+      : `🎯 ROUND ${round} · YOUR PICK ${myNum} OF ${total} — <b>ON THE CLOCK!</b>`;
+    return `<div class="dr-clock">${clockLabel}</div>
       ${coinLine()}
+      ${call}
+      ${tradeRow}
       ${logHTML ? `<div class="dr-logbox">${logHTML}</div>` : ''}
       <div class="dr-list dr-board">${rows}</div>`;
   }
 
-  // ---- 🔁 The TRADE tab ---------------------------------------------------
+  // ---- 🔁 The TRADE tab (shop your roster around) -------------------------
   const OFFER_COUNT = 4;
 
-  // Build a batch of trade offers. Each is a league team offering one of their
-  // players for one of yours — usually a small upgrade that costs you some coins
-  // (that's the catch), sometimes a cool trait instead. Fair-ish on purpose.
   function makeOffers() {
     const abbrs = (window.TDGame ? TDGame.nflAbbrs() : []).slice();
     for (let i = abbrs.length - 1; i > 0; i--) { const j = rint(0, i); [abbrs[i], abbrs[j]] = [abbrs[j], abbrs[i]]; }
@@ -389,12 +523,8 @@
       if (!mine) continue;
       const abbr = abbrs[k] || 'CPU';
       const teamName = (window.TDGame && TDGame.teamByAbbr(abbr)) ? TDGame.teamByAbbr(abbr).name : abbr;
-      // Their player: usually a touch better than yours (−2 .. +12).
-      const inOvr = Math.min(99, Math.max(50, mine.player.ovr + rint(-2, 12)));
+      const inOvr = clampOvr(mine.player.ovr + rint(-2, 12));
       const incoming = makePlayer(pos, inOvr, inOvr, { from: abbr, scouted: true });
-      // Coins to even it up: priced off how GOOD their guy is (not just the
-      // upgrade), so a big star really costs a lot — plus extra for a ⭐ trait.
-      // A weak player they're dumping can even pay YOU a little (floored at −15).
       const coin = Math.max(-15, Math.round((incoming.ovr - 60) * 2.5) + (incoming.trait ? 12 : 0));
       offers.push({ id: 'o' + k, teamName, abbr, incoming, giveIdx: mine.idx, coin });
     }
@@ -456,6 +586,83 @@
       <div class="dr-actions"><div class="ov-btn" data-act="newOffers">🔄 NEW OFFERS</div></div>`;
   }
 
+  // ---- 📨 The REQUESTS tab (rivals come to YOU) ---------------------------
+  const MAX_REQUESTS = 4;
+
+  // Build one incoming request: a rival targets one of your BETTER starters and
+  // offers a same-position player (usually a touch worse) PLUS coins for him.
+  function makeRequest() {
+    const ranked = roster.map((p, i) => ({ p, i })).sort((a, b) => b.p.ovr - a.p.ovr);
+    const t = pick(ranked.slice(0, 4));               // they chase your top players
+    const mine = t.p, idx = t.i;
+    const abbrs = (window.TDGame ? TDGame.nflAbbrs() : []).slice();
+    const abbr = abbrs.length ? pick(abbrs) : 'CPU';
+    const teamName = (window.TDGame && TDGame.teamByAbbr(abbr)) ? TDGame.teamByAbbr(abbr).name : abbr;
+    const inOvr = clampOvr(mine.ovr + rint(-10, -1));  // their guy is a bit worse
+    const incoming = makePlayer(mine.pos, inOvr, inOvr, { from: abbr, scouted: true });
+    // They pay you coins for the drop-off, plus a premium for a real star.
+    const coin = Math.max(5, Math.round((mine.ovr - incoming.ovr) * 3 + Math.max(0, mine.ovr - 70) * 1.5));
+    return { id: 'r' + Date.now() + Math.floor(Math.random() * 1000), teamName, abbr, wantIdx: idx, incoming, coin };
+  }
+
+  // On opening MY TEAM, rivals may send a new request (up to a small cap).
+  function maybeAddRequest() {
+    if (requests.length >= MAX_REQUESTS) return;
+    const chance = requests.length === 0 ? 0.8 : 0.35;
+    if (Math.random() < chance) { requests.push(makeRequest()); saveRequests(); }
+  }
+
+  function acceptRequest(id) {
+    const r = requests.find(x => x.id === id);
+    if (!r) return;
+    earn(r.coin); paintCoins();
+    roster[r.wantIdx] = r.incoming;                   // you send your star, get their guy
+    saveRoster();
+    requests = requests.filter(x => x.id !== id); saveRequests();
+    party($('team-body'), '🤝', `+${r.coin}🪙 TRADE!`);
+    sting('td');
+    render();
+  }
+  function rejectRequest(id) { requests = requests.filter(x => x.id !== id); saveRequests(); render(); }
+
+  function requestsHTML() {
+    let cards;
+    if (!requests.length) {
+      cards = `<div class="dr-hint">📭 No trade requests right now. Build up star players and rival teams
+        will come calling — check back after a few games!</div>`;
+    } else {
+      cards = requests.map(r => {
+        const give = roster[r.wantIdx];
+        const drop = r.incoming.ovr - give.ovr;       // usually negative (you drop a bit)
+        return `<div class="dr-offer dr-req">
+            <div class="dr-offer-h">📣 ${r.teamName} want your ${give.pos} <b>${give.name}</b>!</div>
+            <div class="dr-offer-body">
+              <div class="dr-offer-side">
+                <div class="dr-lab dr-give">YOU GIVE</div>
+                ${playerRow(give)}
+              </div>
+              <div class="dr-offer-side">
+                <div class="dr-lab dr-get">YOU GET</div>
+                ${playerRow(r.incoming)}
+              </div>
+            </div>
+            <div class="dr-offer-foot">
+              ${drop < 0 ? `<span class="dr-dn">⬇ ${drop} at ${give.pos}</span>` : drop > 0 ? `<span class="dr-up">⬆ +${drop} at ${give.pos}</span>` : `<span class="dr-eq">lateral</span>`}
+              · <span class="dr-up">you get ${r.coin}🪙</span>
+            </div>
+            <div class="dr-rowbtns">
+              <div class="dr-mini yes" data-act="acceptReq" data-id="${r.id}">ACCEPT ✅</div>
+              <div class="dr-mini" data-act="rejectReq" data-id="${r.id}">REJECT</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+    return `<div class="dr-intro">Rival teams come to <b>YOU</b>! When you've got stars, other teams send
+        trade requests for them — cash in on a great one, or turn down a lowball.</div>
+      ${coinLine()}
+      <div class="dr-offers">${cards}</div>`;
+  }
+
   // A tiny inline message (used when you can't afford something).
   let flashMsg = '';
   function flash(msg) { flashMsg = msg; render(); setTimeout(() => { flashMsg = ''; render(); }, 1600); }
@@ -464,7 +671,10 @@
   function render() {
     const body = $('team-body');
     if (!body) return;
-    let inner = view === 'draft' ? draftHTML() : view === 'trade' ? tradeHTML() : rosterHTML();
+    let inner = view === 'draft' ? draftHTML()
+              : view === 'trade' ? tradeHTML()
+              : view === 'requests' ? requestsHTML()
+              : rosterHTML();
     const msg = flashMsg ? `<div class="dr-flash">${flashMsg}</div>` : '';
     body.innerHTML = tabsHTML() + msg + inner;
   }
@@ -476,17 +686,24 @@
     e.preventDefault();
     const act = el.dataset.act;
     if (act === 'tab')        { view = el.dataset.v; if (view === 'trade') offers = null; render(); }
-    else if (act === 'startDraft' || act === 'newDraft') { startDraft(); render(); }
-    else if (act === 'scout') scout(+el.dataset.i);
-    else if (act === 'draft') draftPick(+el.dataset.i);
-    else if (act === 'newOffers') { makeOffers(); render(); }
-    else if (act === 'accept') acceptOffer(el.dataset.id);
-    else if (act === 'pass')   passOffer(el.dataset.id);
+    else if (act === 'startDraft' || act === 'newDraft') { if (draftReady()) startDraft(); render(); }
+    else if (act === 'scout')       scout(+el.dataset.i);
+    else if (act === 'draft')       draftPick(+el.dataset.i);
+    else if (act === 'tradeUp')     tradeUp();
+    else if (act === 'tradeDown')   tradeDown();
+    else if (act === 'acceptCall')  acceptCall();
+    else if (act === 'declineCall') declineCall();
+    else if (act === 'newOffers')   { makeOffers(); render(); }
+    else if (act === 'accept')      acceptOffer(el.dataset.id);
+    else if (act === 'pass')        passOffer(el.dataset.id);
+    else if (act === 'acceptReq')   acceptRequest(el.dataset.id);
+    else if (act === 'rejectReq')   rejectRequest(el.dataset.id);
   }
 
   // ---- Open / close the pop-up -------------------------------------------
   function open() {
     view = 'roster'; draft = null; offers = null; flashMsg = '';
+    maybeAddRequest();                                // rivals may have called since last time
     render();
     const el = $('team-modal'); if (el) el.style.display = 'flex';
   }
@@ -510,5 +727,13 @@
     open,               // show the MY TEAM screen (the 🏟 menu button)
     boost,              // main.js beginGame: { off, def } multipliers for YOUR team
     teamOverall,        // { off, def, ovr } — handy for other modules / debug
+    payroll: teamPayroll,
+    // Small dev helpers (handy for testing; harmless in play).
+    _debug: {
+      state: () => ({ nextDraftAt: nextDraftAt(), draftReady: draftReady(), payroll: teamPayroll(), requests: requests.length, draft }),
+      resetDraftDay: () => { store('draftday', 0); },
+      addRequest: () => { if (requests.length < MAX_REQUESTS) { requests.push(makeRequest()); saveRequests(); } render(); },
+      clearRequests: () => { requests = []; saveRequests(); render(); },
+    },
   };
 })();

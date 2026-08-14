@@ -8,16 +8,16 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.24 — cache-buster is `?v=41` in `index.html`.
+- **Version:** v1.25 — cache-buster is `?v=42` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-10.
+- **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.24 are all LIVE (v1.20–v1.24 pushed 2026-08-10)
+## ✅ Sync status — v1.11–v1.25 are all LIVE (v1.25 pushed 2026-08-14)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -26,6 +26,13 @@ v1.16–v1.19 shipped together (commit `094c34f`). On **2026-08-10** this batch 
 **v1.22** (👑 Maxwell is now a BOSS TEAM), **v1.23** (📅 NFL-style season scheduling — divisions + rivals
 twice), and **v1.24** (💰 better players cost more). *(The 🌍 online leaderboards idea was deleted from
 the board on Max's call — it needs a real backend and he didn't want it.)*
+
+On **2026-08-14** the **Round-2 add-on board** shipped as **v1.25** (cache-buster `?v=42`) — 📅 a real
+**Draft Day** (a set date, not every single day), 🔀 **trading draft picks** on the clock (trade up / down +
+CPU calls), 💵 **player salaries** with a team payroll & friendly cap, and 📣 **rivals come calling** (other
+teams send you trade requests in a 📨 inbox with a badge). All four live in `src/draft.js` (+ new `dr-*` CSS
+in `index.html`). Verified live in the browser via DOM/JS (see the v1.25 section below).
+
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
 account, `ssh -T git@github.com` returns "Hi MaxTheStar!", and GitHub Pages rebuilds the live site
@@ -487,6 +494,33 @@ cache-busting query like `…/index.html?cb=1`.)
     **Trades** are priced off the incoming player's absolute rating, not just the upgrade:
     `coin = max(−15, round((ovr−60)×2.5) + (trait ? 12 : 0))` — a 90-overall costs ~75🪙+, a scrub can even pay
     you. Verified: all four scout tiers appear and match the rule; trade coins climb with incoming overall.
+- **v1.25 — 🏟 MY TEAM Round 2: Draft Day, pick trades, salaries & rival requests** (this iteration —
+  `src/draft.js` + new `dr-*` CSS in `index.html`). The four-pick "Add-On Draft Board, Round 2":
+  - 📅 **A real Draft Day.** The draft is an EVENT now, not an every-day thing. We remember the next Draft Day
+    in `localStorage` (`tdr-draftday`); a brand-new player can draft right away, but finishing a draft sets the
+    next one `DRAFT_COOLDOWN_DAYS` (=7) out. While locked the 🎯 DRAFT tab shows a friendly countdown
+    (`fmtCountdown`, e.g. "6d 23h") and hides START; "DRAFT AGAIN" is gone. `setNextDraftDay()` fires the moment
+    the draft's order runs out (in `advanceDraft`). Verified: complete a draft → `draftReady()` flips false,
+    reopen → the locked "DRAFT DAY IS SET" screen with a live countdown.
+  - 🔀 **Trade draft picks on the clock.** On your pick you can 🔼 **TRADE UP** (spend `TRADE_UP_COST`=20🪙 +
+    give up your last upcoming pick → an extra `draft.bonus` pick right now) or 🔽 **TRADE DOWN** (a CPU takes
+    your pick now; you get `TRADE_DOWN_PAY`=30🪙 + a pick pushed to the end of `draft.order`). CPU teams also
+    ring you: `maybeCallOffer` (~35%) sets `draft.callOffer = {team, coin}` — accept to trade down for their
+    coins. The header pick count is computed live (`futureMinePicks()` + `bonus`) since trades change the total.
+    Verified: trade-down +30🪙 and `order` 18→19 with a CPU pick logged; trade-up −20🪙 and `bonus` 0→1.
+  - 💵 **Player salaries.** Every player carries a `salary` in make-believe $M, scaled by rating
+    (`salaryOf(ovr, trait)` ≈ 60→$2M, 70→$7M, 80→$14M, 90→$23M, 99→$33M, +$2M for a ⭐ trait). The 📋 ROSTER
+    shows each salary and a **TEAM PAYROLL** bar (`teamPayroll()`) under a friendly `SALARY_CAP` (=$180M) with an
+    over/under note — informational, never blocks play. Old saves back-fill a salary on load. Salaries show only
+    once a player is scouted/yours. Verified: fresh roster payroll $39–45M, chips scale with rating.
+  - 📣 **Rivals come calling.** A 4th tab 📨 **REQS** with a count badge. On opening MY TEAM, rival teams may send
+    a trade *request* for one of your BETTER starters (`makeRequest` targets your top 4 by overall, offers a
+    same-position player usually a touch worse + coins to cash in). Requests persist in `localStorage`
+    (`tdr-requests`, cap `MAX_REQUESTS`=4); Accept swaps the player and pays you, Reject dismisses. This is the
+    mirror of the existing 🔁 TRADE tab (there YOU shop; here rivals chase your stars). Verified: badge shows a
+    live count, Accept paid coins + swapped the starter, Reject cleared it.
+  - 🔌 Interfaces unchanged: `window.TDDraft` still exposes `open / boost / teamOverall`; `main.js:2679` reads
+    `boost()` in `beginGame` exactly as before. Added: `payroll` and a small `_debug` helper (harmless in play).
 
 ## 🗂 File map (who does what)
 
@@ -500,7 +534,7 @@ cache-busting query like `…/index.html?cb=1`.)
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
 | `src/weather.js` | 🌦 Weather & night games: the over-the-field rain/snow/night overlay, the slippery-ball fumble multiplier, and the menu picker. API: `window.TDWeather`. |
 | `src/season.js` | 🏆 Season mode: 2-division league (📅 NFL-style home-and-away divisional schedule, v1.23), standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
-| `src/draft.js` | 🏟 MY TEAM: your roster, the NFL-style snake draft, scouting & trades (💰 rating-priced, v1.24). API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
+| `src/draft.js` | 🏟 MY TEAM: your roster (💵 salaries + payroll/cap, v1.25), the NFL-style snake draft (📅 real Draft Day + 🔀 on-the-clock pick trades, v1.25), scouting & trades (💰 rating-priced, v1.24), and 📣 rival trade requests (v1.25). API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
 | `src/tour.js` | 🎓 The step-by-step tutorial (coach marks). API: `window.TDTour` (`maybeStart`/`start`/`active`). |
 | `src/ads.js` | Animated TV-break commercials. |
@@ -557,6 +591,10 @@ The 🏈 **Add-On Draft Board** (a chart Max keeps) ranked features easiest → 
 (v1.16), 🧩 CPU formations (v1.17), 🏟 MY TEAM draft/scout/trade (v1.19), 🎩 trick play (v1.20), 🎮 two-player
 (v1.21), 👑 Maxwell boss team (v1.22), 📅 NFL-style scheduling (v1.23), 💰 pricier stars (v1.24). The
 🌍 online-leaderboards pick was **deleted** on Max's call (needs a real backend; not wanted right now).
+
+Then Max opened a **Round-2 Add-On Draft Board** (a fresh chart) with four picks — and as of **v1.25 those
+are all built too**: 📅 real Draft Day, 🔀 trading draft picks, 💵 player salaries, 📣 rival trade requests
+(see the v1.25 section above). Round 2: swept.
 
 **Fresh ideas for whenever Max wants more (the board's wide open):**
 

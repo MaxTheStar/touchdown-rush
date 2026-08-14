@@ -642,6 +642,44 @@
     .dr-flash { font: 800 12px "Arial Black", Arial; color: #ffcf6b; background: rgba(255,120,120,0.14);
       border: 1px solid rgba(255,160,90,0.5); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
 
+    /* ---- 🆕 Round-2 add-ons: salaries, draft day, in-draft trades, requests ---- */
+    .dr-tab { font-size: 12px; }                       /* keep four tabs tidy */
+    .dr-badge { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 9px;
+      font: 800 10px "Arial Black", Arial; color: #10151f; background: #ff5d5d; vertical-align: 1px; }
+
+    /* 💵 salary chip on a player row + the team payroll bar */
+    .dr-sal { font: 800 9px "Arial Black", Arial; color: #ffe066; }
+    .dr-pay { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 8px 10px; margin: 2px 0 10px; }
+    .dr-pay-top { display: flex; align-items: baseline; gap: 6px; font: 800 11px "Arial Black", Arial; color: #dfe6f2; }
+    .dr-pay-top b { font-size: 15px; color: #ffe066; margin-left: auto; }
+    .dr-pay.over .dr-pay-top b { color: #ff7b7b; }
+    .dr-pay-cap { font: 10px Arial; color: #93a0b8; margin-left: 4px; }
+    .dr-pay-bar { height: 8px; border-radius: 5px; background: rgba(255,255,255,0.12); overflow: hidden; margin: 6px 0 4px; }
+    .dr-pay-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7bd88f, #ffd60a); border-radius: 5px; }
+    .dr-pay.over .dr-pay-bar i { background: linear-gradient(90deg, #ffd60a, #ff5d5d); }
+    .dr-pay-note { font: 10px Arial; color: #aab4c8; }
+    .dr-pay.over .dr-pay-note { color: #ffb0a0; }
+
+    /* 📅 the locked "Draft Day is set" screen + the next-day note */
+    .dr-lock { text-align: center; padding: 18px 10px; }
+    .dr-lock-em { font-size: 40px; }
+    .dr-lock-h { font: 900 16px "Arial Black", Arial; color: #ffe066; letter-spacing: 1px; margin-top: 4px; }
+    .dr-lock-sub { font: 12px Arial; color: #aab4c8; margin-top: 6px; }
+    .dr-lock-count { font: 900 34px "Arial Black", Arial; color: #8fd0ff; margin: 2px 0 8px; }
+    .dr-nextday { font: 800 12px "Arial Black", Arial; color: #8fd0ff; text-align: center; margin: 6px 0; }
+    .dr-nextday b { color: #ffe066; }
+
+    /* 🔼🔽 in-draft trade buttons + a team's "trade up" call */
+    .dr-trade-row { display: flex; gap: 6px; margin: 2px 0 8px; }
+    .dr-trade-row .dr-mini { flex: 1; justify-content: center; text-align: center; }
+    .dr-mini small { font: 700 9px Arial; opacity: 0.85; margin-left: 3px; }
+    .dr-mini.off { opacity: 0.35; }
+    .dr-call { background: rgba(143,208,255,0.12); border: 1px solid rgba(143,208,255,0.5);
+      border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; font: 12px/1.4 Arial; color: #dfe6f2; text-align: left; }
+    .dr-call b { color: #8fd0ff; font-family: "Arial Black", Arial; }
+    .dr-req .dr-offer-h b { color: #ffe066; }
+
     /* ---- 🛍 Shop shelves ---- */
     #shop-coins { font: 800 17px "Arial Black", Arial; color: #ffe066; margin-bottom: 10px; }
     .shop-row {
@@ -933,16 +971,16 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=41"></script>
-  <script src="src/sound.js?v=41"></script>
-  <script src="src/shop.js?v=41"></script>
-  <script src="src/progress.js?v=41"></script>
-  <script src="src/weather.js?v=41"></script>
-  <script src="src/season.js?v=41"></script>
-  <script src="src/draft.js?v=41"></script>
-  <script src="src/ads.js?v=41"></script>
-  <script src="src/tour.js?v=41"></script>
-  <script src="src/kick.js?v=41"></script>
-  <script src="src/main.js?v=41"></script>
+  <script src="src/stats.js?v=42"></script>
+  <script src="src/sound.js?v=42"></script>
+  <script src="src/shop.js?v=42"></script>
+  <script src="src/progress.js?v=42"></script>
+  <script src="src/weather.js?v=42"></script>
+  <script src="src/season.js?v=42"></script>
+  <script src="src/draft.js?v=42"></script>
+  <script src="src/ads.js?v=42"></script>
+  <script src="src/tour.js?v=42"></script>
+  <script src="src/kick.js?v=42"></script>
+  <script src="src/main.js?v=42"></script>
 </body>
 </html>
