@@ -598,13 +598,19 @@
     }
     .meta-btn small { font-size: 8px; letter-spacing: 0.5px; margin-top: 1px; }
     .meta-btn:active { transform: scale(0.94); background: rgba(255,255,255,0.4); }
-    /* On a really narrow phone, shrink the row a touch so all six chips
-       (coins + TEAM + SEASON + SHOP + DAILY + HOW TO) stay on one line. */
+    /* On a really narrow phone, shrink the row a touch so all seven chips
+       (coins + TEAM + SEASON + SHOP + DAILY + SPIN + HOW TO) stay on one line. */
     @media (max-width: 380px) {
       #menu-meta { gap: 5px; }
       .meta-btn { width: 42px; font-size: 15px; }
       .meta-btn small { font-size: 7px; }
       #coin-chip { padding: 0 8px; font-size: 14px; }
+    }
+    /* …and on the tiniest screens, tighter still. */
+    @media (max-width: 345px) {
+      #menu-meta { gap: 4px; }
+      .meta-btn { width: 38px; height: 42px; font-size: 14px; }
+      #coin-chip { padding: 0 6px; font-size: 13px; height: 42px; }
     }
 
     /* ---- 📈 Team level + XP bar (sits just under the money row) ---------- */
@@ -655,6 +661,67 @@
     }
     .ov-btn.yes { background: rgba(255,214,10,0.3); border-color: rgba(255,214,10,0.75); }
     .ov-btn:active { transform: scale(0.95); }
+    .ov-btn.waiting { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25);
+                      color: #aab4c8; }
+    .ov-btn.spinning { background: rgba(46,230,255,0.18); border-color: rgba(46,230,255,0.5); }
+
+    /* ---- 🎡 THE LUCKY SPIN (src/spin.js) --------------------------------- */
+    /* The 🎡 menu button glows gold when a free spin is ready. */
+    #open-spin.ready {
+      background: rgba(255,214,10,0.32); border-color: #ffe066;
+      box-shadow: 0 0 0 0 rgba(255,214,10,0.7); animation: spinReady 1.3s ease-out infinite;
+    }
+    @keyframes spinReady {
+      0%   { box-shadow: 0 0 0 0 rgba(255,214,10,0.7); }
+      70%  { box-shadow: 0 0 0 10px rgba(255,214,10,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,214,10,0); }
+    }
+    @media (prefers-reduced-motion: reduce) { #open-spin.ready { animation: none; } }
+
+    /* The wheel itself. */
+    #spin-wheel-wrap { position: relative; width: min(74vw, 290px); margin: 6px auto 2px; }
+    #spin-wheel { width: 100%; height: auto; display: block; filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); }
+    #spin-rot { transform-origin: 160px 160px; }
+    /* The pointer: a little triangle pinned at the top, aiming DOWN into the wheel. */
+    #spin-pointer {
+      position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0; z-index: 2;
+      border-left: 13px solid transparent; border-right: 13px solid transparent;
+      border-top: 20px solid #ffe066; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6));
+    }
+
+    /* The reveal card that slides in once the wheel stops. */
+    .spin-result { max-height: 0; overflow: hidden; opacity: 0; transition: max-height .35s ease, opacity .35s ease; }
+    .spin-result.show { max-height: 220px; opacity: 1; margin: 8px 0 2px; }
+    .sr-tier  { font: 900 12px "Arial Black", Arial; letter-spacing: 1px; }
+    .sr-icon  { font-size: 44px; line-height: 1.1; }
+    .sr-name  { font: 900 20px "Arial Black", Arial; color: #fff; }
+    .sr-blurb { font: 12px Arial; color: #cdd6e6; margin-top: 2px; }
+    .spin-result.tier-legendary .sr-name { color: #ffe066; text-shadow: 0 0 10px rgba(255,214,10,.6); }
+    @media (prefers-reduced-motion: reduce) { .spin-result { transition: none; } }
+
+    /* The in-game buff pill (top-center) while a buff ticks down. */
+    #buff-pill {
+      position: fixed; z-index: 45; top: max(8px, env(safe-area-inset-top));
+      left: 50%; transform: translateX(-50%) translateY(-140%);
+      display: none; align-items: center; gap: 7px;
+      padding: 6px 12px; border-radius: 999px; pointer-events: none;
+      background: rgba(16,26,48,0.92); border: 2px solid #6b7a8d;
+      font: 800 13px "Arial Black", Arial; color: #fff;
+      box-shadow: 0 3px 12px rgba(0,0,0,.45);
+      transition: transform .3s ease;
+    }
+    #buff-pill.show { display: flex; transform: translateX(-50%) translateY(0); }
+    /* The pill is an IN-GAME indicator — on the menu the 🎡 button + its pop-up
+       already show your buff, and the pill would sit on top of the menu row. */
+    body.menu #buff-pill { display: none; }
+    #buff-pill .bp-ic { font-size: 17px; }
+    #buff-pill .bp-t  { font: 800 12px "Arial Black", Arial; color: #ffe066;
+                        padding-left: 7px; margin-left: 2px; border-left: 1px solid rgba(255,255,255,.25); }
+    #buff-pill.tier-uncommon  { border-color: #2fa15a; }
+    #buff-pill.tier-rare      { border-color: #7b4de0; }
+    #buff-pill.tier-legendary { border-color: #f0b429; box-shadow: 0 0 14px rgba(240,180,41,.6); }
+    @media (prefers-reduced-motion: reduce) { #buff-pill { transition: none; } }
 
     /* ---- 🏆 Season hub (season.js fills #season-body) ---- */
     #season-body { text-align: center; }
@@ -938,6 +1005,7 @@
     <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
+    <div class="meta-btn" id="open-spin">🎡<small>SPIN</small></div>
     <div class="meta-btn" id="open-howto">📖<small>HOW TO</small></div>
   </div>
 
@@ -1098,6 +1166,30 @@
     </div>
   </div>
 
+  <!-- 🎡 THE LUCKY SPIN — a timed wheel of buffs. src/spin.js draws the wheel,
+       spins it, and hands out the prize. The shiny slices are SUPER rare! -->
+  <div class="ov" id="spin-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎡 LUCKY SPIN</div>
+      <div class="ov-sub">A free spin every few minutes — the shiny slices are SUPER rare!</div>
+      <div id="spin-wheel-wrap">
+        <div id="spin-pointer"></div>
+        <svg id="spin-wheel" viewBox="0 0 320 320" aria-hidden="true">
+          <g id="spin-rot"></g>
+          <circle cx="160" cy="160" r="22" fill="#101a30" stroke="#ffe066" stroke-width="3"/>
+          <text x="160" y="160" text-anchor="middle" dominant-baseline="central" font-size="22">🏈</text>
+        </svg>
+      </div>
+      <div class="spin-result" id="spin-result"></div>
+      <div class="ov-btn yes" id="spin-do">SPIN! 🎡</div>
+      <div class="ov-btn" id="spin-close">CLOSE</div>
+    </div>
+  </div>
+
+  <!-- 🎡 The little pill that rides along the top while a spin buff is live
+       (src/spin.js fills it in and counts it down). -->
+  <div id="buff-pill"></div>
+
   <!-- ⭐ The review pop-up: would you like to? → are you sure? → write it!
        stats.js shows it after your second finished game, and runs the steps. -->
   <div id="review-modal">
@@ -1130,16 +1222,17 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=49"></script>
-  <script src="src/sound.js?v=49"></script>
-  <script src="src/shop.js?v=49"></script>
-  <script src="src/progress.js?v=49"></script>
-  <script src="src/weather.js?v=49"></script>
-  <script src="src/season.js?v=49"></script>
-  <script src="src/draft.js?v=49"></script>
-  <script src="src/ads.js?v=49"></script>
-  <script src="src/tour.js?v=49"></script>
-  <script src="src/kick.js?v=49"></script>
-  <script src="src/main.js?v=49"></script>
+  <script src="src/stats.js?v=50"></script>
+  <script src="src/sound.js?v=50"></script>
+  <script src="src/shop.js?v=50"></script>
+  <script src="src/spin.js?v=50"></script>
+  <script src="src/progress.js?v=50"></script>
+  <script src="src/weather.js?v=50"></script>
+  <script src="src/season.js?v=50"></script>
+  <script src="src/draft.js?v=50"></script>
+  <script src="src/ads.js?v=50"></script>
+  <script src="src/tour.js?v=50"></script>
+  <script src="src/kick.js?v=50"></script>
+  <script src="src/main.js?v=50"></script>
 </body>
 </html>

@@ -8,16 +8,18 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.32 — cache-buster is `?v=49` in `index.html`.
+- **Version:** v1.33 — cache-buster is `?v=50` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-14.
+- **Last updated:** 2026-08-15.
+- **✅ v1.33 (the 🎡 Lucky Spin) is PUSHED & LIVE** — the first Round-3 feature, shipped 2026-08-15
+  (`src/spin.js` new; `index.html` + `src/shop.js` edited).
 
-## ✅ Sync status — v1.11–v1.32 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.32 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.33 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.33 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -76,6 +78,41 @@ in-game half of "New Draft Board"): 🔥 a **TOP PROSPECT** badge highlights the
 recaps the class with a coin **bonus** and a 🏆 **personal-best** chase (`tdr-draftbest`). All in `src/draft.js`
 + CSS. Verified: a strong class graded A+ (+100🪙, NEW BEST stored), the badge + tags render, no errors. The
 matching **planning chart** (the other half of "Both") is a fresh Artifact, not code.
+
+And **v1.33** (cache-buster `?v=50`) — 🎡 **THE LUCKY SPIN** (the first pick off the new **Round-3** board):
+a timed wheel of **buffs** you can spin every few minutes. Where it lands is a surprise — most spins are
+duds or small stuff, but the shiny slices are SUPER rare, so hitting ⚡ TURBO or 🌟 GOD MODE is a real
+event. That rarity is the whole hook ("just one more spin!"). All new code lives in **`src/spin.js`**
+(+ a `#spin-modal` wheel, an `#open-spin` menu button, and a top-center `#buff-pill` in `index.html`;
++ CSS). Key design choices:
+  - **11 slices, 4 rarity tiers, weighted.** Weights (heavier = commoner): Pocket Change 20, Fresh Legs 20,
+    No Luck 15, Speed Boost 12, Sticky Hands 12, Coin Stash 9, Sure Hands 6, Truck Stick 5, Coin Jackpot 3,
+    ⚡ TURBO 2, 🌟 GOD MODE 1 (total 105). So **GOD MODE ≈ 0.95%**, TURBO ≈ 1.9%, all legendaries ≈ 2.9%.
+    Tune it in the `BUFFS` array — `weight` is the only knob for odds.
+  - **Buffs are felt WITHOUT touching main.js.** `spin.js` exposes live getters
+    (`speedMult / catchAdd / safeThrow / safeBall / truck`) and `shop.js`'s five perk functions quietly
+    **fold them in** (guarded by `window.TDSpin`, so no buff = the old value, byte-for-byte). A speed buff
+    *stacks* on your cleats; "Sure Hands" pushes `armAccuracy`/`gripFactor` to 1 (no picks/no fumbles);
+    "Truck Stick"/"God Mode" floor `stiffChance`. Coins (Pocket Change / Coin Stash / Coin Jackpot) are
+    instant `TDShop.earn`. The core game loop was **not edited at all**.
+  - **Timed, with a countdown pill.** Buffs last 90–120s (`dur` per slice). A `#buff-pill` rides the top
+    while one ticks (hidden on the menu, where the wheel button already shows status). Cooldown is
+    `COOLDOWN = 3 min`; the 🎡 button glows when a free spin is ready.
+  - **Everything persists** in `tdr-spin` = `{ last, id, until }` — the cooldown AND any buff-in-progress
+    survive a reload (you can't refresh for a free spin; an already-expired buff never comes back).
+  - **The wheel:** an SVG pie (`#spin-rot`) built in JS, spun with a CSS `transform: rotate()` + transition.
+    Landing math brings the chosen slice under the top pointer with ~5–6 whole turns; the visual landing
+    ALWAYS matches the awarded buff (verified for all 11). 🐛 **Gotcha fixed:** never apply the landing
+    rotate inside `requestAnimationFrame` — browsers pause rAF for background/unfocused tabs, which froze the
+    wheel (the buff still applied via a `setTimeout`, so it looked "stuck but working"). It's now set
+    synchronously, so it always lands and still animates smoothly when you're watching.
+
+  Verified live via DOM/JS (per house style, not screenshots-only): no console errors; the wheel renders 11
+  slices in order on desktop AND a 375px phone; the geometry lands every slice under the pointer and matches
+  the reveal; the perk-fold is exactly right for each buff and for GOD MODE, and is a perfect no-op with no
+  buff; the pill/countdown/cooldown/ready-glow all work; the buff survives a reload and an expired one does
+  not; and the 7th menu chip fits (right edge 364 ≤ 375) with the pill hidden on the menu. A couple of
+  screenshots (desktop + mobile wheel, in-game pill) were grabbed as proof for Max.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -745,6 +782,10 @@ The 🏈 **Add-On Draft Board** (a chart Max keeps) ranked features easiest → 
 Then Max opened a **Round-2 Add-On Draft Board** (a fresh chart) with four picks — and as of **v1.25 those
 are all built too**: 📅 real Draft Day, 🔀 trading draft picks, 💵 player salaries, 📣 rival trade requests
 (see the v1.25 section above). Round 2: swept.
+
+Now there's a **Round-3 planning chart** (a fresh Artifact — engagement/retention ideas): 🎡 daily spin,
+📆 daily challenges, 🏆 trophy case, 🌱 player growth, 😈 rival nemesis, 🃏 card packs. **First pick built:
+🎡 the Lucky Spin = v1.33** (see its section above). The other five are still open.
 
 **Fresh ideas for whenever Max wants more (the board's wide open):**
 

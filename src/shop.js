@@ -218,8 +218,20 @@
   // Every perk scales with its gear LEVEL (0–10). The numbers below are tuned
   // so a maxed item (level 10) is a real edge without breaking the game.
   // ============================================================
+  // 🎡 A tiny bridge to the Lucky Spin (src/spin.js). If a spin buff is live
+  // right now, these fold its boost into your gear below — so a speed buff
+  // STACKS on your cleats, "Sure Hands" turns off picks/fumbles, etc. No buff
+  // (or the wheel not loaded yet) = every one of these is a harmless "do nothing".
+  const spin = () => window.TDSpin || null;
+  const spinSpeed = () => { const s = spin(); return s ? s.speedMult() : 1; };
+  const spinCatch = () => { const s = spin(); return s ? s.catchAdd()  : 0; };
+  const spinSafeThrow = () => { const s = spin(); return s ? s.safeThrow() : 0; };
+  const spinSafeBall  = () => { const s = spin(); return s ? s.safeBall()  : 0; };
+  const spinTruck     = () => { const s = spin(); return s ? s.truck()     : 0; };
+
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
-  function speedMult() { return 1 + 0.02 * gear.cleats; }
+  //    …times any 🎡 speed buff that's ticking right now.
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -228,8 +240,10 @@
   }
 
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
+  //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    return { catchBonus: 0.02 * gear.gloves, dropCut: 0.02 * gear.gloves };
+    const extra = spinCatch();
+    return { catchBonus: 0.02 * gear.gloves + extra, dropCut: 0.02 * gear.gloves + extra };
   }
 
   // 🔋 Catch energy: how long the after-catch speed burst lasts (0 = not owned).
@@ -238,15 +252,18 @@
 
   // 💪 Stiff arm: the chance to break the FIRST tackle of a play (level 10 = 40%).
   // main.js checks this in checkTackle and, on a hit, shoves the tackler off.
-  function stiffChance() { return 0.04 * gear.stiff; }
+  //    🎡 Truck Stick / God Mode set a big floor here (bust nearly every tackle).
+  function stiffChance() { return Math.max(0.04 * gear.stiff, spinTruck()); }
 
   // 🔒 Iron grip: how much we CUT the fumble chance (a fraction of it). Level 10
   // = 0.9, i.e. 90% fewer fumbles. main.js multiplies FUMBLE_CHANCE by (1 - this).
-  function gripFactor() { return 0.09 * gear.grip; }
+  //    🎡 A "safe ball" buff (Sure Hands / God Mode) pushes this to 1 = no fumbles.
+  function gripFactor() { const g = 0.09 * gear.grip; return 1 - (1 - g) * (1 - spinSafeBall()); }
 
   // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
   // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
-  function armAccuracy() { return 0.05 * gear.arm; }
+  //    🎡 A "safe throw" buff (Sure Hands / God Mode) pushes this to 1 = no picks.
+  function armAccuracy() { const a = 0.05 * gear.arm; return 1 - (1 - a) * (1 - spinSafeThrow()); }
 
   // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
   // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,
