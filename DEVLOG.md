@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.31 — cache-buster is `?v=48` in `index.html`.
+- **Version:** v1.32 — cache-buster is `?v=49` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.31 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.31 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.32 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.32 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -69,6 +69,13 @@ vs the v1.28 rusher), 🖐 BALL HAWK (more takeaways in the v1.30 defense sim). 
 AQUA STORM / VOID STAR uniforms for coins. Verified: perks correct at max (arm .5, weather .8, toe .6, hawk .2),
 old saves normalize (no NaN), All-Weather cut rain FG-wide 20→6/80, Golden Toe rushMs 3400→5848, Ball Hawk
 turnovers 19%→68%, buying a uniform works, no errors.
+
+And **v1.32** (cache-buster `?v=49`) — 🏟 **draft board made more engaging** (4th & last of the batch, the
+in-game half of "New Draft Board"): 🔥 a **TOP PROSPECT** badge highlights the best guy on the board each pick,
+💎 **boom/bust reveals** tag every pick (STEAL / STUD / BIG UPGRADE / DEPTH), and a 🏅 **DRAFT GRADE** (A+→D)
+recaps the class with a coin **bonus** and a 🏆 **personal-best** chase (`tdr-draftbest`). All in `src/draft.js`
++ CSS. Verified: a strong class graded A+ (+100🪙, NEW BEST stored), the badge + tags render, no errors. The
+matching **planning chart** (the other half of "Both") is a fresh Artifact, not code.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -653,6 +660,17 @@ cache-busting query like `…/index.html?cb=1`.)
     team menu to the new look. New perks exported on `TDShop`.
   - 🛟 Save-compat: after `load('gear', …)`, `ITEMS.forEach(it => gear[it.id] ??= 0)` so old saves get the new
     item levels (no `undefined → NaN`). Verified end-to-end (see the sync-status note above); no errors.
+- **v1.32 — 🏟 A more engaging draft board** (this iteration — `src/draft.js` + `dr-grade`/`dr-top` CSS). Three
+  hooks added to the DRAFT tab:
+  - 🔥 **TOP PROSPECT** — `draftHTML` finds the highest-ceiling guy on the board (`scouted ? ovr : hi`) and gives
+    that row a gold badge + border, so there's always a "grab him before a CPU does!" target.
+  - 💎 **Boom/bust reveals** — `draftPick` tags each pick (💎 STEAL ≥90 / 🌟 STUD ≥82 / 🔥 BIG UPGRADE Δ≥6 /
+    ⬆ UPGRADE / 👍 DEPTH) in the log + the celebrate label, and stores `p._delta` for grading.
+  - 🏅 **DRAFT GRADE** — `gradeDraft()` (called once when the draft finishes in `advanceDraft`) scores the class
+    `avgOvr + ΣupgradeΔ×1.4 + traits×4` → A+/A/B/C/D, pays a coin **bonus** (A+ 100 … C 10), and tracks a
+    personal best in `tdr-draftbest` (🏆 NEW BEST when beaten). The recap shows the big letter + a scouting report.
+  - Verified: a strong class graded **A+** (+100🪙 awarded once, NEW BEST stored `A+`), reveal tags in the log, the
+    TOP PROSPECT badge present (exactly one), grade recap renders; no errors.
 
 ## 🗂 File map (who does what)
 
@@ -666,7 +684,7 @@ cache-busting query like `…/index.html?cb=1`.)
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
 | `src/weather.js` | 🌦 Weather & night games: 7 kinds (clear/night/rain/🌬️wind/snow/🥵hot/🥶blizzard), each with **gameplay effects** — `catchMult`/`fgMult`/`fumbleMult` (v1.29) — plus the over-field overlay and menu picker. API: `window.TDWeather`. |
 | `src/season.js` | 🏆 Season mode: 2-division league (📅 NFL-style home-and-away divisional schedule, v1.23), standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
-| `src/draft.js` | 🏟 MY TEAM: your roster (💵 salaries + payroll/cap, v1.25), the NFL-style snake draft (📅 real Draft Day + 🔀 on-the-clock pick trades, v1.25), scouting & trades (💰 rating-priced, v1.24), and 📣 rival trade requests (v1.25). API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
+| `src/draft.js` | 🏟 MY TEAM: your roster (💵 salaries + payroll/cap, v1.25), the NFL-style snake draft (📅 real Draft Day + 🔀 on-the-clock pick trades, v1.25), scouting & trades (💰 rating-priced, v1.24), and 📣 rival trade requests (v1.25); 🔥 TOP PROSPECT hype + 💎 boom/bust pick reveals + a 🏅 DRAFT GRADE recap with a coin bonus & personal best (v1.32, `tdr-draftbest`). API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |
 | `src/tour.js` | 🎓 The step-by-step tutorial (coach marks). API: `window.TDTour` (`maybeStart`/`start`/`active`). |
 | `src/ads.js` | Animated TV-break commercials. |

@@ -341,8 +341,32 @@
       cpuPick(draft.teams[slot - 1]);
       draft.ptr++;
     }
-    // Out of picks — the draft is over. Lock in the next Draft Day.
-    if (!draft.done) { draft.done = true; setNextDraftDay(); }
+    // Out of picks — the draft is over. Lock in the next Draft Day + grade the class.
+    if (!draft.done) { draft.done = true; setNextDraftDay(); gradeDraft(); }
+  }
+
+  // 🏅 Grade your draft class (A+ → D) from the picks you made: their average
+  // overall, the upgrades they brought, and any ⭐ traits you landed. A good grade
+  // pays a coin BONUS, and beating your best-ever grade is a little trophy moment.
+  function gradeDraft() {
+    const picks = draft.picks;
+    let grade = '—', score = 0, bonus = 0, newBest = false;
+    if (picks.length) {
+      let sumOvr = 0, sumUp = 0, traits = 0;
+      picks.forEach(p => { sumOvr += p.ovr; if (p._delta > 0) sumUp += p._delta; if (p.trait) traits++; });
+      score = sumOvr / picks.length + sumUp * 1.4 + traits * 4;
+      if      (score >= 95) { grade = 'A+'; bonus = 100; }
+      else if (score >= 88) { grade = 'A';  bonus = 60; }
+      else if (score >= 80) { grade = 'B';  bonus = 30; }
+      else if (score >= 72) { grade = 'C';  bonus = 10; }
+      else                  { grade = 'D';  bonus = 0; }
+      const order = ['D', 'C', 'B', 'A', 'A+'];
+      const best = load('draftbest', '');
+      newBest = order.indexOf(grade) > order.indexOf(best);
+      if (newBest) store('draftbest', grade);
+      if (bonus > 0) { earn(bonus); paintCoins(); }
+    }
+    draft.grade = grade; draft.gradeScore = Math.round(score); draft.gradeBonus = bonus; draft.newBest = newBest;
   }
 
   // Scout a prospect: pay coins to reveal his true rating + trait.
@@ -369,8 +393,13 @@
     draft.board.splice(i, 1);
     draft.picks.push(p);
     const delta = p.ovr - old;
-    draft.log.unshift(`✅ YOU drafted ${p.pos} ${p.name} (${p.ovr})${delta > 0 ? ' ⬆+' + delta : ''}`);
-    if (delta > 0) { party($('team-body'), p.trait ? p.trait.e : '⭐', 'UPGRADE +' + delta + '!'); sting('td'); }
+    p._delta = delta;                                 // remembered for the DRAFT GRADE later
+    // 💎 A fun "how'd that pick go?" reveal — steal, stud, upgrade, or depth.
+    const tag = p.ovr >= 90 ? '💎 STEAL!' : p.ovr >= 82 ? '🌟 STUD!'
+              : delta >= 6 ? '🔥 BIG UPGRADE!' : delta > 0 ? '⬆ UPGRADE' : '👍 DEPTH PICK';
+    draft.log.unshift(`✅ YOU drafted ${p.pos} ${p.name} (${p.ovr}) ${tag}`);
+    party($('team-body'), p.trait ? p.trait.e : '⭐', tag);
+    sting('td');
     // A trade-up bonus pick keeps you on the clock; a normal pick moves the draft on.
     if (draft.bonus > 0) draft.bonus--;
     else { draft.ptr++; advanceDraft(); }
@@ -433,13 +462,25 @@
         <div class="dr-actions"><div class="ov-btn yes" data-act="startDraft">START DRAFT ▶</div></div>`;
     }
 
-    // Draft finished — a recap of who you landed, plus when the next one is.
+    // Draft finished — your GRADE, a recap of who you landed, and the next date.
     if (draft.done) {
       const got = draft.picks.length
         ? draft.picks.map(p => playerRow(p)).join('')
         : `<div class="dr-hint">No picks this time.</div>`;
       const left = fmtCountdown(nextDraftAt() - Date.now());
-      return `<div class="dr-cap">🎉 DRAFT COMPLETE — your haul:</div>
+      const g = draft.grade || '—';
+      const gClass = { 'A+': 'ap', 'A': 'a', 'B': 'b', 'C': 'c', 'D': 'd' }[g] || 'na';
+      const reports = {
+        'A+': 'A LEGENDARY haul — Hall-of-Fame scouting!',
+        'A':  'Fantastic class! Your team got a lot better.',
+        'B':  'Solid draft — some real contributors.',
+        'C':  'A few useful pieces to build on.',
+        'D':  'Rough one — better luck next Draft Day!',
+      };
+      const report = reports[g] || 'The class is in the books.';
+      return `<div class="dr-cap">🎉 DRAFT COMPLETE${draft.newBest ? ' — 🏆 NEW BEST!' : ''}</div>
+        <div class="dr-grade dr-grade-${gClass}">${g}<span>DRAFT GRADE</span></div>
+        <div class="dr-grade-sub">${report}${draft.gradeBonus ? ` · <b>+${draft.gradeBonus}🪙 bonus!</b>` : ''}</div>
         <div class="dr-list">${got}</div>
         <div class="dr-nextday">📅 Next Draft Day in <b>${left}</b></div>
         <div class="dr-actions">
@@ -469,6 +510,11 @@
         <div class="dr-mini" data-act="tradeDown">🔽 TRADE DOWN <small>+${TRADE_DOWN_PAY}🪙</small></div>
       </div>`;
 
+    // 🔥 The single best guy on the whole board right now — build some hype so
+    // there's always a "get him before a CPU does!" target each pick.
+    let topIdx = -1, topVal = -1;
+    draft.board.forEach((p, i) => { const v = p.scouted ? p.ovr : p.hi; if (v > topVal) { topVal = v; topIdx = i; } });
+
     // Sort the board: offense group, then defense, best first.
     const idx = draft.board.map((p, i) => i);
     idx.sort((a, b) => {
@@ -489,7 +535,9 @@
         gain = d > 0 ? `<span class="dr-up">⬆+${d}</span>` : d < 0 ? `<span class="dr-dn">⬇${d}</span>` : `<span class="dr-eq">=</span>`;
       }
       const scoutBtn = p.scouted ? '' : `<div class="dr-mini" data-act="scout" data-i="${i}">🔎 ${scoutCost(p)}🪙</div>`;
-      return `<div class="dr-item">
+      const topBadge = (i === topIdx) ? `<div class="dr-topbadge">🔥 TOP PROSPECT</div>` : '';
+      return `<div class="dr-item${i === topIdx ? ' dr-top' : ''}">
+          ${topBadge}
           ${playerRow(p)}
           <div class="dr-rowbtns">
             <div class="dr-vs">your ${p.pos}: <b>${yours}</b></div>

@@ -782,6 +782,20 @@
     .dr-nextday { font: 800 12px "Arial Black", Arial; color: #8fd0ff; text-align: center; margin: 6px 0; }
     .dr-nextday b { color: #ffe066; }
 
+    /* 🏅 draft-grade recap + 🔥 top-prospect badge (v1.32) */
+    .dr-grade { text-align: center; font: 900 62px "Arial Black", Arial; line-height: 1; margin: 6px 0 2px; }
+    .dr-grade span { display: block; font: 800 10px "Arial Black", Arial; letter-spacing: 2px; color: #8fb0d8; margin-top: 4px; }
+    .dr-grade-ap { color: #ffd60a; text-shadow: 0 0 18px rgba(255,214,10,0.55); }
+    .dr-grade-a  { color: #7bd88f; }
+    .dr-grade-b  { color: #8fd0ff; }
+    .dr-grade-c  { color: #c6cede; }
+    .dr-grade-d  { color: #ff9a9a; }
+    .dr-grade-sub { text-align: center; font: 13px/1.4 Arial; color: #dfe6f2; margin-bottom: 10px; }
+    .dr-grade-sub b { color: #ffe066; }
+    .dr-item.dr-top { border-color: rgba(255,214,10,0.7); box-shadow: 0 0 0 1px rgba(255,214,10,0.35), 0 0 14px rgba(255,214,10,0.14); }
+    .dr-topbadge { font: 800 9px "Arial Black", Arial; color: #10151f; letter-spacing: .5px;
+      background: linear-gradient(90deg,#ffd60a,#ffa726); display: inline-block; padding: 2px 8px; border-radius: 6px; margin-bottom: 5px; }
+
     /* 🔼🔽 in-draft trade buttons + a team's "trade up" call */
     .dr-trade-row { display: flex; gap: 6px; margin: 2px 0 8px; }
     .dr-trade-row .dr-mini { flex: 1; justify-content: center; text-align: center; }
@@ -1116,16 +1130,16 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=48"></script>
-  <script src="src/sound.js?v=48"></script>
-  <script src="src/shop.js?v=48"></script>
-  <script src="src/progress.js?v=48"></script>
-  <script src="src/weather.js?v=48"></script>
-  <script src="src/season.js?v=48"></script>
-  <script src="src/draft.js?v=48"></script>
-  <script src="src/ads.js?v=48"></script>
-  <script src="src/tour.js?v=48"></script>
-  <script src="src/kick.js?v=48"></script>
-  <script src="src/main.js?v=48"></script>
+  <script src="src/stats.js?v=49"></script>
+  <script src="src/sound.js?v=49"></script>
+  <script src="src/shop.js?v=49"></script>
+  <script src="src/progress.js?v=49"></script>
+  <script src="src/weather.js?v=49"></script>
+  <script src="src/season.js?v=49"></script>
+  <script src="src/draft.js?v=49"></script>
+  <script src="src/ads.js?v=49"></script>
+  <script src="src/tour.js?v=49"></script>
+  <script src="src/kick.js?v=49"></script>
+  <script src="src/main.js?v=49"></script>
 </body>
 </html>
