@@ -787,6 +787,18 @@ function throwTo(num) {
   });
 }
 
+// A weather-flavored "incomplete" call, so the conditions really come through.
+function wxIncompleteMsg() {
+  const w = window.TDWeather ? TDWeather.current() : 'clear';
+  if (w === 'wind')     return pick(['THE WIND GOT IT!', 'BLOWN OFF COURSE!', 'INCOMPLETE — WINDY!']);
+  if (w === 'night')    return pick(['LOST IT IN THE LIGHTS!', 'INCOMPLETE!']);
+  if (w === 'blizzard') return pick(['SNOW-BLIND — INCOMPLETE!', 'LOST IN THE STORM!']);
+  if (w === 'snow')     return pick(['COLD HANDS — INCOMPLETE!', 'INCOMPLETE!']);
+  if (w === 'hot')      return pick(['SWEATY HANDS — INCOMPLETE!', 'INCOMPLETE!']);
+  if (w === 'rain')     return pick(['SLIPPED AWAY — INCOMPLETE!', 'INCOMPLETE!']);
+  return 'INCOMPLETE';
+}
+
 function resolvePass(wr, x, y) {
   G.passTarget = null;   // the ball has arrived — stop the break-on-the-ball chase
   // Where the receiver ACTUALLY is when the ball arrives (he kept running).
@@ -839,7 +851,8 @@ function resolvePass(wr, x, y) {
   // Wide open — but receivers aren't perfect. They can miss it...
   // (🧤 STICKY GLOVES from the shop tilt both chances your way.)
   const gl = window.TDShop ? TDShop.gloveBoost() : { catchBonus: 0, dropCut: 0 };
-  if (Math.random() > CATCH_CHANCE + gl.catchBonus) { endPlay('incomplete', 'INCOMPLETE'); return; }
+  const wxCatch = window.TDWeather ? TDWeather.catchMult() : 1;   // 🌦 night/wind/snow/hot/blizzard make catches harder
+  if (Math.random() > (CATCH_CHANCE + gl.catchBonus) * wxCatch) { endPlay('incomplete', wxIncompleteMsg()); return; }
   // ...or catch it and drop it.
   if (Math.random() < DROP_CHANCE - gl.dropCut)  { endPlay('incomplete', 'DROPPED IT!'); return; }
 
@@ -2188,7 +2201,8 @@ function resolveRedPass(wr, x, y) {
     return;
   }
 
-  if (Math.random() > RED_CATCH) { redPlayEnd('incomplete', 'INCOMPLETE'); return; }
+  const wxRed = window.TDWeather ? TDWeather.catchMult() : 1;   // 🌦 weather hits the CPU's receivers too
+  if (Math.random() > RED_CATCH * wxRed) { redPlayEnd('incomplete', 'INCOMPLETE'); return; }
 
   // They caught it — now it's a foot race. TACKLE HIM!
   ball.setPosition(wx, wy);

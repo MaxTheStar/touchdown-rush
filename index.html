@@ -426,9 +426,51 @@
     body.wx-snow #weather-fx::after { opacity: 0.7; animation-duration: 11s; background-position: 60px 40px; }
     @keyframes wx-snow { from { transform: translateY(0); } to { transform: translateY(220px); } }
 
+    /* 🌬️ WINDY — a pale tint plus fast, near-horizontal streaks racing across */
+    body.wx-wind #weather-fx { background: rgba(198,212,230,0.10); }
+    body.wx-wind #weather-fx::before, body.wx-wind #weather-fx::after {
+      content: ""; position: absolute; inset: -30%;
+      background-image: repeating-linear-gradient(88deg,
+        transparent 0 24px, rgba(230,240,255,0.16) 24px, rgba(230,240,255,0.16) 26px);
+      animation: wx-wind 0.5s linear infinite;
+    }
+    body.wx-wind #weather-fx::after { opacity: 0.5; animation-duration: 0.78s; }
+    @keyframes wx-wind { from { transform: translateX(0); } to { transform: translateX(-130px); } }
+
+    /* 🥵 HEAT WAVE — a warm orange wash with a slow shimmer rising off the field */
+    body.wx-hot #weather-fx { background: linear-gradient(180deg, rgba(255,150,44,0.13), rgba(255,90,20,0.05)); }
+    body.wx-hot #weather-fx::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(120% 60% at 50% 100%, rgba(255,170,60,0.20), transparent 70%);
+      animation: wx-hot 3.2s ease-in-out infinite;
+    }
+    @keyframes wx-hot { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
+
+    /* 🥶 BLIZZARD — a cold vignette plus heavy, fast-driving snow */
+    body.wx-blizzard #weather-fx {
+      background: radial-gradient(120% 95% at 50% 30%, rgba(180,205,235,0.10), rgba(20,34,60,0.55) 100%);
+    }
+    body.wx-blizzard #weather-fx::before, body.wx-blizzard #weather-fx::after {
+      content: ""; position: absolute; inset: -30%;
+      background-image:
+        radial-gradient(3px 3px   at 20px 30px,  #fff, transparent),
+        radial-gradient(2.5px 2.5px at 70px 90px,  #fff, transparent),
+        radial-gradient(3px 3px   at 130px 50px, #fff, transparent),
+        radial-gradient(2px 2px   at 180px 120px,#fff, transparent),
+        radial-gradient(2.5px 2.5px at 110px 170px,#fff, transparent),
+        radial-gradient(2px 2px   at 40px 150px, #fff, transparent);
+      background-size: 200px 200px;
+      animation: wx-blizzard 2.4s linear infinite;
+    }
+    body.wx-blizzard #weather-fx::after { opacity: 0.8; animation-duration: 3.6s; background-position: 80px 30px; }
+    @keyframes wx-blizzard { from { transform: translate(0,0); } to { transform: translate(-70px, 240px); } }
+
     @media (prefers-reduced-motion: reduce) {
       body.wx-rain #weather-fx::before, body.wx-rain #weather-fx::after,
-      body.wx-snow #weather-fx::before, body.wx-snow #weather-fx::after { animation: none; }
+      body.wx-snow #weather-fx::before, body.wx-snow #weather-fx::after,
+      body.wx-wind #weather-fx::before, body.wx-wind #weather-fx::after,
+      body.wx-hot #weather-fx::before,
+      body.wx-blizzard #weather-fx::before, body.wx-blizzard #weather-fx::after { animation: none; }
     }
 
     /* The HAND button dims + goes dead when you're too far from the RB to hand off */
@@ -1007,16 +1049,16 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=45"></script>
-  <script src="src/sound.js?v=45"></script>
-  <script src="src/shop.js?v=45"></script>
-  <script src="src/progress.js?v=45"></script>
-  <script src="src/weather.js?v=45"></script>
-  <script src="src/season.js?v=45"></script>
-  <script src="src/draft.js?v=45"></script>
-  <script src="src/ads.js?v=45"></script>
-  <script src="src/tour.js?v=45"></script>
-  <script src="src/kick.js?v=45"></script>
-  <script src="src/main.js?v=45"></script>
+  <script src="src/stats.js?v=46"></script>
+  <script src="src/sound.js?v=46"></script>
+  <script src="src/shop.js?v=46"></script>
+  <script src="src/progress.js?v=46"></script>
+  <script src="src/weather.js?v=46"></script>
+  <script src="src/season.js?v=46"></script>
+  <script src="src/draft.js?v=46"></script>
+  <script src="src/ads.js?v=46"></script>
+  <script src="src/tour.js?v=46"></script>
+  <script src="src/kick.js?v=46"></script>
+  <script src="src/main.js?v=46"></script>
 </body>
 </html>

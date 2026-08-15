@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.28 — cache-buster is `?v=45` in `index.html`.
+- **Version:** v1.29 — cache-buster is `?v=46` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.28 are all LIVE (v1.25–v1.28 pushed 2026-08-14)
+## ✅ Sync status — v1.11–v1.29 are all LIVE (v1.25–v1.29 pushed 2026-08-14)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -47,6 +47,13 @@ that plays when the defense **stuffs your two-point try** (and on a blocked kick
 rusher (in the opponent's colors) now charges every kick, and if he beats you the **kicker is tackled and you
 lose the ball** (`src/kick.js` + hooks in `src/main.js`). Verified by driving the exported globals + `KickGame`
 and stepping the frozen loop by hand.
+
+And **v1.29** (cache-buster `?v=46`) — 🌦 **weather now changes GAMEPLAY** (first of a new feature batch Max asked
+for on 2026-08-14, shipped one-at-a-time): 🌙 night → harder to catch, 🌧️ rain → shaky field goals, 🌬️ new WINDY
+→ passes flutter, plus two new EXTREMES 🥵 HEAT and 🥶 BLIZZARD. `src/weather.js` gained per-kind `catch`/`fg`
+multipliers (+ `catchMult()`/`fgMult()`); `main.js` applies `catchMult` to both teams' completions, `kick.js`
+can blow a good FG wide (locked once so it can't waver). Verified: FG-wide rates match `fgMult` (rain ~24%,
+blizzard ~20%, clear 0%), all 7 overlays + announcer lines render, no errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -577,6 +584,24 @@ cache-busting query like `…/index.html?cb=1`.)
     so it always matches the current opponent. Verified: block → 0 pts + opponent ball; a quick kick is never
     falsely blocked (rush ~0.07); `rushMs` follows difficulty; visuals (charging rusher, HURRY hint, block) all
     render; no console errors.
+- **v1.29 — 🌦 Dynamic weather EFFECTS on gameplay** (this iteration — `src/weather.js`, `src/main.js`,
+  `src/kick.js`, `index.html` CSS). Weather used to be pure atmosphere (only slippery-ball fumbles); now each
+  kind bites:
+  - `weather.js` — `KINDS`/`PREFS` gained 🌬️ `wind`, 🥵 `hot`, 🥶 `blizzard`. `INFO[kind]` now carries `catch`
+    (catch/pass-completion mult) and `fg` (field-goal make mult) alongside `fumble`. Signatures: night catch
+    0.82; rain fg 0.75 (+fumble 1.5); wind catch 0.80/fg 0.85; snow catch 0.88 (+fumble 1.7); **hot** catch 0.88;
+    **blizzard** catch 0.72/fg 0.78/fumble 2.0. New exports `catchMult()` + `fgMult()`. `forGame` AUTO weights:
+    clear 34 / night 18 / rain 14 / wind 12 / snow 10 / hot 7 / blizzard 5. `say` lines tell the kid what to expect.
+  - `main.js` — the player's catch (`resolvePass`) and the CPU's (`resolveRedPass`) multiply their catch chance by
+    `TDWeather.catchMult()`; a new `wxIncompleteMsg()` gives weather-flavored incompletions ("THE WIND GOT IT!").
+  - `kick.js` — `doKick` rolls `Math.random() > TDWeather.fgMult()` ONCE on a `good` kick to push it `wide`
+    (weather), stored in new `K.lockedResult` so `judge()` can't waver between the flight and the final call;
+    the miss banner names the culprit ("NO GOOD — RAIN!"). Guarded by `window.TDWeather` so the standalone
+    `kick.html` is unaffected.
+  - `index.html` — new `#weather-fx` overlays for `wx-wind` (racing streaks), `wx-hot` (warm shimmer), `wx-blizzard`
+    (cold vignette + heavy snow), all added to the reduced-motion opt-out.
+  - Verified end-to-end: all 7 `catch`/`fg`/`fumble` multipliers correct; a controlled FG batch blew wide at
+    ~`1-fgMult` (rain 19/80, blizzard 16/80, clear 0/80); the three new overlays + announcer lines render; no errors.
 
 ## 🗂 File map (who does what)
 
@@ -588,7 +613,7 @@ cache-busting query like `…/index.html?cb=1`.)
 | `src/sound.js` | Live chiptune soundtrack (oscillators) + stings (`td`/`win`/`lose`/🥁`stuff`). API: `window.TDSound`. |
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
-| `src/weather.js` | 🌦 Weather & night games: the over-the-field rain/snow/night overlay, the slippery-ball fumble multiplier, and the menu picker. API: `window.TDWeather`. |
+| `src/weather.js` | 🌦 Weather & night games: 7 kinds (clear/night/rain/🌬️wind/snow/🥵hot/🥶blizzard), each with **gameplay effects** — `catchMult`/`fgMult`/`fumbleMult` (v1.29) — plus the over-field overlay and menu picker. API: `window.TDWeather`. |
 | `src/season.js` | 🏆 Season mode: 2-division league (📅 NFL-style home-and-away divisional schedule, v1.23), standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |
 | `src/draft.js` | 🏟 MY TEAM: your roster (💵 salaries + payroll/cap, v1.25), the NFL-style snake draft (📅 real Draft Day + 🔀 on-the-clock pick trades, v1.25), scouting & trades (💰 rating-priced, v1.24), and 📣 rival trade requests (v1.25). API: `window.TDDraft` (`boost()` read by main.js; talks to `window.TDGame`, `TDShop`). |
 | `src/stats.js` | World counters (Abacus) + review pop-up + the menu side-tracker. API: `window.TDStats`. |

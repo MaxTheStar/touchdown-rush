@@ -27,18 +27,28 @@
   const load  = (k, f) => (T ? T.load(k, f) : f);
   const $ = id => document.getElementById(id);
 
-  // The weather kinds the field can actually be in.
-  const KINDS = ['clear', 'night', 'rain', 'snow'];
+  // The weather kinds the field can actually be in. (🥵 hot & 🥶 blizzard are the
+  // new EXTREME ones.)
+  const KINDS = ['clear', 'night', 'rain', 'wind', 'snow', 'hot', 'blizzard'];
   // What the menu button can be set to (AUTO = pick a random one each game).
-  const PREFS = ['auto', 'clear', 'night', 'rain', 'snow'];
+  const PREFS = ['auto', 'clear', 'night', 'rain', 'wind', 'snow', 'hot', 'blizzard'];
 
-  // Button label + kickoff announcement + slippery-ball fumble multiplier per kind.
+  // Everything about each weather in one place:
+  //   btn    — the menu button label
+  //   say    — the kickoff announcement (also tells the kid what to expect)
+  //   fumble — slippery-ball fumble multiplier (1.0 = normal)
+  //   catch  — how much HARDER it is to catch / complete a pass (1.0 = normal, lower = harder)
+  //   fg     — how much HARDER a field goal is to make (1.0 = normal, lower = harder)
+  // Each weather has a SIGNATURE effect; the two extremes (hot/blizzard) hit more.
   const INFO = {
-    auto:  { btn: '🌦 AUTO' },
-    clear: { btn: '☀️ CLEAR', say: '☀️ Clear skies!',      fumble: 1.0 },
-    night: { btn: '🌙 NIGHT', say: '🌙 Night game!',        fumble: 1.0 },
-    rain:  { btn: '🌧️ RAIN',  say: '🌧️ Rain is falling!',   fumble: 1.5 },
-    snow:  { btn: '❄️ SNOW',  say: '❄️ Let it snow!',        fumble: 1.7 },
+    auto:     { btn: '🌦 AUTO' },
+    clear:    { btn: '☀️ CLEAR',    say: '☀️ Clear skies — perfect football weather!', fumble: 1.0, catch: 1.00, fg: 1.00 },
+    night:    { btn: '🌙 NIGHT',    say: '🌙 Night game — tougher to track the ball!', fumble: 1.0, catch: 0.82, fg: 1.00 },
+    rain:     { btn: '🌧️ RAIN',     say: '🌧️ Rain! Slippery ball and shaky kicks.',   fumble: 1.5, catch: 0.95, fg: 0.75 },
+    wind:     { btn: '🌬️ WINDY',    say: '🌬️ Windy — passes will flutter and sail!',   fumble: 1.0, catch: 0.80, fg: 0.85 },
+    snow:     { btn: '❄️ SNOW',     say: '❄️ Snow — cold hands, watch the fumbles!',   fumble: 1.7, catch: 0.88, fg: 0.90 },
+    hot:      { btn: '🥵 HEAT',     say: '🥵 HEAT WAVE! Sweaty hands out there.',      fumble: 1.0, catch: 0.88, fg: 0.97 },
+    blizzard: { btn: '🥶 BLIZZARD', say: '🥶 BLIZZARD! Brutal cold — everything is hard!', fumble: 2.0, catch: 0.72, fg: 0.78 },
   };
 
   let pref    = load('weather', 'auto');   // what YOU picked (may be 'auto')
@@ -48,7 +58,7 @@
   function apply(kind) {
     current = KINDS.includes(kind) ? kind : 'clear';
     const b = document.body;
-    b.classList.remove('wx-night', 'wx-rain', 'wx-snow', 'wx-active');
+    b.classList.remove('wx-night', 'wx-rain', 'wx-wind', 'wx-snow', 'wx-hot', 'wx-blizzard', 'wx-active');
     if (current !== 'clear') b.classList.add('wx-' + current, 'wx-active');
   }
 
@@ -58,15 +68,19 @@
   function forGame() {
     let kind = pref;
     if (pref === 'auto') {
-      const r = Math.random();                                  // 40% clear, 25% night, 20% rain, 15% snow
-      kind = r < 0.40 ? 'clear' : r < 0.65 ? 'night' : r < 0.85 ? 'rain' : 'snow';
+      // Weighted toward nice days; the two EXTREMES are rare treats.
+      const r = Math.random();   // clear 34 · night 18 · rain 14 · wind 12 · snow 10 · hot 7 · blizzard 5
+      kind = r < 0.34 ? 'clear' : r < 0.52 ? 'night' : r < 0.66 ? 'rain'
+           : r < 0.78 ? 'wind'  : r < 0.88 ? 'snow'  : r < 0.95 ? 'hot' : 'blizzard';
     }
     apply(kind);
     return INFO[current].say || '';
   }
 
-  // How much MORE likely a fumble is right now (1.0 = normal). Read by main.js.
-  function fumbleMult() { return INFO[current] ? INFO[current].fumble : 1.0; }
+  // The three ways weather bites, read live by main.js / kick.js (1.0 = no effect).
+  function fumbleMult() { return INFO[current] ? INFO[current].fumble : 1.0; }  // slippery ball
+  function catchMult()  { return INFO[current] ? INFO[current].catch  : 1.0; }  // catching / completing a pass
+  function fgMult()     { return INFO[current] ? INFO[current].fg     : 1.0; }  // making a field goal
 
   // ---- The 🌦 WEATHER menu button --------------------------------------------
   function paintBtn() {
@@ -91,6 +105,8 @@
   window.TDWeather = {
     forGame,        // beginGame: pick + show this game's weather, returns the announce line
     fumbleMult,     // main.js: slippery-ball fumble multiplier
+    catchMult,      // main.js: catch / pass-completion multiplier (night, wind, snow, hot, blizzard)
+    fgMult,         // kick.js: field-goal make multiplier (rain, wind, blizzard)
     current: () => current,
     pref: () => pref,
   };

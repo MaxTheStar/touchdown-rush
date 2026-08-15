@@ -67,6 +67,8 @@ window.KickGame = (function () {
     aimX: GOAL_CENTER, aimDir: 1,
     power: 0, powerDir: 1,
     lockedAim: 0, lockedPower: 0,
+    lockedResult: null,// the final outcome, decided once at kick time (so it can't waver)
+    wxBlew: false,     // 🌦 did the weather push a good kick wide?
 
     // practice-page scoreboard
     made: 0, streak: 0, best: 0,
@@ -103,6 +105,7 @@ window.KickGame = (function () {
     K.onDone = opts.onDone || null;
     K.active = true;
     K.rush = 0; K.blocked = false;
+    K.lockedResult = null; K.wxBlew = false;
     K.rushMs = opts.rushMs || RUSH_DEFAULT_MS;
     // Rebuild the rusher's art each kick so it wears the CURRENT opponent's colors.
     if (scene.textures.exists('k_rusher')) scene.textures.remove('k_rusher');
@@ -245,7 +248,15 @@ window.KickGame = (function () {
   // Fly the ball toward wherever you aimed, with your power.
   function doKick() {
     if (K.crosshair) K.crosshair.setVisible(false);
-    const result = judge();
+    let result = judge();
+    // 🌦 Bad weather (rain/wind/blizzard) can push a perfect kick WIDE. Roll it
+    // ONCE here and lock it in, so the ball's flight and the final call agree.
+    if (result === 'good' && window.TDWeather && window.TDWeather.fgMult &&
+        Math.random() > window.TDWeather.fgMult()) {
+      result = 'wide';
+      K.wxBlew = true;
+    }
+    K.lockedResult = result;
 
     // A punt always goes straight ahead; a field goal goes where you aimed.
     const endX = (K.mode === 'punt') ? GOAL_CENTER : K.lockedAim;
@@ -278,6 +289,8 @@ window.KickGame = (function () {
   function judge() {
     // Got tackled? Nothing else matters — it's a blocked, lost kick.
     if (K.blocked) return 'blocked';
+    // Once the kick is away, the outcome is locked (weather may have altered it).
+    if (K.lockedResult) return K.lockedResult;
     // A punt ALWAYS gets away — power just decides how far, never a miss.
     if (K.mode === 'punt') return 'punt';
     // A field goal needs enough power to reach, and good aim between the posts.
@@ -300,7 +313,11 @@ window.KickGame = (function () {
       showBanner('NO GOOD — SHORT!', '#ff8080');
     } else {
       K.streak = 0;
-      showBanner('NO GOOD — WIDE!', '#ff8080');
+      // If the weather blew it, name the culprit ("NO GOOD — WIND!").
+      const wxWord = (K.wxBlew && window.TDWeather && window.TDWeather.current)
+        ? ({ rain: 'RAIN', wind: 'WIND', blizzard: 'BLIZZARD' }[window.TDWeather.current()] || 'WEATHER')
+        : null;
+      showBanner(wxWord ? ('NO GOOD — ' + wxWord + '!') : 'NO GOOD — WIDE!', '#ff8080');
     }
     updateHUD();
   }
@@ -336,6 +353,7 @@ window.KickGame = (function () {
     K.aimX = GOAL_CENTER; K.aimDir = 1;
     K.power = 0; K.powerDir = 1;
     K.rush = 0; K.blocked = false;        // 🏃 send the rusher back to the start
+    K.lockedResult = null; K.wxBlew = false;
     positionRusher();
     K.state = 'aim';
     if (K.banner) { K.banner.destroy(); K.banner = null; }
@@ -515,8 +533,10 @@ window.KickGame = (function () {
   return {
     enter, exit, update, tap, isActive,
     peek: () => ({ state: K.state, mode: K.mode, active: K.active,
-                   outcome: judge(), lockedPower: K.lockedPower,
+                   outcome: judge(), aimX: K.aimX, power: K.power,
+                   lockedAim: K.lockedAim, lockedPower: K.lockedPower, lockedResult: K.lockedResult,
                    powerToReach: K.powerToReach, distance: K.distance,
-                   rush: K.rush, rushMs: K.rushMs, blocked: K.blocked }),
+                   rush: K.rush, rushMs: K.rushMs, blocked: K.blocked, wxBlew: K.wxBlew,
+                   POST_LEFT, POST_RIGHT }),
   };
 })();
