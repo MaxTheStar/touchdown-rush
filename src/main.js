@@ -484,7 +484,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -543,6 +543,11 @@ function update(time, delta) {
     return;
   }
   if (G.state === 'dwait') { freezeEveryone(); return; }   // their drive just ended
+  if (G.state === 'dsim') {                                 // 🛡 1-player tap-to-progress defense
+    freezeEveryone();
+    if (Phaser.Input.Keyboard.JustDown(keys.snap) || Phaser.Input.Keyboard.JustDown(keys.one)) DefenseSim.tap();
+    return;
+  }
 
   if (G.state === 'dead') {
     freezeEveryone();
@@ -1740,7 +1745,10 @@ function startCpuDrive() {
   // possession starts at their own 25.
   const spot = (G.turnoverSpotCpu != null) ? G.turnoverSpotCpu : 25;
   G.turnoverSpotCpu = null;
-  G.cpu = { spot, down: 1, togo: 10, play: null };
+  G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
+  // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
+  // Player 2 gets to run the red offense on their possession.
+  if (!G.twoPlayer) { DefenseSim.start(); return; }
   showBanner(G.oppTeam.abbr + ' BALL — PLAY DEFENSE!', true);
   sayComment('Tackle the ball carrier!');
   setupDefensePlay();
@@ -2407,6 +2415,133 @@ function takeYourBall() {
     startKickoff();
   }
 }
+
+// ============================================================
+// 🛡 DEFENSE (1-player): watch the opponent's drive, tap to advance
+// ------------------------------------------------------------
+// Chasing a ball carrier is gone for single-player. Now defense is a quick,
+// tap-through play-by-play on a SMALL FIELD MAP: each tap runs one of the
+// opponent's plays (a run or a pass, decided by difficulty, YOUR defense
+// rating and the weather), and the drive ends on a score, a punt, a turnover,
+// or a stop on downs — then the ball comes back to you. It reuses the same
+// cpuDriveEnd()/finishCpuDrive() that the old live defense used, so scoring &
+// possession are unchanged. (2-player keeps LIVE defense — see startCpuDrive —
+// so Player 2 still gets to run the red offense on their turn.)
+// ============================================================
+const DefenseSim = (function () {
+  const $id = id => document.getElementById(id);
+  const panel = show => { const el = $id('defense-sim'); if (el) el.style.display = show ? 'flex' : 'none'; };
+  const ordinal = n => (n === 1 ? '1ST' : n === 2 ? '2ND' : n === 3 ? '3RD' : n === 4 ? '4TH' : n + 'TH');
+
+  // Show this drive's field map + down & distance from G.cpu. `line` = the
+  // play-by-play sentence to show (HTML ok); omit to keep the current one.
+  function render(line) {
+    if (!G.cpu) return;
+    const spot = Math.max(0, Math.min(100, G.cpu.spot));
+    const bx = 5 + spot * 0.90;
+    const fx = 5 + Math.min(100, G.cpu.spot + Math.max(0, G.cpu.togo)) * 0.90;
+    const ball = $id('dsim-ball'); if (ball) ball.style.left = bx + '%';
+    const fd = $id('dsim-fd'); if (fd) fd.style.left = fx + '%';
+    const dd = $id('dsim-down'); if (dd) dd.textContent = ordinal(G.cpu.down) + ' & ' + (G.cpu.togo <= 0 ? 'GOAL' : G.cpu.togo);
+    const tg = $id('dsim-togoal'); if (tg) tg.textContent = (100 - G.cpu.spot) + ' yds to the end zone';
+    if (line != null) { const l = $id('dsim-log'); if (l) l.innerHTML = line; }
+    const tap = $id('dsim-tap'); if (tap) tap.textContent = 'TAP TO CONTINUE ▶';
+  }
+
+  // Begin the opponent's drive (G.cpu is already set by startCpuDrive).
+  function start() {
+    G.state = 'dsim';
+    G.dsimEnding = false; G.dsimPending = null;
+    document.body.classList.remove('kicking');
+    document.body.classList.add('returning');
+    const abbr = G.oppTeam ? G.oppTeam.abbr : 'CPU';
+    const t = $id('dsim-team'); if (t) t.textContent = abbr;
+    const ez = $id('dsim-ez-l'); if (ez) ez.textContent = abbr;
+    panel(true);
+    render(pick(['They have the ball — tap to watch! ▶', 'Tap to see their play ▶']));
+    updateHUD();
+  }
+
+  // Decide ONE play's outcome from difficulty, YOUR defense rating & the weather.
+  function play() {
+    const dDef = window.TDDraft ? TDDraft.teamOverall().def : 65;
+    const dStop = Math.min(1, Math.max(0, (dDef - 60) / 39));                 // 0..1: your defense strength
+    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop);
+    const wxCatch  = window.TDWeather ? TDWeather.catchMult()  : 1;
+    const wxFumble = window.TDWeather ? TDWeather.fumbleMult() : 1;
+    const r = Math.random();
+
+    if (Math.random() < 0.56) {                                               // ---- PASS ----
+      if (r < 0.045 + dStop * 0.03) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
+      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow));
+      if (Math.random() < inc) return { r: 'inc', y: 0, t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
+      if (Math.random() < 0.10 + dStop * 0.10) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, t: '<b>SACK!</b> ' + y + ' yards.' }; }
+      let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow); if (Math.random() < 0.08) y += Phaser.Math.Between(10, 26);
+      return { r: 'gain', y, t: 'Pass complete for <b>' + y + '</b>.' };
+    }
+    // ---- RUN ----
+    if (r < (0.03 + dStop * 0.02) * wxFumble) return { r: 'fum', y: 0, t: '<b>FUMBLE!</b> You recovered it!' };
+    if (Math.random() < 0.18 + dStop * 0.15) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
+    let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow); if (Math.random() < 0.08) y += Phaser.Math.Between(10, 30);
+    return { r: 'gain', y, t: 'Run for <b>' + y + '</b> yards.' };
+  }
+
+  // Apply a play to the drive: move the ball, update downs, end it if it's over.
+  function apply(p) {
+    advanceClock(p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY);
+    if (p.r === 'int' || p.r === 'fum') { endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
+    G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
+    if (G.cpu.spot >= 100) { endDrive('touchdown', null, '<b>TOUCHDOWN ' + (G.oppTeam ? G.oppTeam.abbr : '') + '!</b>'); return; }
+    G.cpu.togo -= p.y;
+    let extra = '';
+    if (G.cpu.togo <= 0) { G.cpu.down = 1; G.cpu.togo = 10; G.cpu.goFor = false; extra = ' <b>1st down.</b>'; }
+    else G.cpu.down++;
+    if (G.cpu.down > 4) { if (window.TDSound) TDSound.sting('td'); endDrive('turnover', 'STOPPED ON DOWNS — YOUR BALL!', p.t); return; }
+    render(p.t + extra);
+  }
+
+  // The drive is over — show the final line, then the NEXT tap hands off (via
+  // cpuDriveEnd, exactly like the old live defense did).
+  function endDrive(kind, msg, line) {
+    render(line);
+    G.dsimEnding = true;
+    G.dsimPending = { kind, msg };
+  }
+
+  // One tap advances everything.
+  function tap() {
+    if (G.state !== 'dsim') return;
+    // A drive just ended? This tap hands the ball back.
+    if (G.dsimEnding) {
+      const pk = G.dsimPending; G.dsimEnding = false; G.dsimPending = null;
+      panel(false);
+      if (pk) cpuDriveEnd(pk.kind, pk.msg);
+      return;
+    }
+    // Settle the quarter/half clock at this play boundary (like defenseNextPlay).
+    const t = tickPeriodAtBoundary();
+    if (t === 'gameover') { panel(false); endGame(); return; }
+    if (t === 'halftime') { panel(false); startBreak('half', startCpuDrive); return; }  // 2nd half: they receive
+    if (t === 'qbreak')   { panel(false); startBreak('q', () => { if (G.cpu) { G.state = 'dsim'; panel(true); render(); } }); return; }
+    // 4th down: they decide — usually kick (FG in range / punt), sometimes go for it.
+    if (G.cpu.down === 4 && !G.cpu.goFor) {
+      const fgDist = (100 - G.cpu.spot) + 17;
+      if (fgDist <= FG_MAX_DIST && Math.random() < 0.85) { endDrive('fieldgoal', null, '4th down — they send out the <b>field-goal</b> unit…'); return; }
+      if (!(G.cpu.togo <= 2 && G.cpu.spot > 40 && Math.random() < 0.5)) { endDrive('punt', null, '4th down — they <b>punt</b> it away…'); return; }
+      G.cpu.goFor = true;                                   // GO FOR IT → run the 4th-down play now
+      render("4th down — they're <b>GOING FOR IT!</b>");
+      return;
+    }
+    apply(play());
+  }
+
+  function wire() {
+    const el = $id('defense-sim');
+    if (el) el.addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
+  }
+
+  return { start, tap, wire };
+})();
 
 // ============================================================
 // QUARTER BREAKS & HALFTIME — the score, a breather… and an AD 📺
@@ -3262,6 +3397,7 @@ function setupTouchButtons() {
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
   bindTapEl('btn-xp', () => choosePAT('kick'));    // 🏈 after a TD: kick the extra point
   bindTapEl('btn-two', () => choosePAT('two'));    // 🏈 …or go for two
+  DefenseSim.wire();                               // 🛡 the 1-player tap-to-progress defense map
 
   // The main-menu buttons: ◀ ▶ flip teams, PLAY starts the game
   bindTapEl('tm-prev', () => menuNav(-1));

@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.29 — cache-buster is `?v=46` in `index.html`.
+- **Version:** v1.30 — cache-buster is `?v=47` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.29 are all LIVE (v1.25–v1.29 pushed 2026-08-14)
+## ✅ Sync status — v1.11–v1.30 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -54,6 +54,13 @@ for on 2026-08-14, shipped one-at-a-time): 🌙 night → harder to catch, 🌧�
 multipliers (+ `catchMult()`/`fgMult()`); `main.js` applies `catchMult` to both teams' completions, `kick.js`
 can blow a good FG wide (locked once so it can't waver). Verified: FG-wide rates match `fgMult` (rain ~24%,
 blizzard ~20%, clear 0%), all 7 overlays + announcer lines render, no errors.
+
+And **v1.30** (cache-buster `?v=47`) — 🛡 **defense is simplified** (2nd of Max's 2026-08-14 feature batch): in
+1-player, chasing a ball carrier is GONE — defense is now a **tap-to-progress mini-map** (`#defense-sim` +
+`DefenseSim` in `main.js`) that simulates the opponent's drive play-by-play and reuses the old
+`cpuDriveEnd()`/`finishCpuDrive()` for scoring & possession. **2-player keeps LIVE defense** (`startCpuDrive`
+branches on `G.twoPlayer`) so P2 still runs the red offense. Verified over 400 frozen-clock drives: realistic
+endings (punt 60% / turnover 19% / FG 14% / TD 7%), scoring deltas consistent (3/6/7/8), no errors, no loops.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -602,13 +609,32 @@ cache-busting query like `…/index.html?cb=1`.)
     (cold vignette + heavy snow), all added to the reduced-motion opt-out.
   - Verified end-to-end: all 7 `catch`/`fg`/`fumble` multipliers correct; a controlled FG batch blew wide at
     ~`1-fgMult` (rain 19/80, blizzard 16/80, clear 0/80); the three new overlays + announcer lines render; no errors.
+- **v1.30 — 🛡 Defense simplified: a tap-to-progress mini-map** (this iteration — `src/main.js` `DefenseSim` +
+  `#defense-sim` overlay & CSS in `index.html`). Single-player defense no longer chases a ball carrier:
+  - **How it plays** — when the opponent gets the ball (`startCpuDrive`, gated `if (!G.twoPlayer)`), a DOM overlay
+    shows a small field map (their end zone ↔ 🛡 yours, a ball marker + first-down line), the down & distance, a
+    play-by-play line, and a big TAP button. Each tap runs one play via `DefenseSim.play()` (run/pass outcome from
+    difficulty × YOUR `TDDraft.teamOverall().def` × weather `catchMult`/`fumbleMult`), `apply()` moves the ball &
+    updates downs, and the drive ends on a score / punt / turnover / stop-on-downs. State is a new `'dsim'`
+    (idle in the update loop; keyboard `space`/`1` also advance). Endings are **tap-driven** (`endDrive` sets
+    `G.dsimEnding`/`G.dsimPending`; the next tap calls the SAME `cpuDriveEnd()` the live defense used, so scoring,
+    the 6/7/8 TD try, safeties and the hand-back are unchanged). Clock/quarter boundaries mirror `defenseNextPlay`
+    (`tickPeriodAtBoundary` each tap → qbreak resumes the sim, halftime/gameover exit).
+  - **2-player is untouched** — `startCpuDrive` still calls the old live `setupDefensePlay()` when `G.twoPlayer`, so
+    Player 2 keeps running the red offense on their possession. The old live-D functions (`updateDefensePlay`,
+    `updateRedTeam`, `redPlayEnd`, `pickMyDefender`, `startPickSix`…) stay for that path.
+  - ⚠️ Gotcha fixed in testing: `DefenseSim` first used `rint()` (a draft.js helper not in main.js) →
+    `ReferenceError`; switched to `Phaser.Math.Between()`. `DefenseSim` is exported on `window.__td` for testing.
+  - Verified: 400 frozen-clock drives ended punt 60% / TO 19% / FG 14% / TD 7% with consistent oppScore deltas
+    (3/6/7/8), avg ~7 taps, no timeouts/errors; the mini-map DOM (down, yds-to-goal, ball %, first-down line,
+    play-by-play) updates; 2-player still enters live `'dpresnap'`; the overlay renders correctly.
 
 ## 🗂 File map (who does what)
 
 | File | Job |
 |------|-----|
 | `index.html` | Page shell, all CSS, every HTML overlay/button, and the script load order (bump `?v=N` on every ship). |
-| `src/main.js` | The Phaser game: field, players, plays, defense, kickoffs, HUD, replay, team menu. |
+| `src/main.js` | The Phaser game: field, players, plays, kickoffs, HUD, replay, team menu. Defense = a tap-to-progress mini-map (`DefenseSim`, v1.30) in 1-player; live defense kept for 2-player. |
 | `src/kick.js` | The field-goal/punt/extra-point kick mini-game — now with a 🏈 **rusher who can block the kick / tackle the kicker** (v1.28, reads `rushMs` + `window.OPP`). **Loads before main.js** (main uses `KickGame`). |
 | `src/sound.js` | Live chiptune soundtrack (oscillators) + stings (`td`/`win`/`lose`/🥁`stuff`). API: `window.TDSound`. |
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
