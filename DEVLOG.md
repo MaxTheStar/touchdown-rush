@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.26 — cache-buster is `?v=43` in `index.html`.
+- **Version:** v1.27 — cache-buster is `?v=44` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.26 are all LIVE (v1.25–v1.26 pushed 2026-08-14)
+## ✅ Sync status — v1.11–v1.27 are all LIVE (v1.25–v1.27 pushed 2026-08-14)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -37,6 +37,10 @@ Same day, **v1.26** shipped (cache-buster `?v=43`) — 🏈 **two-point conversi
 choose ① KICK (+1) or ② GO FOR 2 (+2, one real snap from the 2-yard line), and the CPU goes for two too (its
 TDs now score 6/7/8). All in `src/main.js` + a new `#pat-choice` panel in `index.html`. Verified by driving the
 exported globals and stepping the frozen game loop by hand.
+
+And **v1.27** (cache-buster `?v=44`) — 🎉 a **celebration when YOU convert a two-pointer**: `resolveTwoPoint`'s
+success path now fires `TDShop.celebrate(null, '🎉', 'TWO POINTS!  +2')` (the same confetti party as level-ups /
+shop buys; it respects "reduce motion"). A failed try stays quiet, and the CPU's conversions don't party.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -546,6 +550,12 @@ cache-busting query like `…/index.html?cb=1`.)
     resolveTwoPoint`. `G.twoPtTry` (and `G.pendingXP`) reset in `beginGame`. Verified: +2 on a converted try,
     +0 on a stuffed try, GO-FOR-2 sets up the 2-yard snap (`losYards 98`, presnap), KICK enters the `xp` kick,
     no console errors.
+- **v1.27 — 🎉 Two-point celebration** (this iteration — `src/main.js`): converting a two-pointer is a big,
+  gutsy moment, so `resolveTwoPoint`'s `'touchdown'` branch now throws a party — `TDShop.celebrate(null, '🎉',
+  'TWO POINTS!  +2')`, the same floating-label + emoji-spray used for level-ups and shop buys (respects
+  `prefers-reduced-motion` on its own). Only YOUR made conversion celebrates; a stuffed try and the CPU's
+  conversions don't. Verified: a converted try spawns the `TWO POINTS!  +2` label + 12 confetti; a failed try
+  spawns none.
 
 ## 🗂 File map (who does what)
 

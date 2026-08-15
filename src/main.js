@@ -1598,6 +1598,9 @@ function resolveTwoPoint(result) {
     if (window.TDSound) TDSound.sting('td');
     if (window.TDShop)  TDShop.earn(4);           // a 2-pt play pays a touch more than a kick
     if (window.TDProgress) TDProgress.addXP(5);   // 📈 +5 XP
+    // 🎉 A gutsy two-pointer deserves a party — a burst of confetti + a floating
+    // shout (reuses the shop's celebrate; it respects "reduce motion" on its own).
+    if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '🎉', 'TWO POINTS!  +2');
   } else {
     if (window.TDSound) TDSound.sting('lose');
     msg = (result === 'interception') ? 'PICKED OFF — NO GOOD!'
