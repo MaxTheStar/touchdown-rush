@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.30 — cache-buster is `?v=47` in `index.html`.
+- **Version:** v1.31 — cache-buster is `?v=48` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.30 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.31 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.31 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -61,6 +61,14 @@ And **v1.30** (cache-buster `?v=47`) — 🛡 **defense is simplified** (2nd of 
 `cpuDriveEnd()`/`finishCpuDrive()` for scoring & possession. **2-player keeps LIVE defense** (`startCpuDrive`
 branches on `G.twoPlayer`) so P2 still runs the red offense. Verified over 400 frozen-clock drives: realistic
 endings (punt 60% / turnover 19% / FG 14% / TD 7%), scoring deltas consistent (3/6/7/8), no errors, no loops.
+
+And **v1.31** (cache-buster `?v=48`) — 🛍 **shop upgrade** (3rd of the batch): **4 new gear items** (each ties into
+a recent feature) + **3 buyable uniforms**. New gear: 🎯 CANNON ARM (fewer thrown picks), 🧥 ALL-WEATHER GEAR
+(shrug off the v1.29 weather penalties on catches & FGs), 🦵 GOLDEN TOE (easier kicks — steadier aim + more time
+vs the v1.28 rusher), 🖐 BALL HAWK (more takeaways in the v1.30 defense sim). New 🎽 STYLES shelf sells FIREBALL /
+AQUA STORM / VOID STAR uniforms for coins. Verified: perks correct at max (arm .5, weather .8, toe .6, hawk .2),
+old saves normalize (no NaN), All-Weather cut rain FG-wide 20→6/80, Golden Toe rushMs 3400→5848, Ball Hawk
+turnovers 19%→68%, buying a uniform works, no errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -628,6 +636,23 @@ cache-busting query like `…/index.html?cb=1`.)
   - Verified: 400 frozen-clock drives ended punt 60% / TO 19% / FG 14% / TD 7% with consistent oppScore deltas
     (3/6/7/8), avg ~7 taps, no timeouts/errors; the mini-map DOM (down, yds-to-goal, ball %, first-down line,
     play-by-play) updates; 2-player still enters live `'dpresnap'`; the overlay renders correctly.
+- **v1.31 — 🛍 Shop upgrade: 4 new gear items + 3 buyable uniforms** (this iteration — `src/shop.js`,
+  `src/main.js`, `src/kick.js`, `index.html`). The shop went 6 → 10 gear items, each wired to a real mechanic
+  (and, on purpose, to a recent feature):
+  - 🎯 **CANNON ARM** (`arm`, `armAccuracy()` = `.05×lvl`) — `main.js` `resolvePass` multiplies the contested-pass
+    INT chance by `(1 - armAccuracy())` (L10 = half the picks).
+  - 🧥 **ALL-WEATHER GEAR** (`allwx`, `weatherResist()` = `.08×lvl`, 0..0.8) — blends a weather multiplier back
+    toward 1.0: `main.js` catch (`wxCatch += (1-wxCatch)*resist`) and `kick.js` FG (`fg += (1-fg)*resist`). Softens
+    the v1.29 penalties.
+  - 🦵 **GOLDEN TOE** (`toe`, `toeFactor()` = `.06×lvl`, 0..0.6) — `kick.js` `enter()` slows `aimSpeed` (×`1-toe*.6`),
+    raises `rushMs` (×`1+toe*1.2`, more time vs the v1.28 rusher) and lowers `powerToReach` (×`1-toe*.25`).
+  - 🖐 **BALL HAWK** (`hawk`, `hawkBoost()` = `.02×lvl`, 0..0.2) — `DefenseSim.play()` adds it to the INT chance and
+    half of it to the fumble chance (more v1.30 takeaways).
+  - 🎽 **STYLES shelf** — new `#shop-uniforms` list + `SHOP_UNIS`/`buyUniform` in shop.js sells 3 uniforms with a
+    `price` (FIREBALL 120 / AQUA STORM 160 / VOID STAR 240); buying spends coins, adds to `owned`, and jumps the
+    team menu to the new look. New perks exported on `TDShop`.
+  - 🛟 Save-compat: after `load('gear', …)`, `ITEMS.forEach(it => gear[it.id] ??= 0)` so old saves get the new
+    item levels (no `undefined → NaN`). Verified end-to-end (see the sync-status note above); no errors.
 
 ## 🗂 File map (who does what)
 
@@ -637,7 +662,7 @@ cache-busting query like `…/index.html?cb=1`.)
 | `src/main.js` | The Phaser game: field, players, plays, kickoffs, HUD, replay, team menu. Defense = a tap-to-progress mini-map (`DefenseSim`, v1.30) in 1-player; live defense kept for 2-player. |
 | `src/kick.js` | The field-goal/punt/extra-point kick mini-game — now with a 🏈 **rusher who can block the kick / tackle the kicker** (v1.28, reads `rushMs` + `window.OPP`). **Loads before main.js** (main uses `KickGame`). |
 | `src/sound.js` | Live chiptune soundtrack (oscillators) + stings (`td`/`win`/`lose`/🥁`stuff`). API: `window.TDSound`. |
-| `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
+| `src/shop.js` | Coins, Pro Shop (**10 gear items** + a 🎽 STYLES uniform shelf, v1.31), Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (perks incl. `armAccuracy`/`weatherResist`/`toeFactor`/`hawkBoost`; + `window.TDMenu` in main.js). |
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
 | `src/weather.js` | 🌦 Weather & night games: 7 kinds (clear/night/rain/🌬️wind/snow/🥵hot/🥶blizzard), each with **gameplay effects** — `catchMult`/`fgMult`/`fumbleMult` (v1.29) — plus the over-field overlay and menu picker. API: `window.TDWeather`. |
 | `src/season.js` | 🏆 Season mode: 2-division league (📅 NFL-style home-and-away divisional schedule, v1.23), standings, playoffs, Max Bowl, the season screen. API: `window.TDSeason` (talks to `window.TDGame` in main.js). |

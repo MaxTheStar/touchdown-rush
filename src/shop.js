@@ -48,7 +48,14 @@
     // 🏆 The gold CHAMPIONS uniform — you can ONLY get this by winning the
     //    Max Bowl in Season mode (season.js grants it via TDShop.grantUniform).
     CHMP: { abbr: 'CHMP', name: 'CHAMPIONS',   jersey: 0x8a6d1a, helmet: 0xffd700, special: true },
+    // 🎽 v1.31 — three NEW styles you can BUY with coins in the Pro Shop's
+    //    STYLES shelf (a `price` = it's for sale). They join your team menu once bought.
+    FIRE: { abbr: 'FIRE', name: 'FIREBALL',    jersey: 0x8a1f06, helmet: 0xff7a1a, special: true, price: 120 },
+    AQUA: { abbr: 'AQUA', name: 'AQUA STORM',  jersey: 0x06406a, helmet: 0x22d3ee, special: true, price: 160 },
+    VOID: { abbr: 'VOID', name: 'VOID STAR',   jersey: 0x14091f, helmet: 0x8a4dff, special: true, price: 240 },
   };
+  // The abbrs that are for SALE in the shop (in display order).
+  const SHOP_UNIS = ['FIRE', 'AQUA', 'VOID'];
 
   // ---- 🎁 The 14-day reward calendar --------------------------------------
   // coins/uniform = what EVERYONE gets, every day, for FREE. Five days hand out
@@ -100,11 +107,27 @@
     { id: 'grip',   icon: '🔒', name: 'IRON GRIP',
       blurb: 'Hold the ball tight — way fewer fumbles',
       next: L => '−' + (9 * L) + '% fumbles' },
+    // ---- NEW gear (v1.31) — each ties into a recent feature -----------------
+    { id: 'arm',    icon: '🎯', name: 'CANNON ARM',
+      blurb: 'Zip your passes in — way fewer interceptions',
+      next: L => '−' + (5 * L) + '% picks thrown' },
+    { id: 'allwx',  icon: '🧥', name: 'ALL-WEATHER GEAR',
+      blurb: 'Shrug off rain, wind, snow & the cold',
+      next: L => (8 * L) + '% weather-proof' },
+    { id: 'toe',    icon: '🦵', name: 'GOLDEN TOE',
+      blurb: 'Steadier aim + more time before the block',
+      next: L => 'kicks ' + (6 * L) + '% easier' },
+    { id: 'hawk',   icon: '🖐', name: 'BALL HAWK',
+      blurb: 'Snag more picks & fumbles on defense',
+      next: L => '+' + (2 * L) + '% takeaways' },
   ];
 
   // ---- What you own (loaded from last time) -------------------------------
   let coins   = load('coins', 0);
   let gear    = load('gear', { cleats: 0, turbo: 0, gloves: 0, energy: 0, stiff: 0, grip: 0 });
+  // Make sure every shop item has a level, even in OLD saves from before it existed
+  // (otherwise a new perk would read `undefined` and go NaN). New items start at 0.
+  ITEMS.forEach(it => { if (gear[it.id] == null) gear[it.id] = 0; });
   let daily   = load('daily', { day: 0, last: '' });  // day = last day claimed (1-7)
   let owned   = load('owned-uniforms', []);           // abbrs, e.g. ['GLX']
 
@@ -221,6 +244,23 @@
   // = 0.9, i.e. 90% fewer fumbles. main.js multiplies FUMBLE_CHANCE by (1 - this).
   function gripFactor() { return 0.09 * gear.grip; }
 
+  // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
+  // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
+  function armAccuracy() { return 0.05 * gear.arm; }
+
+  // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
+  // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,
+  // so catches & field goals suffer less in rain/wind/snow/cold. Read live.
+  function weatherResist() { return 0.08 * gear.allwx; }
+
+  // 🦵 Golden toe: how much EASIER kicks are (0..0.6). kick.js slows the aim swing,
+  // gives more time before the rusher, and needs a little less power. Read on enter.
+  function toeFactor() { return 0.06 * gear.toe; }
+
+  // 🖐 Ball hawk: extra takeaway chance on defense (0..0.20 at level 10). The
+  // DefenseSim adds this to its interception & fumble odds. Read per play.
+  function hawkBoost() { return 0.02 * gear.hawk; }
+
   // ============================================================
   // 🛍 THE PRO SHOP screen
   // ============================================================
@@ -255,6 +295,48 @@
         buy(btn.dataset.item, btn);
       });
     });
+
+    renderShopUniforms();   // 🎽 the STYLES shelf below the gear
+  }
+
+  // 🎽 The STYLES shelf: buy new uniforms with coins. Owned ones show a check;
+  // the rest show their price (grayed out until you can afford them).
+  function renderShopUniforms() {
+    const box = $('shop-uniforms');
+    if (!box) return;
+    box.innerHTML = SHOP_UNIS.map(abbr => {
+      const u = UNIFORMS[abbr];
+      const have = owned.includes(abbr);
+      const canBuy = !have && coins >= u.price;
+      const hex = n => '#' + n.toString(16).padStart(6, '0');
+      return `
+        <div class="shop-row">
+          <div class="uni-chip" style="background:linear-gradient(${hex(u.jersey)} 50%,${hex(u.helmet)} 50%)"></div>
+          <div class="shop-info">
+            <div class="shop-name">${u.name}</div>
+            <div class="shop-blurb">${have ? 'In your team menu' : 'A fresh look for your squad'}</div>
+          </div>
+          <div class="shop-buy ${have ? 'maxed' : canBuy ? '' : 'poor'}" data-uni="${abbr}">
+            ${have ? 'OWNED ✓' : u.price + ' 🪙'}
+          </div>
+        </div>`;
+    }).join('');
+    box.querySelectorAll('.shop-buy[data-uni]').forEach(btn => {
+      btn.addEventListener('pointerdown', e => { e.preventDefault(); buyUniform(btn.dataset.uni, btn); });
+    });
+  }
+
+  function buyUniform(abbr, originEl) {
+    const u = UNIFORMS[abbr];
+    if (!u || owned.includes(abbr)) return;
+    if (!spend(u.price)) return;                 // can't afford (button was gray)
+    owned.push(abbr);
+    store('owned-uniforms', owned);
+    if (window.TDSound) TDSound.sting('win');
+    celebrate(originEl, '🎽', u.name + '!');
+    renderShop();
+    // Pop the team menu to the new style so you can see it right away.
+    if (window.TDMenu) setTimeout(() => { closeOv('shop-modal'); TDMenu.showTeam(abbr); }, 900);
   }
 
   function buy(id, originEl) {
@@ -425,8 +507,9 @@
     earn, spend, coins: () => coins,
     startGame: () => { earnedThisGame = 0; },
     gameEarnings: () => earnedThisGame,
-    // gear perks (read by main.js during plays)
+    // gear perks (read by main.js / kick.js during plays)
     speedMult, dashBoost, gloveBoost, energyMs, ENERGY_MULT, stiffChance, gripFactor,
+    armAccuracy, weatherResist, toeFactor, hawkBoost,
     // uniforms you've unlocked (the menu adds them to the team list)
     unlockedUniforms: () => owned.map(a => UNIFORMS[a]).filter(Boolean),
     grantUniform,

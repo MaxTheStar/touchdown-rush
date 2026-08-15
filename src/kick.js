@@ -113,6 +113,13 @@ window.KickGame = (function () {
     // Longer kicks are harder: you need more power, and the aim swings faster.
     K.powerToReach = clamp(0.30 + (K.distance - 17) / 70, 0.35, 0.92);
     K.aimSpeed = AIM_SPEED * (1 + (K.distance - 34) / 130);
+    // 🦵 GOLDEN TOE (shop): steadier aim, more time before the block, less power needed.
+    const toe = (window.TDShop && window.TDShop.toeFactor) ? window.TDShop.toeFactor() : 0;
+    if (toe > 0) {
+      K.aimSpeed     *= (1 - toe * 0.6);    // slower swing = easier to stop between the posts
+      K.rushMs       *= (1 + toe * 1.2);    // more time before the rusher gets home
+      K.powerToReach *= (1 - toe * 0.25);   // needs a touch less power to reach
+    }
 
     makeTextures(scene);
     buildView(scene);
@@ -251,10 +258,11 @@ window.KickGame = (function () {
     let result = judge();
     // 🌦 Bad weather (rain/wind/blizzard) can push a perfect kick WIDE. Roll it
     // ONCE here and lock it in, so the ball's flight and the final call agree.
-    if (result === 'good' && window.TDWeather && window.TDWeather.fgMult &&
-        Math.random() > window.TDWeather.fgMult()) {
-      result = 'wide';
-      K.wxBlew = true;
+    if (result === 'good' && window.TDWeather && window.TDWeather.fgMult) {
+      let fg = window.TDWeather.fgMult();
+      const resist = (window.TDShop && window.TDShop.weatherResist) ? window.TDShop.weatherResist() : 0;
+      fg += (1 - fg) * resist;                 // 🧥 All-Weather Gear steadies the kick
+      if (Math.random() > fg) { result = 'wide'; K.wxBlew = true; }
     }
     K.lockedResult = result;
 

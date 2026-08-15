@@ -800,6 +800,11 @@
       padding: 10px; margin-bottom: 8px;
     }
     .shop-icon { font-size: 26px; }
+    /* 🎽 STYLES shelf: a section heading + a bigger uniform swatch in each row */
+    .shop-section { font: 800 12px "Arial Black", Arial; color: #8fd0ff; letter-spacing: .5px;
+      text-align: left; margin: 14px 2px 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.14); }
+    #shop-uniforms .uni-chip { width: 34px; height: 26px; border-radius: 6px; margin: 0 2px 0 0; flex: none;
+      border: 1px solid rgba(255,255,255,0.25); }
     .shop-info { flex: 1; min-width: 0; }
     .shop-name { font: 800 13px "Arial Black", Arial; color: #fff; }
     .shop-pips { color: #ffd60a; letter-spacing: 2px; margin-left: 4px; }
@@ -1061,6 +1066,8 @@
       <div class="ov-sub">Gear up! Every upgrade really changes how you play.</div>
       <div id="shop-coins"></div>
       <div id="shop-items"></div>
+      <div class="shop-section">🎽 STYLES — new looks for your squad</div>
+      <div id="shop-uniforms"></div>
       <div class="ov-btn" id="shop-close">DONE</div>
     </div>
   </div>
@@ -1109,16 +1116,16 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=47"></script>
-  <script src="src/sound.js?v=47"></script>
-  <script src="src/shop.js?v=47"></script>
-  <script src="src/progress.js?v=47"></script>
-  <script src="src/weather.js?v=47"></script>
-  <script src="src/season.js?v=47"></script>
-  <script src="src/draft.js?v=47"></script>
-  <script src="src/ads.js?v=47"></script>
-  <script src="src/tour.js?v=47"></script>
-  <script src="src/kick.js?v=47"></script>
-  <script src="src/main.js?v=47"></script>
+  <script src="src/stats.js?v=48"></script>
+  <script src="src/sound.js?v=48"></script>
+  <script src="src/shop.js?v=48"></script>
+  <script src="src/progress.js?v=48"></script>
+  <script src="src/weather.js?v=48"></script>
+  <script src="src/season.js?v=48"></script>
+  <script src="src/draft.js?v=48"></script>
+  <script src="src/ads.js?v=48"></script>
+  <script src="src/tour.js?v=48"></script>
+  <script src="src/kick.js?v=48"></script>
+  <script src="src/main.js?v=48"></script>
 </body>
 </html>

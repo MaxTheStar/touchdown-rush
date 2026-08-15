@@ -845,7 +845,8 @@ function resolvePass(wr, x, y) {
   // A defender is right there — he either intercepts it or knocks it away.
   // Maxwell contests from a hair farther and picks it off a lot more often.
   if (nearestDef < (starThere ? CATCH_CONTEST + 6 : CATCH_CONTEST)) {
-    const intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
+    let intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
+    if (window.TDShop && TDShop.armAccuracy) intChance *= (1 - TDShop.armAccuracy());   // 🎯 Cannon Arm: fewer picks
     if (Math.random() < intChance) {
       G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(wy)), 1, 99);
       endPlay('interception');
@@ -856,7 +857,8 @@ function resolvePass(wr, x, y) {
   // Wide open — but receivers aren't perfect. They can miss it...
   // (🧤 STICKY GLOVES from the shop tilt both chances your way.)
   const gl = window.TDShop ? TDShop.gloveBoost() : { catchBonus: 0, dropCut: 0 };
-  const wxCatch = window.TDWeather ? TDWeather.catchMult() : 1;   // 🌦 night/wind/snow/hot/blizzard make catches harder
+  let wxCatch = window.TDWeather ? TDWeather.catchMult() : 1;     // 🌦 night/wind/snow/hot/blizzard make catches harder…
+  if (window.TDShop && TDShop.weatherResist) wxCatch += (1 - wxCatch) * TDShop.weatherResist();   // 🧥 …All-Weather Gear shrugs it off
   if (Math.random() > (CATCH_CHANCE + gl.catchBonus) * wxCatch) { endPlay('incomplete', wxIncompleteMsg()); return; }
   // ...or catch it and drop it.
   if (Math.random() < DROP_CHANCE - gl.dropCut)  { endPlay('incomplete', 'DROPPED IT!'); return; }
@@ -2469,10 +2471,11 @@ const DefenseSim = (function () {
     const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop);
     const wxCatch  = window.TDWeather ? TDWeather.catchMult()  : 1;
     const wxFumble = window.TDWeather ? TDWeather.fumbleMult() : 1;
+    const hawk = (window.TDShop && TDShop.hawkBoost) ? TDShop.hawkBoost() : 0;  // 🖐 Ball Hawk: more takeaways
     const r = Math.random();
 
     if (Math.random() < 0.56) {                                               // ---- PASS ----
-      if (r < 0.045 + dStop * 0.03) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
+      if (r < 0.045 + dStop * 0.03 + hawk) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow));
       if (Math.random() < inc) return { r: 'inc', y: 0, t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
       if (Math.random() < 0.10 + dStop * 0.10) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, t: '<b>SACK!</b> ' + y + ' yards.' }; }
@@ -2480,7 +2483,7 @@ const DefenseSim = (function () {
       return { r: 'gain', y, t: 'Pass complete for <b>' + y + '</b>.' };
     }
     // ---- RUN ----
-    if (r < (0.03 + dStop * 0.02) * wxFumble) return { r: 'fum', y: 0, t: '<b>FUMBLE!</b> You recovered it!' };
+    if (r < (0.03 + dStop * 0.02 + hawk * 0.5) * wxFumble) return { r: 'fum', y: 0, t: '<b>FUMBLE!</b> You recovered it!' };
     if (Math.random() < 0.18 + dStop * 0.15) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
     let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow); if (Math.random() < 0.08) y += Phaser.Math.Between(10, 30);
     return { r: 'gain', y, t: 'Run for <b>' + y + '</b> yards.' };
