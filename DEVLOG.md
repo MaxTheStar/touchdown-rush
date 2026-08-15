@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.25 — cache-buster is `?v=42` in `index.html`.
+- **Version:** v1.26 — cache-buster is `?v=43` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.25 are all LIVE (v1.25 pushed 2026-08-14)
+## ✅ Sync status — v1.11–v1.26 are all LIVE (v1.25–v1.26 pushed 2026-08-14)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -32,6 +32,11 @@ On **2026-08-14** the **Round-2 add-on board** shipped as **v1.25** (cache-buste
 CPU calls), 💵 **player salaries** with a team payroll & friendly cap, and 📣 **rivals come calling** (other
 teams send you trade requests in a 📨 inbox with a badge). All four live in `src/draft.js` (+ new `dr-*` CSS
 in `index.html`). Verified live in the browser via DOM/JS (see the v1.25 section below).
+
+Same day, **v1.26** shipped (cache-buster `?v=43`) — 🏈 **two-point conversions**: after every touchdown you
+choose ① KICK (+1) or ② GO FOR 2 (+2, one real snap from the 2-yard line), and the CPU goes for two too (its
+TDs now score 6/7/8). All in `src/main.js` + a new `#pat-choice` panel in `index.html`. Verified by driving the
+exported globals and stepping the frozen game loop by hand.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -521,6 +526,26 @@ cache-busting query like `…/index.html?cb=1`.)
     live count, Accept paid coins + swapped the starter, Reject cleared it.
   - 🔌 Interfaces unchanged: `window.TDDraft` still exposes `open / boost / teamOverall`; `main.js:2679` reads
     `boost()` in `beginGame` exactly as before. Added: `payroll` and a small `_debug` helper (harmless in play).
+- **v1.26 — 🏈 Two-point conversions** (this iteration — `src/main.js` + a new `#pat-choice` panel in `index.html`):
+  - **The choice.** After a TD (and after the optional score replay) we no longer auto-kick — the `dead`-state
+    handler and `endReplay` now call `showPATChoice()`, which sets `G.state='patdecision'` and shows the
+    `#pat-choice` overlay with two buttons: ① KICK · +1 and ② GO FOR 2 · +2 (keyboard ①/② work too, mirroring
+    the 4th-down panel). `choosePAT('kick')` → the existing `startExtraPoint()` kick game; `choosePAT('two')` →
+    `startTwoPointTry()`.
+  - **The try.** `startTwoPointTry()` sets `G.twoPtTry=true` and calls `setupPlay({los:98, down:1, fd:100})` —
+    one ordinary snap from the 2-yard line (fd 100 so it can only ever be a score, never a first down). A new
+    guard at the TOP of `endPlay` (`if (G.twoPtTry) { resolveTwoPoint(result); return; }`) catches every ending:
+    `resolveTwoPoint` gives **+2** on `'touchdown'` and **0** on anything else (tackle/incomplete/pick/lost
+    fumble — all of which funnel through `endPlay`), then hands the ball to the other team on a kickoff. The try
+    is untimed (no clock), just like a kicked PAT.
+  - **The CPU goes for two too.** `cpuDriveEnd('touchdown')` no longer awards a flat 7 — it scores 6 for the TD,
+    then ~25% of the time goes for two (≈45% good → +2) and otherwise kicks (≈94% good → +1). Net: CPU touchdowns
+    now score **6 / 7 / 8** with the right banner. Verified distribution over 200 sims: 7 most common, with 8s
+    and 6s appearing.
+  - New globals exported on `window.__td` for testing: `showPATChoice, choosePAT, startTwoPointTry,
+    resolveTwoPoint`. `G.twoPtTry` (and `G.pendingXP`) reset in `beginGame`. Verified: +2 on a converted try,
+    +0 on a stuffed try, GO-FOR-2 sets up the 2-yard snap (`losYards 98`, presnap), KICK enters the `xp` kick,
+    no console errors.
 
 ## 🗂 File map (who does what)
 

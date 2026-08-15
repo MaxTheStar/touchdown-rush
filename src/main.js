@@ -277,7 +277,8 @@ const G = {
   deadUntil: 0,
   next: null,           // where the next play starts, decided when a play ends
   kickKind: 'fg',       // what kind of kick is on screen: 'fg' | 'punt' | 'xp' (extra point)
-  pendingXP: false,     // just scored a TD? then an extra-point kick comes next
+  pendingXP: false,     // just scored a TD? then the extra-point/2-pt choice comes next
+  twoPtTry: false,      // 🏈 a two-point conversion play is live (reach the end zone = +2)
   banner: null,
   comment: null,        // the "announcer" line for quick play-by-play call-outs
   commentTween: null,
@@ -483,7 +484,7 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak };
 }
 
 // ============================================================
@@ -547,7 +548,7 @@ function update(time, delta) {
     freezeEveryone();
     if (time >= G.deadUntil) {
       if (G.replayPending) { G.replayPending = false; startReplay(); }  // watch the score again!
-      else if (G.pendingXP) startExtraPoint();   // just scored? kick the extra point first
+      else if (G.pendingXP) showPATChoice();     // just scored? kick the point or go for 2
       else startNextPlay();
     }
     updateBall();
@@ -570,6 +571,16 @@ function update(time, delta) {
     freezeEveryone();
     if (Phaser.Input.Keyboard.JustDown(keys.one)) chooseFourthDown('play');
     else if (Phaser.Input.Keyboard.JustDown(keys.two)) chooseFourthDown('kick');
+    updateBall();
+    updateHUD();
+    return;
+  }
+
+  // AFTER A TOUCHDOWN: kick the extra point (+1), or go for two (+2).
+  if (G.state === 'patdecision') {
+    freezeEveryone();
+    if (Phaser.Input.Keyboard.JustDown(keys.one)) choosePAT('kick');
+    else if (Phaser.Input.Keyboard.JustDown(keys.two)) choosePAT('two');
     updateBall();
     updateHUD();
     return;
@@ -1365,6 +1376,12 @@ function endPlay(result, customMsg) {
   freezeEveryone();
   G.pickSix = false;                // a pick-six return that reached the endzone is done
   if (routeGfx) routeGfx.clear();   // the route lines vanish when the play ends
+
+  // 🏈 TWO-POINT TRY? This snap isn't a normal down — reaching the end zone is
+  // worth +2, and ANY other ending (tackle, incomplete, pick, lost fumble) means
+  // no good. Either way the try is over, so settle it and hand off the ball.
+  if (G.twoPtTry) { resolveTwoPoint(result); return; }
+
   let msg, next, big = false;
 
   // 🛑 SAFETY — you got tackled with the ball in your OWN end zone. That's 2
@@ -1533,6 +1550,66 @@ function onKickDone(result) {
   G.next = { los: 20, down: 1, fd: 30, fresh: true };
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1600;
+  showBanner(msg, true);
+}
+
+// ============================================================
+// 🏈 THE TRY — after a touchdown: kick the extra point (+1) or go for TWO (+2)
+// ------------------------------------------------------------
+// Real football gives you a choice after every TD: the safe 1-point kick, or a
+// gutsy play from close range worth 2. We pause and show two buttons; ① kicks
+// (the same easy KickGame), ② snaps ONE play from the 2-yard line — reach the
+// end zone and it's +2, come up short and it's nothing.
+// ============================================================
+function showPATChoice() {
+  G.pendingXP = false;                 // the choice replaces the old auto-kick
+  G.twoPtTry = false;
+  G.state = 'patdecision';
+  const panel = document.getElementById('pat-choice');
+  if (panel) panel.style.display = 'flex';
+}
+
+// The player (or the ① / ② keys) picked how to take the try.
+function choosePAT(which) {
+  if (G.state !== 'patdecision') return;   // ignore stray taps
+  const panel = document.getElementById('pat-choice');
+  if (panel) panel.style.display = 'none';
+  if (which === 'kick') startExtraPoint();
+  else                  startTwoPointTry();
+}
+
+// GO FOR 2: line up one real play from the 2-yard line. No downs, no clock —
+// score a touchdown here and it counts 2; anything else and the try fails.
+function startTwoPointTry() {
+  G.twoPtTry = true;
+  document.body.classList.remove('kicking');   // make sure the football buttons are back
+  sayComment(pick(['Going for TWO!', 'No kick — they want two!', 'Gutsy call — going for it!']));
+  // los 98 = the 2-yard line; fd 100 so it can never be a "first down", only a score.
+  setupPlay({ los: 98, down: 1, fd: 100 });
+}
+
+// Settle a two-point try (called from endPlay when G.twoPtTry is on).
+function resolveTwoPoint(result) {
+  G.twoPtTry = false;
+  let msg;
+  if (result === 'touchdown') {
+    G.score += 2;
+    msg = 'TWO-POINT CONVERSION!  +2';
+    if (window.TDSound) TDSound.sting('td');
+    if (window.TDShop)  TDShop.earn(4);           // a 2-pt play pays a touch more than a kick
+    if (window.TDProgress) TDProgress.addXP(5);   // 📈 +5 XP
+  } else {
+    if (window.TDSound) TDSound.sting('lose');
+    msg = (result === 'interception') ? 'PICKED OFF — NO GOOD!'
+        : (result === 'incomplete')   ? 'INCOMPLETE — NO GOOD!'
+        :                               'STUFFED — NO GOOD!';
+  }
+  // The try is untimed (no clock comes off), then the ball goes to the other
+  // team on a kickoff — exactly like after an extra point.
+  G.next = { los: 20, down: 1, fd: 30, fresh: true };
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1600;
+  updateHUD();
   showBanner(msg, true);
 }
 
@@ -2252,8 +2329,16 @@ function cpuDriveEnd(kind, customMsg) {
   G.state = 'dwait';                 // hold everything while the banner lands
   const abbr = G.oppTeam.abbr;
   let msg, pts = 0, big = false;
-  if (kind === 'touchdown')      { pts = 7; big = true; msg = abbr + ' TOUCHDOWN';
-                                   if (window.TDSound) TDSound.sting('lose'); }
+  if (kind === 'touchdown')      { big = true; pts = 6;   // the touchdown itself is 6
+                                   if (window.TDSound) TDSound.sting('lose');
+                                   // Then the CPU takes its try — usually a kick, sometimes bold.
+                                   if (Math.random() < 0.25) {                 // 🏈 go for two!
+                                     if (Math.random() < 0.45) { pts += 2; msg = abbr + ' 2-POINT CONVERSION!  +8'; }
+                                     else                      {             msg = abbr + ' NO GOOD ON 2  +6'; }
+                                   } else {                                    // kick the extra point
+                                     if (Math.random() < 0.94) { pts += 1; msg = abbr + ' TOUCHDOWN  +7'; }
+                                     else                      {             msg = abbr + ' TD — XP NO GOOD  +6'; }
+                                   } }
   else if (kind === 'fieldgoal') { pts = 3; big = true; msg = abbr + ' FIELD GOAL  +3'; }
   else if (kind === 'punt')      { msg = abbr + ' PUNTS IT AWAY'; }
   else if (kind === 'safety')    { big = true; msg = customMsg || 'SAFETY!  YOU +2';
@@ -2683,6 +2768,7 @@ function beginGame(team, opp, isSeason) {
 
   // Fresh scoreboard & game clock for a brand-new game.
   G.score = 0; G.oppScore = 0;
+  G.pendingXP = false; G.twoPtTry = false;      // 🏈 no leftover try from a past game
   G.quarter = 1; G.clock = QUARTER_SECONDS;
   G.overtime = false; G.gameOver = false;
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
@@ -2954,7 +3040,7 @@ function skipReplay() {
   if (G.state === 'replay') endReplay();
 }
 
-// The film is over — clean up the decorations and go on to the extra point.
+// The film is over — clean up the decorations and go on to the try (kick or 2-pt).
 function endReplay() {
   for (const k of ['replayBars', 'replayText', 'replayHint', 'replayRing']) {
     if (G[k]) { G[k].destroy(); G[k] = null; }
@@ -2965,7 +3051,7 @@ function endReplay() {
   const then = G.replayThen; G.replayThen = null;
   if (then) { then(); return; }
   // Otherwise this was a SCORE replay: pick up exactly where the touchdown left off.
-  if (G.pendingXP) startExtraPoint();
+  if (G.pendingXP) showPATChoice();
   else startNextPlay();
 }
 
@@ -3146,6 +3232,8 @@ function setupTouchButtons() {
   // The 4th-down choice buttons (① play the down, ② kick)
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
+  bindTapEl('btn-xp', () => choosePAT('kick'));    // 🏈 after a TD: kick the extra point
+  bindTapEl('btn-two', () => choosePAT('two'));    // 🏈 …or go for two
 
   // The main-menu buttons: ◀ ▶ flip teams, PLAY starts the game
   bindTapEl('tm-prev', () => menuNav(-1));

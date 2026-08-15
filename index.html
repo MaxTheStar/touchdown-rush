@@ -263,6 +263,33 @@
     #fourth-down .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
     #btn-kick:active { background: rgba(255,214,10,0.55); }
 
+    /* 🏈 The after-touchdown try panel (kick +1, or go for two +2) — shares the
+       4th-down panel's look; ② GO FOR 2 gets a bold green so the choice reads fast. */
+    #pat-choice {
+      position: fixed; z-index: 30; inset: 0;
+      display: none;                          /* main.js flips this to flex */
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; background: rgba(10,16,32,0.72);
+    }
+    #pat-choice .title {
+      font: 800 26px "Arial Black", Arial; color: #ffe066;
+      text-shadow: 0 2px 6px #000; letter-spacing: 1px;
+    }
+    #pat-choice .sub { font: 700 14px Arial; color: #dfe6f2; margin-top: -8px; text-shadow: 0 2px 6px #000; }
+    #pat-choice .choice {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      width: min(78vw, 300px); text-align: center;
+      padding: 18px 16px; border-radius: 16px;
+      font: 800 clamp(16px, 5.2vw, 22px) "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
+      box-shadow: 0 3px 10px rgba(0,0,0,.4);
+    }
+    #pat-choice .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
+    #btn-xp  { background: rgba(255,214,10,0.28); border-color: rgba(255,214,10,0.75); }
+    #btn-xp:active  { background: rgba(255,214,10,0.55); }
+    #btn-two { background: rgba(123,216,143,0.30); border-color: rgba(123,216,143,0.85); }
+    #btn-two:active { background: rgba(123,216,143,0.6); }
+
     /* While kicking, hide the football controls so the whole screen is one
        big "tap to kick" area (main.js adds/removes the .kicking class). */
     body.kicking #dpad,
@@ -867,6 +894,15 @@
     <div class="choice" id="btn-kick">② FIELD GOAL</div>
   </div>
 
+  <!-- 🏈 After a touchdown: kick the extra point (+1) or go for two (+2).
+       main.js shows/hides this and wires the two buttons. -->
+  <div id="pat-choice">
+    <div class="title">TOUCHDOWN! 🏈</div>
+    <div class="sub">Take the point, or go for two?</div>
+    <div class="choice" id="btn-xp">① KICK · +1</div>
+    <div class="choice" id="btn-two">② GO FOR 2 · +2</div>
+  </div>
+
   <!-- Player 2's D-pad (top) — only shows in 2-player mode -->
   <div id="dpad2">
     <div class="btn" id="btn2-up">▲</div>
@@ -971,16 +1007,16 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=42"></script>
-  <script src="src/sound.js?v=42"></script>
-  <script src="src/shop.js?v=42"></script>
-  <script src="src/progress.js?v=42"></script>
-  <script src="src/weather.js?v=42"></script>
-  <script src="src/season.js?v=42"></script>
-  <script src="src/draft.js?v=42"></script>
-  <script src="src/ads.js?v=42"></script>
-  <script src="src/tour.js?v=42"></script>
-  <script src="src/kick.js?v=42"></script>
-  <script src="src/main.js?v=42"></script>
+  <script src="src/stats.js?v=43"></script>
+  <script src="src/sound.js?v=43"></script>
+  <script src="src/shop.js?v=43"></script>
+  <script src="src/progress.js?v=43"></script>
+  <script src="src/weather.js?v=43"></script>
+  <script src="src/season.js?v=43"></script>
+  <script src="src/draft.js?v=43"></script>
+  <script src="src/ads.js?v=43"></script>
+  <script src="src/tour.js?v=43"></script>
+  <script src="src/kick.js?v=43"></script>
+  <script src="src/main.js?v=43"></script>
 </body>
 </html>
