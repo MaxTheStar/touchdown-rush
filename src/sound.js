@@ -114,6 +114,7 @@
     td:   { notes: [69, 73, 76, 81], gap: 0.09, dur: 0.30, type: 'square',   vol: 0.10 }, // A major fanfare — TOUCHDOWN!
     win:  { notes: [72, 76, 79, 84], gap: 0.16, dur: 0.60, type: 'square',   vol: 0.10 }, // C major — champions!
     lose: { notes: [64, 62, 57],     gap: 0.28, dur: 0.55, type: 'triangle', vol: 0.10 }, // a sad little slide down
+    stuff:{ notes: [48, 46, 43],     gap: 0.19, dur: 0.32, type: 'square',   vol: 0.12 }, // 🥁 "BUM… BUM… BUM" — you got stopped!
   };
   function sting(name) {
     if (!started || !STINGS[name]) return;

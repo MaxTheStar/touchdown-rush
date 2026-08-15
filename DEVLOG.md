@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.27 — cache-buster is `?v=44` in `index.html`.
+- **Version:** v1.28 — cache-buster is `?v=45` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,7 +17,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-14.
 
-## ✅ Sync status — v1.11–v1.27 are all LIVE (v1.25–v1.27 pushed 2026-08-14)
+## ✅ Sync status — v1.11–v1.28 are all LIVE (v1.25–v1.28 pushed 2026-08-14)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -41,6 +41,12 @@ exported globals and stepping the frozen game loop by hand.
 And **v1.27** (cache-buster `?v=44`) — 🎉 a **celebration when YOU convert a two-pointer**: `resolveTwoPoint`'s
 success path now fires `TDShop.celebrate(null, '🎉', 'TWO POINTS!  +2')` (the same confetti party as level-ups /
 shop buys; it respects "reduce motion"). A failed try stays quiet, and the CPU's conversions don't party.
+
+And **v1.28** (cache-buster `?v=45`) — two things: 🥁 a low "**bum bum bum**" sting (`STINGS.stuff` in `sound.js`)
+that plays when the defense **stuffs your two-point try** (and on a blocked kick); and 🏈 a **kick upgrade** — a
+rusher (in the opponent's colors) now charges every kick, and if he beats you the **kicker is tackled and you
+lose the ball** (`src/kick.js` + hooks in `src/main.js`). Verified by driving the exported globals + `KickGame`
+and stepping the frozen loop by hand.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
@@ -556,6 +562,21 @@ cache-busting query like `…/index.html?cb=1`.)
   `prefers-reduced-motion` on its own). Only YOUR made conversion celebrates; a stuffed try and the CPU's
   conversions don't. Verified: a converted try spawns the `TWO POINTS!  +2` label + 12 confetti; a failed try
   spawns none.
+- **v1.28 — 🥁 "Bum bum bum" + 🏈 the kicker can be tackled** (this iteration — `src/sound.js`, `src/kick.js`,
+  `src/main.js`):
+  - 🥁 **The "bum bum bum".** A new sting `STINGS.stuff` (three low descending square-wave notes, `[48,46,43]`)
+    in `sound.js`. `resolveTwoPoint`'s fail branch now plays `TDSound.sting('stuff')` instead of `'lose'`, so
+    getting **stuffed on a two-point try** lands with a dramatic thud. (A blocked kick plays it too.)
+  - 🏈 **Block the kick / tackle the kicker.** The kick mini-game (`kick.js`) gained a **rusher** who charges the
+    ball while you AIM/POWER: `K.rush` climbs `delta / K.rushMs` each frame, a sprite (`k_rusher`, drawn in the
+    OPPONENT's colors from `window.OPP`) slides `RUSH_START → RUSH_END`, and at `rush >= 1` `getBlocked()` fires —
+    ball pops loose, "TACKLED! LOST THE BALL", `judge()` returns `'blocked'`. When close, the hint flips to a red
+    "🏃 KICK — HURRY!". `main.js` passes `rushMs: diff().kickRush` (easy 4200 / med 3400 / hard 2800) into
+    `startKick` + `startExtraPoint`, exposes `window.OPP`, and `onKickDone` handles `outcome==='blocked'` (no
+    points, ball to the other team, banner "KICK/PUNT BLOCKED — LOST IT"). The rusher art is rebuilt each `enter`
+    so it always matches the current opponent. Verified: block → 0 pts + opponent ball; a quick kick is never
+    falsely blocked (rush ~0.07); `rushMs` follows difficulty; visuals (charging rusher, HURRY hint, block) all
+    render; no console errors.
 
 ## 🗂 File map (who does what)
 
@@ -563,8 +584,8 @@ cache-busting query like `…/index.html?cb=1`.)
 |------|-----|
 | `index.html` | Page shell, all CSS, every HTML overlay/button, and the script load order (bump `?v=N` on every ship). |
 | `src/main.js` | The Phaser game: field, players, plays, defense, kickoffs, HUD, replay, team menu. |
-| `src/kick.js` | The field-goal/punt/extra-point kick mini-game. **Loads before main.js** (main uses `KickGame`). |
-| `src/sound.js` | Live chiptune soundtrack (oscillators). API: `window.TDSound`. |
+| `src/kick.js` | The field-goal/punt/extra-point kick mini-game — now with a 🏈 **rusher who can block the kick / tackle the kicker** (v1.28, reads `rushMs` + `window.OPP`). **Loads before main.js** (main uses `KickGame`). |
+| `src/sound.js` | Live chiptune soundtrack (oscillators) + stings (`td`/`win`/`lose`/🥁`stuff`). API: `window.TDSound`. |
 | `src/shop.js` | Coins, Pro Shop, Daily Rewards, the ✨ coin celebration. API: `window.TDShop` (+ `window.TDMenu` in main.js). |
 | `src/progress.js` | 📈 Player progression: XP, team level, titles, the menu level bar, the capped strength boost. API: `window.TDProgress`. |
 | `src/weather.js` | 🌦 Weather & night games: the over-the-field rain/snow/night overlay, the slippery-ball fumble multiplier, and the menu picker. API: `window.TDWeather`. |

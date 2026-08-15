@@ -90,9 +90,9 @@ function inFieldGoalRange()  { return fieldGoalDistance() <= FG_MAX_DIST; }
 // defBoost = defense speed multiplier on scrimmage plays (1 = normal)
 // redSpeed = how fast THEIR ball carrier runs when you play defense
 const DIFFICULTY = {
-  easy:   { label: 'EASY',   koCover: 180, xpDist: 22, rushSlow: 0.18, defBoost: 1.0,  redSpeed: 182 },  // strong pocket, lots of time
-  medium: { label: 'MEDIUM', koCover: 198, xpDist: 30, rushSlow: 0.32, defBoost: 1.0,  redSpeed: 192 },
-  hard:   { label: 'HARD',   koCover: 214, xpDist: 38, rushSlow: 0.50, defBoost: 1.09, redSpeed: 200 },  // weak pocket, REAL defense
+  easy:   { label: 'EASY',   koCover: 180, xpDist: 22, rushSlow: 0.18, defBoost: 1.0,  redSpeed: 182, kickRush: 4200 },  // strong pocket, lots of time
+  medium: { label: 'MEDIUM', koCover: 198, xpDist: 30, rushSlow: 0.32, defBoost: 1.0,  redSpeed: 192, kickRush: 3400 },
+  hard:   { label: 'HARD',   koCover: 214, xpDist: 38, rushSlow: 0.50, defBoost: 1.09, redSpeed: 200, kickRush: 2800 },  // weak pocket, REAL defense
 };
 function diff() { return DIFFICULTY[G.difficulty] || DIFFICULTY.medium; }
 
@@ -1498,6 +1498,7 @@ function startKick(mode) {
   KickGame.enter(G.scene, {
     mode,
     distance: fieldGoalDistance(),
+    rushMs: diff().kickRush,        // 🏃 how long before the rusher can block it
     onDone: onKickDone,
   });
 }
@@ -1514,6 +1515,7 @@ function startExtraPoint() {
     mode: 'fg',
     distance: diff().xpDist,   // farther on higher difficulty
     points: 1,            // a made extra point is worth 1, not 3
+    rushMs: diff().kickRush,   // 🏃 the rush can block an extra point too
     onDone: onKickDone,
   });
 }
@@ -1522,7 +1524,13 @@ function startExtraPoint() {
 function onKickDone(result) {
   document.body.classList.remove('kicking');  // bring the football buttons back
   let msg;
-  if (G.kickKind === 'xp' && result.made) {
+  if (result.outcome === 'blocked') {
+    // 🏃 The rusher got home — the kicker was tackled and the ball is lost.
+    // (KickGame already played the "bum bum bum" the moment it happened.)
+    msg = (G.kickKind === 'xp') ? '🚫 BLOCKED — NO POINT!'
+        : (result.mode === 'punt') ? '🚫 PUNT BLOCKED — LOST IT!'
+        : '🚫 KICK BLOCKED — LOST IT!';
+  } else if (G.kickKind === 'xp' && result.made) {
     G.score += 1;
     msg = 'EXTRA POINT!  +1';
     if (window.TDSound) TDSound.sting('td');
@@ -1602,7 +1610,8 @@ function resolveTwoPoint(result) {
     // shout (reuses the shop's celebrate; it respects "reduce motion" on its own).
     if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '🎉', 'TWO POINTS!  +2');
   } else {
-    if (window.TDSound) TDSound.sting('lose');
+    // 🥁 The defense stuffed your two-point try — a dramatic "bum bum bum".
+    if (window.TDSound) TDSound.sting('stuff');
     msg = (result === 'interception') ? 'PICKED OFF — NO GOOD!'
         : (result === 'incomplete')   ? 'INCOMPLETE — NO GOOD!'
         :                               'STUFFED — NO GOOD!';
@@ -2787,8 +2796,10 @@ function beginGame(team, opp, isSeason) {
   for (const o of offense) o.s.setTexture('blue');
   for (const d of defense) d.s.setTexture('red');
 
-  // Tell the kicking screen your colors, so its kicker matches your team.
+  // Tell the kicking screen your colors, so its kicker matches your team —
+  // and the OTHER team's colors, so the rusher who tries to block you matches them.
   window.TEAM = { jersey: G.team.jersey, helmet: G.team.helmet };
+  window.OPP  = { jersey: G.oppTeam.jersey, helmet: G.oppTeam.helmet };
 
   // Put your team's name in your home endzone.
   if (G.endzoneLabel) G.endzoneLabel.setText(G.team.name);

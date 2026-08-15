@@ -37,6 +37,13 @@ window.KickGame = (function () {
   const POWER_SPEED = 1.6;   // how fast the power bar fills (per sec)
   const MAX_PUNT    = 55;    // a full-power punt goes this many yards
 
+  // ---- 🏃 The rusher who tries to block the kick ----
+  // He breaks through downfield (small + far) and charges the ball. Get your
+  // kick off before he arrives, or he tackles the kicker and you LOSE the ball.
+  const RUSH_START = { x: 338, y: 356, s: 0.50 };   // where he appears (far away)
+  const RUSH_END   = { x: 286, y: 628, s: 1.12 };   // right on the ball = BLOCKED!
+  const RUSH_DEFAULT_MS = 3400;                      // time to arrive if none given
+
   // ---- Colors ----
   const SKY_TOP = 0x0b1020, SKY_LOW = 0x1a2a4a, CROWD = 0x11162b;
   const FIELD_NEAR = 0x379437, GOAL_GOLD = 0xffd400;
@@ -52,6 +59,9 @@ window.KickGame = (function () {
     onDone: null,      // the function to call when the kick is over
     powerToReach: 0.55,// how much power you need for THIS distance
     aimSpeed: AIM_SPEED,
+    rush: 0,           // 🏃 how far the rusher has charged (0..1); 1 = block!
+    rushMs: RUSH_DEFAULT_MS,
+    blocked: false,    // did the kick get blocked / the kicker tackled?
 
     state: 'aim',      // aim -> power -> kick -> result
     aimX: GOAL_CENTER, aimDir: 1,
@@ -63,7 +73,7 @@ window.KickGame = (function () {
 
     // display objects (kept so we can clean them all up)
     objs: [],
-    ball: null, crosshair: null, powerBar: null,
+    ball: null, crosshair: null, powerBar: null, rusher: null,
     hud: null, hint: null, distLabel: null, banner: null,
     flight: null,       // the ball-flight tween (so we can stop it)
 
@@ -92,6 +102,10 @@ window.KickGame = (function () {
     K.standalone = !!opts.standalone;
     K.onDone = opts.onDone || null;
     K.active = true;
+    K.rush = 0; K.blocked = false;
+    K.rushMs = opts.rushMs || RUSH_DEFAULT_MS;
+    // Rebuild the rusher's art each kick so it wears the CURRENT opponent's colors.
+    if (scene.textures.exists('k_rusher')) scene.textures.remove('k_rusher');
 
     // Longer kicks are harder: you need more power, and the aim swings faster.
     K.powerToReach = clamp(0.30 + (K.distance - 17) / 70, 0.35, 0.92);
@@ -131,7 +145,7 @@ window.KickGame = (function () {
     }
     for (const o of K.objs) o.destroy();
     K.objs = [];
-    K.ball = K.crosshair = K.powerBar = K.hud = K.hint = K.distLabel = K.banner = null;
+    K.ball = K.crosshair = K.powerBar = K.rusher = K.hud = K.hint = K.distLabel = K.banner = null;
     K.active = false;
   }
 
@@ -157,7 +171,51 @@ window.KickGame = (function () {
       if (K.power < 0) { K.power = 0; K.powerDir = 1; }
     }
 
+    // 🏃 While you're aiming or powering up, the rusher keeps charging. If he
+    // reaches the ball before you kick, the kicker is tackled — you lose it!
+    if (K.state === 'aim' || K.state === 'power') {
+      K.rush = Math.min(1, K.rush + delta / K.rushMs);
+      positionRusher();
+      updateHurryHint();
+      if (K.rush >= 1) getBlocked();
+    }
+
     drawPowerBar();
+  }
+
+  // Slide the rusher along his charge path (small & far → big & on the ball).
+  function positionRusher() {
+    if (!K.rusher) return;
+    const t = K.rush;
+    K.rusher.setPosition(
+      Phaser.Math.Linear(RUSH_START.x, RUSH_END.x, t),
+      Phaser.Math.Linear(RUSH_START.y, RUSH_END.y, t)
+    ).setScale(Phaser.Math.Linear(RUSH_START.s, RUSH_END.s, t)).setVisible(true);
+  }
+
+  // When the rusher gets close, the hint turns into a red "HURRY!" warning.
+  function updateHurryHint() {
+    if (!K.hint) return;
+    if (K.rush > 0.6) { K.hint.setText('🏃 KICK — HURRY!').setColor('#ff8080'); return; }
+    const base = (K.state === 'aim') ? 'TAP to AIM  ⟵ ⟶'
+               : (K.mode === 'punt') ? 'TAP to BOOT it' : 'TAP to set POWER';
+    K.hint.setText(base).setColor('#ffffff');
+  }
+
+  // The rusher got home: tackle the kicker, pop the ball loose, and it's a
+  // blocked kick — a lost ball. judge() will now report 'blocked'.
+  function getBlocked() {
+    if (K.blocked) return;
+    K.blocked = true;
+    K.state = 'result';
+    if (K.crosshair) K.crosshair.setVisible(false);
+    if (K.ball) K.scene.tweens.add({
+      targets: K.ball, x: BALL_X + Phaser.Math.Between(-70, 70), y: BALL_Y + 34,
+      angle: 260, scale: 0.8, duration: 420, ease: 'Cubic.Out'
+    });
+    if (window.TDSound && TDSound.sting) TDSound.sting('stuff');   // 🥁 bum bum bum!
+    showBanner(K.mode === 'punt' ? 'BLOCKED!  LOST IT' : 'TACKLED!  LOST THE BALL', '#ff8080');
+    if (K.hint) K.hint.setText(K.standalone ? 'TAP to kick again' : 'TAP to continue').setColor('#ffffff');
   }
 
   // ==========================================================
@@ -218,6 +276,8 @@ window.KickGame = (function () {
 
   // Work out the outcome from the locked-in aim + power.
   function judge() {
+    // Got tackled? Nothing else matters — it's a blocked, lost kick.
+    if (K.blocked) return 'blocked';
     // A punt ALWAYS gets away — power just decides how far, never a miss.
     if (K.mode === 'punt') return 'punt';
     // A field goal needs enough power to reach, and good aim between the posts.
@@ -275,6 +335,8 @@ window.KickGame = (function () {
     K.aimSpeed = AIM_SPEED * (1 + (K.distance - 34) / 130);
     K.aimX = GOAL_CENTER; K.aimDir = 1;
     K.power = 0; K.powerDir = 1;
+    K.rush = 0; K.blocked = false;        // 🏃 send the rusher back to the start
+    positionRusher();
     K.state = 'aim';
     if (K.banner) { K.banner.destroy(); K.banner = null; }
     updateHUD();
@@ -343,6 +405,10 @@ window.KickGame = (function () {
     keep(scene.add.sprite(BALL_X, BALL_Y + 46, 'k_kicker')).setDepth(104);
     // The football on its tee.
     K.ball = keep(scene.add.sprite(BALL_X, BALL_Y, 'k_ball')).setDepth(106);
+
+    // 🏃 The rusher (in the OTHER team's colors) — starts downfield and charges.
+    K.rusher = keep(scene.add.sprite(RUSH_START.x, RUSH_START.y, 'k_rusher')).setDepth(105);
+    positionRusher();
 
     // The aim crosshair (hidden until we're aiming).
     K.crosshair = keep(scene.add.sprite(GOAL_CENTER, GOAL_Y - 30, 'k_cross'))
@@ -428,6 +494,20 @@ window.KickGame = (function () {
       g.fillStyle(0xffffff); g.fillRect(18, 2, 4, 14);        // stripe
       g.generateTexture('k_kicker', 40, 40); g.destroy();
     }
+    if (!scene.textures.exists('k_rusher')) {
+      // The blocker wears the OTHER team's colors (window.OPP), set by main.js.
+      const O = window.OPP || {};
+      const jersey = (O.jersey != null) ? O.jersey : 0xd8342f;   // default: a mean red
+      const helmet = (O.helmet != null) ? O.helmet : 0xd8342f;
+      const g = scene.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(jersey);   g.fillEllipse(20, 30, 34, 20);      // a big charging body
+      g.fillStyle(0xd9a066); g.fillCircle(4, 24, 4); g.fillCircle(36, 24, 4);  // arms reaching UP to block
+      g.fillStyle(helmet);   g.fillCircle(20, 15, 14);           // helmet
+      g.fillStyle(0xffffff); g.fillCircle(20, 15, 10);
+      g.fillStyle(helmet);   g.fillCircle(20, 15, 9);
+      g.fillStyle(0x111111); g.fillRect(11, 14, 18, 3);          // a mean dark visor
+      g.generateTexture('k_rusher', 40, 40); g.destroy();
+    }
   }
 
   // What other files are allowed to call.
@@ -436,6 +516,7 @@ window.KickGame = (function () {
     enter, exit, update, tap, isActive,
     peek: () => ({ state: K.state, mode: K.mode, active: K.active,
                    outcome: judge(), lockedPower: K.lockedPower,
-                   powerToReach: K.powerToReach, distance: K.distance }),
+                   powerToReach: K.powerToReach, distance: K.distance,
+                   rush: K.rush, rushMs: K.rushMs, blocked: K.blocked }),
   };
 })();
