@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.34 — cache-buster is `?v=51` in `index.html`.
+- **Version:** v1.35 — cache-buster is `?v=52` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -18,11 +18,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Last updated:** 2026-08-15.
 - **✅ v1.33 (the 🎡 Lucky Spin) is PUSHED & LIVE** — the first Round-3 feature, shipped 2026-08-15
   (`src/spin.js` new; `index.html` + `src/shop.js` edited; commit `6adfd4b`).
-- **✅ v1.34 (🎡 FREE SPINS in the daily rewards) is PUSHED & LIVE** — shipped 2026-08-15. Edits:
-  `src/spin.js` (free-spin credits), `src/shop.js` (3 daily days → free spins), `index.html`
+- **✅ v1.34 (🎡 FREE SPINS in the daily rewards) is PUSHED & LIVE** — shipped 2026-08-15 (commit `693127f`).
+  Edits: `src/spin.js` (free-spin credits), `src/shop.js` (3 daily days → free spins), `index.html`
   (badge + credits note + legend), `?v=51`.
+- **✅ v1.35 (📋 DAILY CHALLENGES) is PUSHED & LIVE** — the 2nd Round-3 pick, shipped 2026-08-15. New
+  `src/challenges.js`; 6 one-line `TDChallenge.bump()` hooks + an `onMenu()` hook in `src/main.js`; a menu
+  bar + modal + toast in `index.html`; `?v=52`.
 
-## ✅ Sync status — v1.11–v1.34 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.34 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.35 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.35 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -135,6 +138,33 @@ the 14 daily-reward days now hand out **free spins** instead of coins — **day 
   day 2 banks exactly 2 credits with no coins added; a normal spin keeps credits + starts the cooldown; a
   free spin drops the count by one and preserves the timer; the badge/note/glow track the count and clear at
   zero; it all persists across a reload; no console errors.
+
+And **v1.35** (cache-buster `?v=52`, shipped 2026-08-15) — 📋 **DAILY CHALLENGES** (the 2nd
+Round-3 pick). Three little goals every day — e.g. "Score 2 touchdowns", "Catch 5 passes", "Force a
+turnover" — that reset at your local midnight. Beat one and CLAIM its coins; beat all three and bag the
+🎁 bonus (a **🎡 free spin + 50 coins**), tying challenges back into the Lucky Spin. How it's built:
+  - **New `src/challenges.js` / `window.TDChallenge`.** A 12-entry POOL (kinds: td, fg, catch, takeaway,
+    win, play). Each day a **date-seeded** RNG (`hashStr`→`mulberry32`) picks **3 different kinds**, so the
+    set is steady all day and rotates daily (verified: 7 distinct sets over 7 days). Progress, claims, and
+    the bonus persist in **`tdr-chal`** `{date, ids, prog, claimed, bonus}`; a new local day auto-rolls a
+    fresh set and clears progress.
+  - **Progress comes from the game, not the loop.** `main.js` calls `TDChallenge.bump(kind)` at six spots,
+    each **co-located with the existing `TDProgress.addXP` award** so it fires on exactly the same real
+    events: a touchdown (`endPlay`), a made field goal (`onKickDone`), a completed catch (`catchAndRun`), a
+    pick-six and a defensive turnover (`startPickSix` + `cpuDriveEnd`), and finishing/winning a game
+    (`endGame`). A 7th call, `TDChallenge.onMenu()`, refreshes the bar when the menu shows. Every hook is a
+    guarded one-liner (`if (window.TDChallenge) …`), so with the module absent the game is byte-identical.
+  - **UI in `index.html`:** a slim **`#chal-bar`** on the menu (stacked under the XP bar) that shows
+    "N/3" and **glows "CLAIM!"** when something's collectable; a **`#chal-modal`** with a progress bar +
+    CLAIM button per goal, the all-three bonus row, and a "New challenges in Xh Ym" countdown; and a small
+    **`#chal-toast`** that flashes "CHALLENGE COMPLETE!" mid-game. All themed amber to sit apart from the
+    green XP bar.
+
+  Verified live via DOM/JS: today's set is 3 distinct kinds; bumping ticks the right goals and completing one
+  fires the toast; the bar flips to CLAIM!/glow; the modal renders all three + the unlocked bonus + the
+  reset clock; claiming the three paid 15+20+25 coins and the bonus paid +50 coins **and +1 free spin**
+  (25→135 coins, spins 3→4); forcing a stale day re-rolls and clears progress; the bar hides in-game; a
+  real game starts clean with the module loaded; no console errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub

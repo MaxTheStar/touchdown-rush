@@ -874,6 +874,7 @@ function catchAndRun(wr, x, y, msg) {
   ball.setPosition(x, y);
   G.ballCarrier = wr;
   G.state = 'live';
+  if (window.TDChallenge) TDChallenge.bump('catch');   // 📋 daily challenge: a completed catch
   ballFollow = true;
   G.scene.cameras.main.startFollow(wr.s, true, 0.12, 0.12);
   // 🔋 CATCH ENERGY (shop): a clean catch fires a burst of speed!
@@ -1427,6 +1428,7 @@ function endPlay(result, customMsg) {
     if (window.TDSound) TDSound.sting('td');   // 🎺 the touchdown fanfare!
     if (window.TDShop)  TDShop.earn(10);       // 🪙 touchdowns pay 10 coins
     if (window.TDProgress) TDProgress.addXP(12);  // 📈 …and 12 XP toward your team's next level
+    if (window.TDChallenge) TDChallenge.bump('td');   // 📋 daily challenge progress
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
@@ -1564,6 +1566,7 @@ function onKickDone(result) {
     if (window.TDSound) TDSound.sting('td');
     if (window.TDShop)  TDShop.earn(5);        // 🪙 field goals pay 5 coins
     if (window.TDProgress) TDProgress.addXP(6);   // 📈 +6 XP
+    if (window.TDChallenge) TDChallenge.bump('fg');   // 📋 daily challenge progress
   } else if (result.mode === 'fg') {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else {
@@ -2231,6 +2234,7 @@ function startPickSix(picker, x, y) {
   if (window.TDSound) TDSound.sting('td');
   if (window.TDShop)  TDShop.earn(3);        // 🪙 takeaways pay 3 coins
   if (window.TDProgress) TDProgress.addXP(8);   // 📈 a takeaway is worth 8 XP
+  if (window.TDChallenge) TDChallenge.bump('takeaway');   // 📋 daily challenge progress
   G.cpu = null;                              // their drive is over
   G.dpassTarget = null;
   G.ballCarrier = picker;
@@ -2384,7 +2388,8 @@ function cpuDriveEnd(kind, customMsg) {
                                    if (window.TDProgress) TDProgress.addXP(8); }   // 🪙📈 a takeaway-ish reward
   else                           { big = true; msg = customMsg || 'TURNOVER — YOUR BALL!';
                                    if (window.TDShop) TDShop.earn(3);
-                                   if (window.TDProgress) TDProgress.addXP(8); }   // 🪙📈 takeaways pay coins + XP
+                                   if (window.TDProgress) TDProgress.addXP(8);
+                                   if (window.TDChallenge) TDChallenge.bump('takeaway'); }  // 🪙📈📋 takeaway
 
   G.oppScore += pts;
   updateHUD();
@@ -2635,6 +2640,10 @@ function endGame() {
     G.xpEarned  = TDProgress.gameXP();
     G.leveledTo = TDProgress.claimLevelUps();   // the new level if we leveled up, else 0
   }
+  if (window.TDChallenge) {                       // 📋 daily challenges: you finished a game
+    TDChallenge.bump('play');
+    if (G.score > G.oppScore) TDChallenge.bump('win');
+  }
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons
@@ -2813,6 +2822,7 @@ function enterMenu() {
   syncDiffButtons();   // highlight the current difficulty
   if (window.TDShop)  TDShop.onMenu();           // 🪙 coin count + a daily gift if one's ready
   if (window.TDProgress) TDProgress.onMenu();    // 📈 refresh the team level + XP bar
+  if (window.TDChallenge) TDChallenge.onMenu();  // 📋 refresh the daily-challenges bar
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
   if (window.TDTour)  TDTour.maybeStart('menu');  // 🎓 first-visit menu tour (waits for popups)
 }
