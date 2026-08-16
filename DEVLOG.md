@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.37 — cache-buster is `?v=54` in `index.html`.
+- **Version:** v1.38 — cache-buster is `?v=55` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -30,8 +30,11 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **✅ v1.37 (🌱 PLAYER GROWTH) is PUSHED & LIVE** — the 4th & last Round-3 pick, shipped 2026-08-15. All in
   `src/draft.js` (growth math + roster UI) + two one-line hooks in `src/main.js` (`addGrowth` in endGame,
   `onMenu`) + a sprout badge & growth CSS in `index.html`; `?v=54`. **🎉 The Round-3 board is fully swept.**
+- **✅ v1.38 (😈 RIVAL NEMESIS) is PUSHED & LIVE** — the 1st Round-4 pick, shipped 2026-08-15. New
+  `src/nemesis.js`; a `startRivalGame` on the `window.TDGame` bridge + a `rivalGame` flag/buff/record hooks
+  in `src/main.js`; a 😈 RIVAL button + modal & CSS in `index.html`; `?v=55`.
 
-## ✅ Sync status — v1.11–v1.37 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.37 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.38 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -218,6 +221,30 @@ all built into the existing MY TEAM system (`src/draft.js`):
   at their `pot` (0 over-cap, all show "MAXED ⭐", team capped at 74, +3%); the ROSTER tab shows bars /
   potential / "▲+N" badges / the "8 players grew" banner, the TEAM sprout shows then clears after viewing,
   the DRAFT tab has zero growth bars, and a real game starts clean; no console errors.
+
+And **v1.38** (cache-buster `?v=55`, shipped 2026-08-15) — 😈 **RIVAL NEMESIS** (the first
+Round-4 pick). One team in the league is your **arch-rival**, and the game keeps a running **head-to-head**
+with them — your wins, their wins, current streak, who won last, and a 🔥 rivalry-heat meter — plus a
+trash-talk line that fits the feud. Challenge them for a tougher-than-normal **grudge match**; beat them for
+**+15 bonus coins** and bragging rights. How it's built:
+  - **New `src/nemesis.js` / `window.TDNemesis`.** Owns the feud (persisted in `tdr-nemesis`), the modal, and
+    the taunts. It leans on main.js's tiny `window.TDGame` bridge for team colours + to start the match, so
+    it never touches Phaser. A rival is auto-assigned (a random real NFL team) the first time you hit the
+    menu. `recordResult(win)` updates the record/streak/heat and stashes a `justPlayed` result; `onMenu()`
+    pops the modal once after a grudge match with a 🏆/😱 headline.
+  - **`src/main.js`:** a `startRivalGame(oppAbbr)` added to the `TDGame` bridge; `beginGame` gained an
+    `isRival` arg → sets `G.rivalGame`, a **+6% opponent buff** (a notch below Maxwell's +10%), and pulls the
+    intro line from `TDNemesis.introLine()`; `endGame` records the result + pays the win bonus; one
+    `ensure()/onMenu()` line in `showMenu`. Existing 3-arg `beginGame` callers are unaffected (isRival falsy).
+  - **`index.html`:** a 😈 RIVAL button in the CHALLENGE & WEATHER row (shows the rival's abbr, glows red for
+    revenge) + a `#nemesis-modal` (rival badge, big record, streak, heat meter, taunt, CHALLENGE button) + CSS.
+
+  Verified live via DOM/JS: a rival auto-picks (CHI/Bears); the modal renders record/streak/taunt/heat; wins
+  & losses flip the streak sign, swap the taunt + intro line, grow the heat bar, and toggle the button
+  ("CHALLENGE"↔"GET REVENGE") + the red revenge glow; the CHALLENGE button starts a grudge match
+  (`G.rivalGame` true, opp = the rival, +6% buff) and closes the modal; after a win the modal auto-pops
+  "🏆 YOU BEAT BEARS!" with the updated 4–1 record and clears `justPlayed`; a normal Quick Game is unaffected
+  (rival/boss both false); the 3-button challenge row + modal are clean on desktop and a 375px phone; no errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub

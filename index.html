@@ -862,6 +862,52 @@
     .tbadge-nd { font: 600 8.5px Arial; color: #6fd39a; letter-spacing: .02em; margin-top: 2px; line-height: 1.2; }
     .tbadge.locked .tbadge-nd { color: #8fb0d8; }
 
+    /* ---- 😈 RIVAL NEMESIS (src/nemesis.js) ------------------------------ */
+    /* The 😈 RIVAL menu button glows red when they beat you last (revenge!). */
+    #open-nemesis.revenge { background: rgba(255,70,70,0.32); border-color: #ff6b6b; color: #fff;
+      animation: rivalGlow 1.4s ease-in-out infinite; }
+    @keyframes rivalGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(255,70,70,0.5); } 50% { box-shadow: 0 0 0 7px rgba(255,70,70,0); } }
+    @media (prefers-reduced-motion: reduce) { #open-nemesis.revenge { animation: none; } }
+
+    /* The result headline that flashes in after a grudge match. */
+    .nemesis-flash { max-height: 0; overflow: hidden; opacity: 0; font: 900 18px "Arial Black", Arial;
+      transition: max-height .35s ease, opacity .35s ease; }
+    .nemesis-flash.show { max-height: 60px; opacity: 1; margin: 2px 0 8px; }
+    .nemesis-flash.win  { color: #7bd88f; text-shadow: 0 0 10px rgba(123,216,143,.5); }
+    .nemesis-flash.lose { color: #ff8a8a; }
+    @media (prefers-reduced-motion: reduce) { .nemesis-flash { transition: none; } }
+
+    /* Rival badge + name. */
+    .nemesis-head { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 6px 0 10px; }
+    .nemesis-badge { width: 54px; height: 54px; border-radius: 13px; flex: none;
+      border: 2px solid rgba(255,255,255,0.25); box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
+    .nemesis-namewrap { text-align: left; }
+    .nemesis-name { font: 900 22px "Arial Black", Arial; color: #fff; line-height: 1.05; }
+    .nemesis-vs { font: 700 11px Arial; color: #8fb0d8; margin-top: 2px; letter-spacing: .04em; }
+
+    /* The big head-to-head record. */
+    .nemesis-record { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 4px 0; }
+    .nm-rec { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+    .nm-rec b { font: 900 40px "Arial Black", Arial; line-height: 1; font-variant-numeric: tabular-nums; }
+    .nm-rec span { font: 800 10px "Arial Black", Arial; color: #8fb0d8; letter-spacing: .08em; margin-top: 3px; }
+    .nm-rec.win b { color: #7bd88f; }
+    .nm-rec.lose b { color: #ff8a8a; }
+    .nm-dash { font: 900 30px "Arial Black", Arial; color: #66789a; }
+    .nemesis-streak { font: 800 13px "Arial Black", Arial; color: #ffe066; margin: 2px 0 10px; }
+
+    /* Rivalry heat meter. */
+    .nemesis-heat { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; }
+    .nemesis-heat span { font: 800 10px "Arial Black", Arial; color: #ff9a6b; letter-spacing: .06em; white-space: nowrap; }
+    .nemesis-heat-bar { flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    .nemesis-heat-bar i { display: block; height: 100%; width: 0; border-radius: 999px;
+      background: linear-gradient(90deg,#ffb020,#ff5a3c,#ff2d55); transition: width .4s ease; }
+    @media (prefers-reduced-motion: reduce) { .nemesis-heat-bar i { transition: none; } }
+
+    /* The trash-talk quote. */
+    .nemesis-taunt { font: italic 600 13px/1.4 Arial; color: #dfe6f2; margin: 2px 6px 4px;
+      background: rgba(255,255,255,0.05); border-left: 3px solid #ff6b6b; border-radius: 6px;
+      padding: 8px 10px; text-align: left; }
+
     /* ---- 🏆 Season hub (season.js fills #season-body) ---- */
     #season-body { text-align: center; }
     .se-intro, .se-out, .se-bracket { font: 13px/1.45 Arial; color: #dfe6f2; margin: 6px 2px 10px; }
@@ -1205,6 +1251,7 @@
     <div class="tm-diff-row">
       <div class="diff-btn" id="toggle-maxwell">👑 MAXWELL</div>
       <div class="diff-btn" id="cycle-weather">🌦 AUTO</div>
+      <div class="diff-btn" id="open-nemesis">😈 RIVAL</div>
     </div>
   </div>
 
@@ -1393,6 +1440,27 @@
     </div>
   </div>
 
+  <!-- 😈 RIVAL NEMESIS — nemesis.js fills in your rival, the record & the taunt. -->
+  <div class="ov" id="nemesis-modal">
+    <div class="ov-card">
+      <div class="ov-title">😈 YOUR RIVAL</div>
+      <div class="nemesis-flash" id="nemesis-flash"></div>
+      <div class="nemesis-head">
+        <div class="nemesis-badge" id="nemesis-badge"></div>
+        <div class="nemesis-namewrap">
+          <div class="nemesis-name" id="nemesis-name">???</div>
+          <div class="nemesis-vs" id="nemesis-vs">YOU vs ???</div>
+        </div>
+      </div>
+      <div class="nemesis-record" id="nemesis-record"></div>
+      <div class="nemesis-streak" id="nemesis-streak"></div>
+      <div class="nemesis-heat"><span>🔥 RIVALRY</span><div class="nemesis-heat-bar"><i id="nemesis-heat-fill"></i></div></div>
+      <div class="nemesis-taunt" id="nemesis-taunt"></div>
+      <div class="ov-btn yes" id="nemesis-play">⚔️ CHALLENGE THEM →</div>
+      <div class="ov-btn" id="nemesis-close">CLOSE</div>
+    </div>
+  </div>
+
   <!-- ⭐ The review pop-up: would you like to? → are you sure? → write it!
        stats.js shows it after your second finished game, and runs the steps. -->
   <div id="review-modal">
@@ -1425,19 +1493,20 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=54"></script>
-  <script src="src/sound.js?v=54"></script>
-  <script src="src/shop.js?v=54"></script>
-  <script src="src/spin.js?v=54"></script>
-  <script src="src/challenges.js?v=54"></script>
-  <script src="src/progress.js?v=54"></script>
-  <script src="src/trophy.js?v=54"></script>
-  <script src="src/weather.js?v=54"></script>
-  <script src="src/season.js?v=54"></script>
-  <script src="src/draft.js?v=54"></script>
-  <script src="src/ads.js?v=54"></script>
-  <script src="src/tour.js?v=54"></script>
-  <script src="src/kick.js?v=54"></script>
-  <script src="src/main.js?v=54"></script>
+  <script src="src/stats.js?v=55"></script>
+  <script src="src/sound.js?v=55"></script>
+  <script src="src/shop.js?v=55"></script>
+  <script src="src/spin.js?v=55"></script>
+  <script src="src/challenges.js?v=55"></script>
+  <script src="src/progress.js?v=55"></script>
+  <script src="src/trophy.js?v=55"></script>
+  <script src="src/nemesis.js?v=55"></script>
+  <script src="src/weather.js?v=55"></script>
+  <script src="src/season.js?v=55"></script>
+  <script src="src/draft.js?v=55"></script>
+  <script src="src/ads.js?v=55"></script>
+  <script src="src/tour.js?v=55"></script>
+  <script src="src/kick.js?v=55"></script>
+  <script src="src/main.js?v=55"></script>
 </body>
 </html>

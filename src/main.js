@@ -301,6 +301,7 @@ const G = {
   dformation: -1,       // 🧩 which RED (CPU) offense formation is on the field (index into RED_FORMATIONS; -1 = none yet)
   maxwell: false,       // 👑 menu toggle: do you WANT to face the Maxwell boss team? (saved)
   bossGame: false,      // 👑 is THIS game actually against Maxwell? (drives the boss AI + buff)
+  rivalGame: false,     // 😈 is THIS game a grudge match against your Rival Nemesis? (see nemesis.js)
   starLabel: null,      // the floating "MAXWELL 👑" nametag over the superstar defender
 
   // ---- v1.20: 🎩 the once-a-game TRICK PLAY (flea flicker) ----
@@ -2645,6 +2646,10 @@ function endGame() {
     if (G.score > G.oppScore) TDChallenge.bump('win');
   }
   if (window.TDDraft && TDDraft.addGrowth) TDDraft.addGrowth(G.score > G.oppScore);  // 🌱 your drafted players grow
+  if (G.rivalGame && window.TDNemesis) {          // 😈 grudge match — update the rivalry
+    if (G.score > G.oppScore && window.TDShop) TDShop.earn(15);   // beating your rival pays extra
+    TDNemesis.recordResult(G.score > G.oppScore);
+  }
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons
@@ -2826,6 +2831,7 @@ function enterMenu() {
   if (window.TDChallenge) TDChallenge.onMenu();  // 📋 refresh the daily-challenges bar
   if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
+  if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
   if (window.TDTour)  TDTour.maybeStart('menu');  // 🎓 first-visit menu tour (waits for popups)
 }
@@ -2906,11 +2912,12 @@ function startGameWithTeam() {
 // The shared "start a brand-new game" routine, used by BOTH Quick Game and
 // 🏆 Season mode. `team`/`opp` are team objects; `isSeason` is true for a
 // season game (so endGame knows to report the final score back to the season).
-function beginGame(team, opp, isSeason) {
+function beginGame(team, opp, isSeason, isRival) {
   G.team = team;
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
+  G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
 
   // ⭐ Turn each team's OFFENSE/DEFENSE ratings into a gentle speed tilt: a 5 is
   // neutral, a 10 is +7.5%, a 1 is −6%. So a great team really does play tougher,
@@ -2924,6 +2931,13 @@ function beginGame(team, opp, isSeason) {
   // strength bump on BOTH sides of the ball, so he really is the toughest test in
   // the game (on top of his 👑 superstar free safety, driven by G.bossGame).
   if (G.bossGame) { G.oppOff *= 1.10; G.oppDef *= 1.10; }
+
+  // 😈 RIVAL BUFF — your nemesis always brings their A-game, so a grudge match is
+  // a real test (a notch below the Maxwell boss). nemesis.js supplies the intro line.
+  if (G.rivalGame) {
+    G.oppOff *= 1.06; G.oppDef *= 1.06;
+    if (window.TDNemesis && TDNemesis.introLine) sayComment(TDNemesis.introLine());
+  }
 
   // 📈 Player progression: your leveled-up team plays a little stronger — a
   // gentle, CAPPED edge on YOUR offense & defense only (never the opponent's),
@@ -2999,6 +3013,18 @@ window.TDGame = {
   startSeasonGame(youAbbr, oppAbbr) {
     const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
     if (team && opp && G.scene) beginGame(team, opp, true);
+  },
+  // 😈 start a GRUDGE MATCH: your currently-picked team vs your Rival Nemesis
+  // (nemesis.js calls this from the CHALLENGE button). If you happen to be playing
+  // AS your rival's team, they get a random stand-in so it's still a real game.
+  startRivalGame(oppAbbr) {
+    if (G.state !== 'menu') return;
+    const team = allTeams()[G.menuIndex];
+    let opp = this.teamByAbbr(oppAbbr);
+    if (opp && team && opp.abbr === team.abbr) {
+      do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp.abbr === team.abbr);
+    }
+    if (team && opp && G.scene) beginGame(team, opp, false, true);
   }
 };
 
