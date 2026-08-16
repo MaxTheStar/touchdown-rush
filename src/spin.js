@@ -87,20 +87,25 @@
   const byId = id => BUFFS.find(b => b.id === id) || null;
 
   // ---- 🧠 What we remember between visits ---------------------------------
-  //   last  = when you last spun (ms since 1970) — powers the cooldown
-  //   id    = the buff that's still ticking (or null)
-  //   until = when that buff wears off (ms since 1970)
-  const data = load('spin', { last: 0, id: null, until: 0 });
+  //   last    = when you last spun (ms since 1970) — powers the cooldown
+  //   id      = the buff that's still ticking (or null)
+  //   until   = when that buff wears off (ms since 1970)
+  //   credits = 🎡 FREE SPINS you've banked (from the daily rewards) — each one
+  //             lets you spin RIGHT NOW without waiting out the cooldown.
+  const data = load('spin', { last: 0, id: null, until: 0, credits: 0 });
   let last  = data.last  || 0;
   let curId = (data.id && data.until > Date.now()) ? data.id : null;
   let until = curId ? data.until : 0;
+  let credits = data.credits || 0;
   let spinning = false;   // true only during the wheel animation
 
-  function save() { store('spin', { last, id: curId, until }); }
+  function save() { store('spin', { last, id: curId, until, credits }); }
 
   // ---- ⏱ Cooldown helpers -------------------------------------------------
-  function msLeft()  { return Math.max(0, COOLDOWN - (Date.now() - last)); }
-  function ready()   { return last === 0 || msLeft() === 0; }
+  function msLeft()    { return Math.max(0, COOLDOWN - (Date.now() - last)); }
+  function cooldownUp(){ return last === 0 || msLeft() === 0; }
+  // You can spin if your timer is up OR you have a banked free spin to burn.
+  function ready()     { return cooldownUp() || credits > 0; }
   function clock(ms) { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 
   // ---- 💪 THE LIVE BUFF — shop.js asks these mid-play ---------------------
@@ -175,7 +180,10 @@
   function doSpin() {
     if (spinning || !ready()) return;
     spinning = true;
-    last = Date.now();               // the cooldown starts the moment you spin
+    // If your timer is up, this is your normal spin and it restarts the cooldown.
+    // Otherwise you're spending a banked 🎡 FREE SPIN, which leaves the timer alone.
+    if (cooldownUp()) last = Date.now();
+    else credits = Math.max(0, credits - 1);
     save();
     renderModal();                   // flip the button to "SPINNING…"
 
@@ -240,16 +248,31 @@
     buildWheel();
     const btn = $('spin-do');
     if (btn) {
-      if (spinning) { btn.textContent = 'SPINNING…'; btn.className = 'ov-btn spinning'; }
-      else if (ready()) { btn.textContent = 'SPIN! 🎡'; btn.className = 'ov-btn yes'; }
-      else { btn.textContent = '⏱ ' + clock(msLeft()); btn.className = 'ov-btn waiting'; }
+      if (spinning)         { btn.textContent = 'SPINNING…';           btn.className = 'ov-btn spinning'; }
+      else if (cooldownUp()){ btn.textContent = 'SPIN! 🎡';            btn.className = 'ov-btn yes'; }
+      else if (credits > 0) { btn.textContent = 'FREE SPIN! 🎡';       btn.className = 'ov-btn yes'; }
+      else                  { btn.textContent = '⏱ ' + clock(msLeft());btn.className = 'ov-btn waiting'; }
+    }
+    // The little "you have free spins!" note under the sub-title.
+    const cr = $('spin-credits');
+    if (cr) {
+      if (credits > 0 && !spinning) {
+        cr.style.display = 'block';
+        cr.innerHTML = '🎡 <b>' + credits + '</b> free spin' + (credits > 1 ? 's' : '') + ' ready — spin now, no waiting!';
+      } else cr.style.display = 'none';
     }
   }
 
-  // The 🎡 menu button glows when a free spin is waiting.
+  // The 🎡 menu button glows when a spin is ready, and shows a badge counting
+  // any banked FREE SPINS.
   function refreshBtn() {
     const el = $('open-spin');
     if (el) el.classList.toggle('ready', ready() && !spinning);
+    const b = $('spin-badge');
+    if (b) {
+      if (credits > 0) { b.textContent = credits; b.style.display = 'flex'; }
+      else b.style.display = 'none';
+    }
   }
 
   // A little pill that rides along the top while a buff is live, counting down.
@@ -299,12 +322,24 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUp);
   else wireUp();
 
+  // 🎡 Bank some FREE SPINS (the daily rewards call this). Each one lets you spin
+  // without waiting for the cooldown. Refreshes the button glow + badge right away.
+  function grantFreeSpins(n) {
+    n = Math.max(0, Math.floor(n || 0));
+    if (!n) return;
+    credits += n;
+    save();
+    refresh();
+  }
+
   // ---- What the rest of the game may use ----------------------------------
   window.TDSpin = {
     // live buff values, folded into the shop perks during play
     speedMult, catchAdd, safeThrow, safeBall, truck,
+    // 🎁 daily rewards hand out free spins through here
+    grantFreeSpins,
     // handy for menus / debugging
     current: () => curBuff(),
-    ready, msLeft,
+    ready, msLeft, freeSpins: () => credits,
   };
 })();

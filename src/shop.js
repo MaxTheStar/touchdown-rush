@@ -62,18 +62,20 @@
   // an exclusive uniform (days 3, 7, 10, 12 & 14); the coins climb as your streak
   // grows, and day 14 is the grand-finale jackpot. Keep the streak alive — miss a
   // day and it starts back at day 1!
+  // Three days now hand out 🎡 FREE SPINS instead of coins (days 2, 6 & 11) —
+  // banked spins you can use on the Lucky Spin wheel without waiting out its timer.
   const DAILY = [
     { coins: 10 },                    // day 1
-    { coins: 15 },                    // day 2
+    { spins: 2 },                     // day 2  🎡 FREE SPINS
     { coins: 10, uniform: 'GLX' },    // day 3  🎽 GALAXY
     { coins: 20 },                    // day 4
     { coins: 25 },                    // day 5
-    { coins: 30 },                    // day 6
+    { spins: 3 },                     // day 6  🎡 FREE SPINS
     { coins: 50, uniform: 'GLD' },    // day 7  🎽 GOLD RUSH
     { coins: 30 },                    // day 8
     { coins: 35 },                    // day 9
     { coins: 40, uniform: 'LAV' },    // day 10 🎽 LAVA (brand new!)
-    { coins: 45 },                    // day 11
+    { spins: 3 },                     // day 11 🎡 FREE SPINS
     { coins: 50, uniform: 'ICE' },    // day 12 🎽 NEON ICE
     { coins: 60 },                    // day 13
     { coins: 100, uniform: 'BLK' },   // day 14 🎽🎉 BLACK DIAMOND — the finale!
@@ -395,8 +397,12 @@
     if (!day) return;
     const r = DAILY[day - 1];
 
-    earn(r.coins);
-    earnedThisGame -= r.coins;  // a gift, not game winnings
+    if (r.coins) {
+      earn(r.coins);
+      earnedThisGame -= r.coins;  // a gift, not game winnings
+    }
+    // 🎡 FREE SPINS days (2, 6 & 11) bank spins on the Lucky Spin wheel instead.
+    if (r.spins && window.TDSpin && TDSpin.grantFreeSpins) TDSpin.grantFreeSpins(r.spins);
 
     // Uniforms! Days 3 and 7 hand one out.
     const newUnis = [];
@@ -411,8 +417,9 @@
     if (window.TDSound) TDSound.sting(day === 7 ? 'win' : 'td');
     paintChip();
     renderDaily();
-    // 🎉 Coins fly up from the CLAIM button with a big "+N 🪙"!
-    celebrate($('daily-claim'), '🪙', '+' + r.coins + ' 🪙');
+    // 🎉 The reward flies up from the CLAIM button — coins, or free spins!
+    if (r.spins) celebrate($('daily-claim'), '🎡', '+' + r.spins + ' FREE SPIN' + (r.spins > 1 ? 'S' : ''));
+    else         celebrate($('daily-claim'), '🪙', '+' + r.coins + ' 🪙');
 
     // A new uniform? Jump the team menu right to it so you can try it on!
     if (newUnis.length && window.TDMenu) {
@@ -440,10 +447,13 @@
       // or including it if you've claimed today).
       const claimed = today === 0 ? d <= daily.day : d < shownDay;
       const cls = 'day-cell' + (d === shownDay ? ' today' : '') + (claimed ? ' claimed' : '');
+      const reward = r.uniform ? uniChip(r.uniform)
+                   : r.spins  ? '🎡<div class="uni-name">' + r.spins + ' FREE SPIN' + (r.spins > 1 ? 'S' : '') + '</div>'
+                   : '🪙' + r.coins;
       return `
         <div class="${cls}">
           <div class="day-num">${claimed ? '✓' : 'DAY ' + d}</div>
-          <div class="day-free">${r.uniform ? uniChip(r.uniform) : '🪙' + r.coins}</div>
+          <div class="day-free">${reward}</div>
         </div>`;
     }).join('');
 

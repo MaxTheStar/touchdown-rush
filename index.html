@@ -677,6 +677,22 @@
       100% { box-shadow: 0 0 0 0 rgba(255,214,10,0); }
     }
     @media (prefers-reduced-motion: reduce) { #open-spin.ready { animation: none; } }
+    /* A little count badge on the 🎡 button when you've banked FREE SPINS. */
+    #open-spin { position: relative; }
+    #spin-badge {
+      display: none; position: absolute; top: -5px; right: -5px;
+      min-width: 17px; height: 17px; padding: 0 3px; box-sizing: border-box;
+      align-items: center; justify-content: center;
+      background: #2ee6c8; color: #06202a; border-radius: 999px;
+      font: 800 10px "Arial Black", Arial; border: 1.5px solid #06202a;
+    }
+    /* The "you have free spins!" note inside the wheel pop-up. */
+    #spin-credits {
+      display: none; margin: 2px 0 6px; padding: 7px 10px; border-radius: 10px;
+      background: rgba(46,230,255,0.14); border: 1px solid rgba(46,230,255,0.4);
+      color: #bff4ff; font: 700 12px Arial;
+    }
+    #spin-credits b { color: #fff; font-weight: 900; }
 
     /* The wheel itself. */
     #spin-wheel-wrap { position: relative; width: min(74vw, 290px); margin: 6px auto 2px; }
@@ -1005,7 +1021,7 @@
     <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
-    <div class="meta-btn" id="open-spin">🎡<small>SPIN</small></div>
+    <div class="meta-btn" id="open-spin">🎡<small>SPIN</small><span id="spin-badge"></span></div>
     <div class="meta-btn" id="open-howto">📖<small>HOW TO</small></div>
   </div>
 
@@ -1160,7 +1176,7 @@
       <div class="ov-title">🎁 DAILY REWARDS</div>
       <div class="ov-sub">Play every day to keep the streak — day 14 is the BIG one!</div>
       <div id="daily-grid"></div>
-      <div class="daily-legend">every reward is FREE · <b style="color:#ffd60a">special uniforms on days 3, 7, 10, 12 &amp; 14</b></div>
+      <div class="daily-legend">every reward is FREE · <b style="color:#ffd60a">uniforms on days 3, 7, 10, 12 &amp; 14</b> · <b style="color:#2ee6c8">🎡 free spins on days 2, 6 &amp; 11</b></div>
       <div class="ov-btn yes" id="daily-claim">CLAIM 🎁</div>
       <div class="ov-btn" id="daily-close">CLOSE</div>
     </div>
@@ -1172,6 +1188,7 @@
     <div class="ov-card">
       <div class="ov-title">🎡 LUCKY SPIN</div>
       <div class="ov-sub">A free spin every few minutes — the shiny slices are SUPER rare!</div>
+      <div id="spin-credits"></div>
       <div id="spin-wheel-wrap">
         <div id="spin-pointer"></div>
         <svg id="spin-wheel" viewBox="0 0 320 320" aria-hidden="true">
@@ -1222,17 +1239,17 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=50"></script>
-  <script src="src/sound.js?v=50"></script>
-  <script src="src/shop.js?v=50"></script>
-  <script src="src/spin.js?v=50"></script>
-  <script src="src/progress.js?v=50"></script>
-  <script src="src/weather.js?v=50"></script>
-  <script src="src/season.js?v=50"></script>
-  <script src="src/draft.js?v=50"></script>
-  <script src="src/ads.js?v=50"></script>
-  <script src="src/tour.js?v=50"></script>
-  <script src="src/kick.js?v=50"></script>
-  <script src="src/main.js?v=50"></script>
+  <script src="src/stats.js?v=51"></script>
+  <script src="src/sound.js?v=51"></script>
+  <script src="src/shop.js?v=51"></script>
+  <script src="src/spin.js?v=51"></script>
+  <script src="src/progress.js?v=51"></script>
+  <script src="src/weather.js?v=51"></script>
+  <script src="src/season.js?v=51"></script>
+  <script src="src/draft.js?v=51"></script>
+  <script src="src/ads.js?v=51"></script>
+  <script src="src/tour.js?v=51"></script>
+  <script src="src/kick.js?v=51"></script>
+  <script src="src/main.js?v=51"></script>
 </body>
 </html>

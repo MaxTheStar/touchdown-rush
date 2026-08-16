@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.33 — cache-buster is `?v=50` in `index.html`.
+- **Version:** v1.34 — cache-buster is `?v=51` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -17,9 +17,12 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
 - **Last updated:** 2026-08-15.
 - **✅ v1.33 (the 🎡 Lucky Spin) is PUSHED & LIVE** — the first Round-3 feature, shipped 2026-08-15
-  (`src/spin.js` new; `index.html` + `src/shop.js` edited).
+  (`src/spin.js` new; `index.html` + `src/shop.js` edited; commit `6adfd4b`).
+- **✅ v1.34 (🎡 FREE SPINS in the daily rewards) is PUSHED & LIVE** — shipped 2026-08-15. Edits:
+  `src/spin.js` (free-spin credits), `src/shop.js` (3 daily days → free spins), `index.html`
+  (badge + credits note + legend), `?v=51`.
 
-## ✅ Sync status — v1.11–v1.33 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.33 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.34 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.34 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -113,6 +116,25 @@ event. That rarity is the whole hook ("just one more spin!"). All new code lives
   buff; the pill/countdown/cooldown/ready-glow all work; the buff survives a reload and an expired one does
   not; and the 7th menu chip fits (right edge 364 ≤ 375) with the pill hidden on the menu. A couple of
   screenshots (desktop + mobile wheel, in-game pill) were grabbed as proof for Max.
+
+And **v1.34** (cache-buster `?v=51`, shipped 2026-08-15) — 🎡 **FREE SPINS in the daily
+rewards** (Max's follow-up: "replace a few things on the daily chart… write it as 'free spins'"). Three of
+the 14 daily-reward days now hand out **free spins** instead of coins — **day 2 (×2), day 6 (×3), day 11
+(×3)** (`DAILY` in `src/shop.js`). A "free spin" is a banked spin you can use on the Lucky Spin wheel
+**without waiting out its 3-min cooldown**. How it fits together:
+  - `src/spin.js` gained a **credits** count (persisted in `tdr-spin.credits`) + `TDSpin.grantFreeSpins(n)`.
+    `ready()` is now "cooldown up **OR** credits > 0". In `doSpin`, if the timer is up it's your normal spin
+    (restarts the cooldown, credits untouched — no wasted credit); otherwise it spends one credit and
+    **leaves the cooldown running**. The wheel button reads SPIN! / FREE SPIN! / ⏱ m:ss accordingly, with a
+    "🎡 N free spins ready" note (correct singular/plural), and the 🎡 menu button shows a teal count badge.
+  - `src/shop.js` `claim()` now grants `r.spins` via `TDSpin.grantFreeSpins` and guards `r.coins` (a
+    free-spins day has no coins — no NaN); the calendar cell + a legend line show "🎡 N FREE SPINS".
+  - `index.html`: `#spin-badge` on the button, `#spin-credits` note in the wheel pop-up, legend text, CSS.
+
+  Verified live via DOM/JS: the calendar shows FREE SPINS on days 2/6/11 (desktop + 375px phone); claiming
+  day 2 banks exactly 2 credits with no coins added; a normal spin keeps credits + starts the cooldown; a
+  free spin drops the count by one and preserves the timer; the badge/note/glow track the count and clear at
+  zero; it all persists across a reload; no console errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
