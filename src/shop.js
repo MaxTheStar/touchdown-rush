@@ -528,6 +528,24 @@
     return true;
   }
 
+  // 🏆 The full uniform catalog for the Trophy Case — every style, whether you
+  // own it yet, and how to earn the ones you don't. Read live, so `owned` is current.
+  function uniformCatalog() {
+    const dayOf = {};
+    DAILY.forEach((r, i) => { if (r.uniform) dayOf[r.uniform] = i + 1; });
+    const order = ['GLX', 'GLD', 'LAV', 'ICE', 'BLK', 'FIRE', 'AQUA', 'VOID', 'CHMP'];
+    return order.map(abbr => {
+      const u = UNIFORMS[abbr];
+      if (!u) return null;
+      let how;
+      if (u.price)              how = 'Pro Shop · ' + u.price + ' 🪙';
+      else if (abbr === 'CHMP') how = 'Win the Max Bowl 🏆';
+      else if (dayOf[abbr])     how = 'Daily reward · Day ' + dayOf[abbr];
+      else                      how = 'Special reward';
+      return { abbr, name: u.name, jersey: u.jersey, helmet: u.helmet, owned: owned.includes(abbr), how };
+    }).filter(Boolean);
+  }
+
   // ---- What the rest of the game may use ----------------------------------
   window.TDShop = {
     // coins
@@ -539,6 +557,7 @@
     armAccuracy, weatherResist, toeFactor, hawkBoost,
     // uniforms you've unlocked (the menu adds them to the team list)
     unlockedUniforms: () => owned.map(a => UNIFORMS[a]).filter(Boolean),
+    uniformCatalog,   // 🏆 the full collection (owned + how to earn) for the Trophy Case
     grantUniform,
     // menu hook
     onMenu,

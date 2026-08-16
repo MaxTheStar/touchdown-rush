@@ -2823,6 +2823,7 @@ function enterMenu() {
   if (window.TDShop)  TDShop.onMenu();           // 🪙 coin count + a daily gift if one's ready
   if (window.TDProgress) TDProgress.onMenu();    // 📈 refresh the team level + XP bar
   if (window.TDChallenge) TDChallenge.onMenu();  // 📋 refresh the daily-challenges bar
+  if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
   if (window.TDTour)  TDTour.maybeStart('menu');  // 🎓 first-visit menu tour (waits for popups)
 }

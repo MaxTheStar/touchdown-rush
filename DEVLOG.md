@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.35 — cache-buster is `?v=52` in `index.html`.
+- **Version:** v1.36 — cache-buster is `?v=53` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -21,11 +21,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **✅ v1.34 (🎡 FREE SPINS in the daily rewards) is PUSHED & LIVE** — shipped 2026-08-15 (commit `693127f`).
   Edits: `src/spin.js` (free-spin credits), `src/shop.js` (3 daily days → free spins), `index.html`
   (badge + credits note + legend), `?v=51`.
-- **✅ v1.35 (📋 DAILY CHALLENGES) is PUSHED & LIVE** — the 2nd Round-3 pick, shipped 2026-08-15. New
-  `src/challenges.js`; 6 one-line `TDChallenge.bump()` hooks + an `onMenu()` hook in `src/main.js`; a menu
-  bar + modal + toast in `index.html`; `?v=52`.
+- **✅ v1.35 (📋 DAILY CHALLENGES) is PUSHED & LIVE** — the 2nd Round-3 pick, shipped 2026-08-15 (commit
+  `4d61638`). New `src/challenges.js`; 6 one-line `TDChallenge.bump()` hooks + an `onMenu()` hook in
+  `src/main.js`; a menu bar + modal + toast in `index.html`; `?v=52`.
+- **✅ v1.36 (🏆 TROPHY CASE) is PUSHED & LIVE** — the 3rd Round-3 pick, shipped 2026-08-15. New
+  `src/trophy.js` (read-only showcase); one `TDShop.uniformCatalog()` export in `src/shop.js`; one
+  `onMenu()` hook in `src/main.js`; a menu bar + modal in `index.html`; `?v=53`.
 
-## ✅ Sync status — v1.11–v1.35 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.35 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.36 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.36 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -165,6 +168,29 @@ turnover" — that reset at your local midnight. Beat one and CLAIM its coins; b
   reset clock; claiming the three paid 15+20+25 coins and the bonus paid +50 coins **and +1 free spin**
   (25→135 coins, spins 3→4); forcing a stale day re-rolls and clears progress; the bar hides in-game; a
   real game starts clean with the module loaded; no console errors.
+
+And **v1.36** (cache-buster `?v=53`, shipped 2026-08-15) — 🏆 **THE TROPHY CASE** (the 3rd
+Round-3 pick). A shelf that shows off everything you've earned: your 🏅 **records** (team level & title,
+Max Bowl titles, games played, coins), a 🎽 **uniform cabinet** (all 9 styles — owned ones in colour, the
+rest locked with a hint for how to earn them), and a 🏆 **badge wall** (10 milestones that light up as you
+hit them). How it's built:
+  - **New `src/trophy.js` / `window.TDTrophy`.** It OWNS no state — it just READS what other files already
+    remember and renders it live each time you open it, so it's always in sync and can't corrupt a save:
+    `TDProgress.level()/title()`, `TDShop.coins()` + the new `TDShop.uniformCatalog()`, and the raw
+    `tdr-games` / `tdr-titles` / `tdr-draftbest` keys. Because it's read-only there are **no gameplay
+    hooks** — just a single `TDChallenge`-style `onMenu()` in `showMenu` to refresh the bar.
+  - **`src/shop.js`** gained one export, `uniformCatalog()`, returning every uniform with `{owned, how}` —
+    "how" derived from the data it already has (a `price` → Pro Shop, the `DAILY` day map → daily reward,
+    CHMP → Win the Max Bowl). No other shop behaviour changed.
+  - **`index.html`:** a slim gold **`#trophy-bar`** on the menu (stacked under the challenges bar, shows
+    "N/9 🎽"), and a **`#trophy-modal`** with the records strip, the uniform-cabinet grid, and the badge
+    grid. All themed gold to sit apart from the green XP bar and amber challenges bar.
+
+  Verified live via DOM/JS with a seeded save (3 uniforms owned, level 5, 12 games, 1 title, 620 coins, an
+  A draft grade): the records tiles read 1 / Lv 5 PRO / 12 / 620; the cabinet marks GALAXY/GOLD RUSH/FIREBALL
+  as ✓ Earned and the other six locked with correct hints (daily day, Pro Shop price, Max Bowl); all 10
+  badges resolve correctly (6 unlocked, 4 locked with their requirement); the three menu bars stack with no
+  overlap; desktop + 375px phone both clean; no console errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub
