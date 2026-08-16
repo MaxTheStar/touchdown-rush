@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.36 — cache-buster is `?v=53` in `index.html`.
+- **Version:** v1.37 — cache-buster is `?v=54` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -24,11 +24,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **✅ v1.35 (📋 DAILY CHALLENGES) is PUSHED & LIVE** — the 2nd Round-3 pick, shipped 2026-08-15 (commit
   `4d61638`). New `src/challenges.js`; 6 one-line `TDChallenge.bump()` hooks + an `onMenu()` hook in
   `src/main.js`; a menu bar + modal + toast in `index.html`; `?v=52`.
-- **✅ v1.36 (🏆 TROPHY CASE) is PUSHED & LIVE** — the 3rd Round-3 pick, shipped 2026-08-15. New
-  `src/trophy.js` (read-only showcase); one `TDShop.uniformCatalog()` export in `src/shop.js`; one
-  `onMenu()` hook in `src/main.js`; a menu bar + modal in `index.html`; `?v=53`.
+- **✅ v1.36 (🏆 TROPHY CASE) is PUSHED & LIVE** — the 3rd Round-3 pick, shipped 2026-08-15 (commit
+  `9ee2334`). New `src/trophy.js` (read-only showcase); one `TDShop.uniformCatalog()` export in
+  `src/shop.js`; one `onMenu()` hook in `src/main.js`; a menu bar + modal in `index.html`; `?v=53`.
+- **✅ v1.37 (🌱 PLAYER GROWTH) is PUSHED & LIVE** — the 4th & last Round-3 pick, shipped 2026-08-15. All in
+  `src/draft.js` (growth math + roster UI) + two one-line hooks in `src/main.js` (`addGrowth` in endGame,
+  `onMenu`) + a sprout badge & growth CSS in `index.html`; `?v=54`. **🎉 The Round-3 board is fully swept.**
 
-## ✅ Sync status — v1.11–v1.36 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.36 pushed 2026-08-15)
+## ✅ Sync status — v1.11–v1.37 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.37 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
@@ -191,6 +194,30 @@ hit them). How it's built:
   as ✓ Earned and the other six locked with correct hints (daily day, Pro Shop price, Max Bowl); all 10
   badges resolve correctly (6 unlocked, 4 locked with their requirement); the three menu bars stack with no
   overlap; desktop + 375px phone both clean; no console errors.
+
+And **v1.37** (cache-buster `?v=54`, shipped 2026-08-15) — 🌱 **PLAYER GROWTH** (the 4th &
+last Round-3 pick). Your drafted players now get **better the more you play** — each one earns a little
+growth XP after every game and climbs toward his **potential**, so your rookies slowly become stars. It's
+all built into the existing MY TEAM system (`src/draft.js`):
+  - **The math.** Every player gets two new fields — `pot` (his ceiling) and `xp` (progress to the next
+    +1). `growthCap(ovr)` gives lower-rated guys the most upside; `growNeed(ovr)` makes early +1s cheap and
+    later ones dear. `addGrowth(win)` (called once at the final whistle) hands every starter `12` XP (`+6`
+    on a win) and bumps his `ovr` each time `xp` fills, **stopping at `pot`**. Since the team boost is the
+    average `ovr` (already capped at +8%), growth can't run away. Old saves get `pot`/`xp` back-filled on
+    load (no NaN); a grown player's **salary is left alone** (your homegrown guys stay cheap — no cap
+    surprises).
+  - **Seeing it.** The 📋 ROSTER tab now shows a green **growth bar** + "▲ N potential" (or "MAXED ⭐") under
+    each player; players who leveled up wear a **"▲+N"** badge and a **"🌱 N players grew"** banner sits up
+    top — both clear once you've looked. A little **🌱 sprout** rides the TEAM menu button whenever there's
+    unseen growth. The DRAFT/TRADE tabs are untouched (growth is roster-only).
+  - **Hooks.** Two guarded one-liners in `main.js`: `TDDraft.addGrowth(win)` in `endGame`, and
+    `TDDraft.onMenu()` in `showMenu` for the badge. `index.html` gained the sprout badge + growth CSS.
+
+  Verified live via DOM/JS: from a 65-overall team, 8 winning games grew it to 67 (boost +1%→+1.4%); each
+  player accrued XP and leveled toward — never past — his potential; blasting 60 games maxed all 8 exactly
+  at their `pot` (0 over-cap, all show "MAXED ⭐", team capped at 74, +3%); the ROSTER tab shows bars /
+  potential / "▲+N" badges / the "8 players grew" banner, the TEAM sprout shows then clears after viewing,
+  the DRAFT tab has zero growth bars, and a real game starts clean; no console errors.
 
 The push path is healthy: this Mac's SSH key (`~/.ssh/id_ed25519`, "touchdown-rush-mac",
 fingerprint `SHA256:NhURco+HMa7SkTP7UvmMAO0XKJL5Pr8nEXik36j05QU`) is on the MaxTheStar GitHub

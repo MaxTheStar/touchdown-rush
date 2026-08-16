@@ -107,6 +107,16 @@
   const clampOvr = v => Math.min(99, Math.max(50, v));
   let idSeq = 1;
 
+  // ---- 🌱 PLAYER GROWTH — your guys get better the more you play ----------
+  // Every player can climb from his current rating up to his POTENTIAL. Rookies
+  // (lower-rated) have the most room to grow; near the top it barely moves. He
+  // earns a little growth XP after every game, and each time it fills he goes +1.
+  const GROW_GAIN = 12, GROW_WIN_BONUS = 6;         // XP a game (a bit more on a win)
+  function growthCap(ovr) {                         // his ceiling — lower guys get more upside
+    return Math.min(99, ovr + Math.max(2, Math.round((85 - ovr) * 0.35) + rint(1, 4)));
+  }
+  function growNeed(ovr) { return 20 + Math.max(0, ovr - 55) * 3; }   // XP for the NEXT +1
+
   // Build one player. `scouted` players show their real rating; unscouted
   // prospects only show a rough range (lo..hi) until you pay to scout them.
   function makePlayer(pos, minOvr, maxOvr, opts) {
@@ -124,6 +134,8 @@
       scouted: opts.scouted !== false ? (opts.scouted === true) : false,
       salary: salaryOf(ovr, trait),
       lo, hi,
+      pot: growthCap(ovr),   // 🌱 how high he can grow
+      xp: 0,                 // 🌱 growth XP toward his next +1
     };
   }
 
@@ -139,10 +151,37 @@
     roster = freshRoster();
     saveRoster();
   } else {
-    // Old saves are trusted, but make sure every starter is "known" and has a salary.
-    roster.forEach(p => { p.scouted = true; if (p.salary == null) p.salary = salaryOf(p.ovr, p.trait); });
+    // Old saves are trusted, but make sure every starter is "known", has a salary,
+    // and (for saves from before v1.37) has growth fields so 🌱 growth can't go NaN.
+    roster.forEach(p => {
+      p.scouted = true;
+      if (p.salary == null) p.salary = salaryOf(p.ovr, p.trait);
+      if (p.pot == null || p.pot < p.ovr) p.pot = growthCap(p.ovr);
+      if (p.xp == null) p.xp = 0;
+    });
   }
   function saveRoster() { store('roster', roster); }
+
+  // 🌱 Called once at the final whistle: every player earns a little growth XP
+  // (a bit more on a win) and climbs toward his potential. Marks who leveled up
+  // (`p.grew`) so the roster can show a "▲+N" badge, and returns the same list.
+  function addGrowth(win) {
+    const gain = GROW_GAIN + (win ? GROW_WIN_BONUS : 0);
+    const grew = [];
+    roster.forEach(p => {
+      if (p.pot == null) p.pot = growthCap(p.ovr);
+      if (p.xp == null) p.xp = 0;
+      if (p.ovr >= p.pot) return;                       // already maxed — no more room
+      p.xp += gain;
+      let ups = 0;
+      while (p.ovr < p.pot && p.xp >= growNeed(p.ovr)) { p.xp -= growNeed(p.ovr); p.ovr++; ups++; }
+      if (ups) { p.grew = (p.grew || 0) + ups; grew.push({ name: p.name, pos: p.pos, ovr: p.ovr, up: ups }); }
+    });
+    if (grew.length) saveRoster();
+    return grew;
+  }
+  // How many players have grown since you last looked at the roster?
+  function growthPending() { return roster.filter(p => p.grew).length; }
 
   const avg = list => Math.round(list.reduce((s, p) => s + p.ovr, 0) / list.length);
   function teamOverall() {
@@ -213,17 +252,31 @@
     return tr ? `<span class="dr-trait">${tr.e} ${tr.n}</span>` : '';
   }
   // One player as a table-ish row. `extra` is optional right-side HTML (buttons).
-  function playerRow(p, extra) {
+  // `showGrowth` adds the 🌱 growth bar + "▲+N" badge (roster tab only).
+  function playerRow(p, extra, showGrowth) {
     const shown = p.scouted ? `${p.ovr}` : `${p.lo}–${p.hi}`;
     const tr = p.scouted ? traitChip(p.trait) : `<span class="dr-trait dr-unk">❔ ???</span>`;
     // Salary only shows once we truly know the player (scouted / on your team).
     const sal = p.scouted ? `<span class="dr-sal">💵 ${fmtSal(p.salary)}</span>` : '';
+    // 🌱 The growth bar — how close he is to his next +1, and his ceiling.
+    let grow = '';
+    if (showGrowth && p.scouted) {
+      const maxed = p.ovr >= (p.pot || p.ovr);
+      const pct = maxed ? 100 : Math.round(100 * (p.xp || 0) / growNeed(p.ovr));
+      grow = `<div class="dr-grow">
+          <div class="dr-grow-bar"><i style="width:${pct}%"></i></div>
+          <span class="dr-grow-lab">${maxed ? 'MAXED ⭐' : '▲ ' + p.pot + ' potential'}</span>
+        </div>`;
+    }
+    const grew = (showGrowth && p.grew) ? `<span class="dr-grew">▲+${p.grew}</span>` : '';
     return `<div class="dr-row">
         <div class="dr-pos">${POS_EMOJI[p.pos] || ''}<b>${p.pos}</b></div>
         <div class="dr-main">
           <div class="dr-name">${p.name}</div>
           <div class="dr-sub">from ${p.from} ${sal} ${tr}</div>
+          ${grow}
         </div>
+        ${grew}
         <div class="dr-ovr" style="color:${p.scouted ? ovrColor(p.ovr) : '#c6cede'}">${shown}</div>
         ${extra || ''}
       </div>`;
@@ -266,9 +319,19 @@
         <div class="dr-pay-note">${note}</div>
       </div>`;
 
-    const rows = roster.map(p => playerRow(p)).join('');
-    return head + payHTML + `<div class="dr-list">${rows}</div>` +
-      `<div class="dr-hint">Draft young stars or trade to raise your overall — a better team plays tougher!</div>`;
+    // 🌱 A banner when players have grown since your last game.
+    const grewCount = roster.filter(p => p.grew).length;
+    const grewSum = grewCount
+      ? `<div class="dr-grow-sum">🌱 <b>${grewCount}</b> player${grewCount > 1 ? 's' : ''} grew since your last game!</div>`
+      : '';
+
+    const rows = roster.map(p => playerRow(p, '', true)).join('');
+    const html = head + payHTML + grewSum + `<div class="dr-list">${rows}</div>` +
+      `<div class="dr-hint">🌱 Your players grow as you play — keep going and your rookies become stars!</div>`;
+
+    // You've seen the growth now — clear the "▲+N" badges so they don't linger.
+    if (grewCount) { roster.forEach(p => { p.grew = 0; }); saveRoster(); }
+    return html;
   }
 
   // ---- 🎯 The DRAFT tab ---------------------------------------------------
@@ -725,6 +788,13 @@
               : rosterHTML();
     const msg = flashMsg ? `<div class="dr-flash">${flashMsg}</div>` : '';
     body.innerHTML = tabsHTML() + msg + inner;
+    onMenu();   // keep the 🌱 growth badge on the TEAM button in sync
+  }
+
+  // 🌱 Put a little sprout on the TEAM menu button when players have grown.
+  function onMenu() {
+    const b = $('team-grow-badge');
+    if (b) b.style.display = growthPending() ? 'flex' : 'none';
   }
 
   // ---- One click handler for the whole pop-up (event delegation) ----------
@@ -776,6 +846,9 @@
     boost,              // main.js beginGame: { off, def } multipliers for YOUR team
     teamOverall,        // { off, def, ovr } — handy for other modules / debug
     payroll: teamPayroll,
+    addGrowth,          // 🌱 main.js endGame: grow your players a little
+    growthPending,      // how many players grew since last viewed (for the badge)
+    onMenu,             // refresh the 🌱 TEAM-button badge when the menu shows
     // Small dev helpers (handy for testing; harmless in play).
     _debug: {
       state: () => ({ nextDraftAt: nextDraftAt(), draftReady: draftReady(), payroll: teamPayroll(), requests: requests.length, draft }),

@@ -938,6 +938,24 @@
     .dr-eq { color: #c6cede; font-weight: 800; }
 
     .dr-hint { font: 12px/1.4 Arial; color: #93a0b8; margin-top: 10px; }
+
+    /* 🌱 PLAYER GROWTH (draft.js roster tab) */
+    .dr-grow { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .dr-grow-bar { flex: 1; max-width: 130px; height: 5px; border-radius: 999px;
+      background: rgba(255,255,255,0.14); overflow: hidden; }
+    .dr-grow-bar i { display: block; height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg,#5fc97f,#9be86a); }
+    .dr-grow-lab { font: 700 9px Arial; color: #7fae8f; white-space: nowrap; }
+    .dr-grew { flex: none; font: 800 11px "Arial Black", Arial; color: #08130c;
+      background: #7bd88f; border-radius: 7px; padding: 2px 6px; white-space: nowrap; }
+    .dr-grow-sum { font: 800 12px "Arial Black", Arial; color: #08130c; text-align: center;
+      background: linear-gradient(90deg,#7bd88f,#9be86a); border-radius: 10px; padding: 8px; margin: 2px 0 10px; }
+    .dr-grow-sum b { color: #06400f; }
+    /* the little sprout on the TEAM menu button when players have grown */
+    #open-team { position: relative; }
+    #team-grow-badge { display: none; position: absolute; top: -5px; right: -5px;
+      width: 18px; height: 18px; align-items: center; justify-content: center;
+      background: #7bd88f; border-radius: 999px; font-size: 11px; border: 1.5px solid #06202a; }
     .dr-intro { font: 13px/1.5 Arial; color: #dfe6f2; margin: 2px 2px 10px; text-align: left; }
     .dr-cap { font: 800 13px "Arial Black", Arial; color: #ffe066; margin: 4px 0 8px; }
     .dr-actions { margin-top: 6px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
@@ -1140,7 +1158,7 @@
   <!-- 🪙 Coins + SHOP + DAILY buttons (top-left, menu only — see shop.js) -->
   <div id="menu-meta">
     <div id="coin-chip">🪙&nbsp;<b id="coin-amt">0</b></div>
-    <div class="meta-btn" id="open-team">🏟<small>TEAM</small></div>
+    <div class="meta-btn" id="open-team">🏟<small>TEAM</small><span id="team-grow-badge">🌱</span></div>
     <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
     <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
@@ -1407,19 +1425,19 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=53"></script>
-  <script src="src/sound.js?v=53"></script>
-  <script src="src/shop.js?v=53"></script>
-  <script src="src/spin.js?v=53"></script>
-  <script src="src/challenges.js?v=53"></script>
-  <script src="src/progress.js?v=53"></script>
-  <script src="src/trophy.js?v=53"></script>
-  <script src="src/weather.js?v=53"></script>
-  <script src="src/season.js?v=53"></script>
-  <script src="src/draft.js?v=53"></script>
-  <script src="src/ads.js?v=53"></script>
-  <script src="src/tour.js?v=53"></script>
-  <script src="src/kick.js?v=53"></script>
-  <script src="src/main.js?v=53"></script>
+  <script src="src/stats.js?v=54"></script>
+  <script src="src/sound.js?v=54"></script>
+  <script src="src/shop.js?v=54"></script>
+  <script src="src/spin.js?v=54"></script>
+  <script src="src/challenges.js?v=54"></script>
+  <script src="src/progress.js?v=54"></script>
+  <script src="src/trophy.js?v=54"></script>
+  <script src="src/weather.js?v=54"></script>
+  <script src="src/season.js?v=54"></script>
+  <script src="src/draft.js?v=54"></script>
+  <script src="src/ads.js?v=54"></script>
+  <script src="src/tour.js?v=54"></script>
+  <script src="src/kick.js?v=54"></script>
+  <script src="src/main.js?v=54"></script>
 </body>
 </html>

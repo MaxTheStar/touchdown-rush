@@ -2644,6 +2644,7 @@ function endGame() {
     TDChallenge.bump('play');
     if (G.score > G.oppScore) TDChallenge.bump('win');
   }
+  if (window.TDDraft && TDDraft.addGrowth) TDDraft.addGrowth(G.score > G.oppScore);  // 🌱 your drafted players grow
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons
@@ -2824,6 +2825,7 @@ function enterMenu() {
   if (window.TDProgress) TDProgress.onMenu();    // 📈 refresh the team level + XP bar
   if (window.TDChallenge) TDChallenge.onMenu();  // 📋 refresh the daily-challenges bar
   if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
+  if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
   if (window.TDTour)  TDTour.maybeStart('menu');  // 🎓 first-visit menu tour (waits for popups)
 }
