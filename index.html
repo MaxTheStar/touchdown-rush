@@ -922,6 +922,20 @@
       100% { box-shadow: 0 0 0 0 rgba(70,227,160,0); }
     }
     @media (prefers-reduced-motion: reduce) { #road-bar.ready { animation: none; } }
+    /* 📱 On phones the game canvas letterboxes, so the "CHOOSE YOUR TEAM" title
+       sits lower on screen — right where a 3rd stacked bar would land. So on
+       narrow screens we tighten the three status bars (shorter + closer) back
+       into the footprint the old two bars used, keeping them clear of the title.
+       iPad (≥ its wider viewport) keeps the roomier default spacing. */
+    @media (max-width: 500px) {
+      #chal-bar, #trophy-bar, #road-bar { height: 25px; }
+      #chal-bar   { top: calc(max(12px, env(safe-area-inset-top)) + 92px); }
+      #trophy-bar { top: calc(max(12px, env(safe-area-inset-top)) + 120px); }
+      #road-bar   { top: calc(max(12px, env(safe-area-inset-top)) + 148px); }
+      .chal-bar-ic { font-size: 14px; }
+      .chal-bar-lab { font-size: 10.5px; }
+      .chal-bar-go { font-size: 14px; }
+    }
     /* Reward Road pop-up bits (the tier rows reuse the .chal-row look). */
     .road-top-row { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 2px 5px; }
     .road-rp { font: 800 15px "Arial Black", Arial; color: #46e3a0; }
@@ -958,9 +972,10 @@
     #cards-buy.nope { animation: cardsNope .45s ease; }
     @keyframes cardsNope { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
     /* the pack-opening reveal strip */
-    #cards-reveal { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 4px 0; }
+    #cards-reveal { display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap; margin: 4px 0; }
     #cards-reveal:empty { margin: 0; }
-    .rv-card { position: relative; width: 92px; padding: 12px 6px; border-radius: 12px; text-align: center;
+    .rv-card { position: relative; box-sizing: border-box; width: calc((100% - 16px) / 3); max-width: 116px;
+      padding: 12px 4px; border-radius: 12px; text-align: center;
       background: rgba(255,255,255,.06); border: 2px solid #9fb0c3; color: #9fb0c3;
       opacity: 0; transform: scale(.62) rotate(-4deg); animation: rvIn .5s cubic-bezier(.2,.8,.2,1) forwards; }
     .rv-card.r-E, .rv-card.r-L { box-shadow: 0 0 16px -2px currentColor; }
@@ -1718,25 +1733,25 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=60"></script>
-  <script src="src/sound.js?v=60"></script>
-  <script src="src/shop.js?v=60"></script>
-  <script src="src/spin.js?v=60"></script>
-  <script src="src/challenges.js?v=60"></script>
-  <script src="src/progress.js?v=60"></script>
-  <script src="src/streak.js?v=60"></script>
-  <script src="src/achievements.js?v=60"></script>
-  <script src="src/trophy.js?v=60"></script>
-  <script src="src/records.js?v=60"></script>
-  <script src="src/road.js?v=60"></script>
-  <script src="src/cards.js?v=60"></script>
-  <script src="src/nemesis.js?v=60"></script>
-  <script src="src/weather.js?v=60"></script>
-  <script src="src/season.js?v=60"></script>
-  <script src="src/draft.js?v=60"></script>
-  <script src="src/ads.js?v=60"></script>
-  <script src="src/tour.js?v=60"></script>
-  <script src="src/kick.js?v=60"></script>
-  <script src="src/main.js?v=60"></script>
+  <script src="src/stats.js?v=61"></script>
+  <script src="src/sound.js?v=61"></script>
+  <script src="src/shop.js?v=61"></script>
+  <script src="src/spin.js?v=61"></script>
+  <script src="src/challenges.js?v=61"></script>
+  <script src="src/progress.js?v=61"></script>
+  <script src="src/streak.js?v=61"></script>
+  <script src="src/achievements.js?v=61"></script>
+  <script src="src/trophy.js?v=61"></script>
+  <script src="src/records.js?v=61"></script>
+  <script src="src/road.js?v=61"></script>
+  <script src="src/cards.js?v=61"></script>
+  <script src="src/nemesis.js?v=61"></script>
+  <script src="src/weather.js?v=61"></script>
+  <script src="src/season.js?v=61"></script>
+  <script src="src/draft.js?v=61"></script>
+  <script src="src/ads.js?v=61"></script>
+  <script src="src/tour.js?v=61"></script>
+  <script src="src/kick.js?v=61"></script>
+  <script src="src/main.js?v=61"></script>
 </body>
 </html>
