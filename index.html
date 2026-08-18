@@ -898,6 +898,38 @@
     #rec-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     @media (prefers-reduced-motion: reduce) { #rec-toast { transition: none; } }
 
+    /* ---- 🎟️ REWARD ROAD (src/road.js) ---------------------------------- */
+    /* The 3rd slim menu bar, stacked under the Trophy Case (teal accent). */
+    #road-bar {
+      position: fixed; z-index: 40; display: none; align-items: center; gap: 7px;
+      left: max(12px, env(safe-area-inset-left));
+      top: calc(max(12px, env(safe-area-inset-top)) + 177px);
+      width: 214px; height: 34px; padding: 0 10px; box-sizing: border-box;
+      background: rgba(10,16,32,0.72); border: 2px solid rgba(56,211,159,0.5);
+      border-radius: 12px; color: #fff;
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+    }
+    body.menu #road-bar { display: flex; }
+    #road-bar:active { transform: scale(0.98); }
+    #road-bar .chal-bar-lab { color: #b7f0d8; }
+    #road-bar-sum { font: 800 12px "Arial Black", Arial; color: #46e3a0; white-space: nowrap; }
+    #road-bar .chal-bar-go { color: #46e3a0; }
+    #road-bar.ready { border-color: #46e3a0; animation: roadReady 1.3s ease-out infinite; }
+    #road-bar.ready #road-bar-sum { color: #06231a; background: #46e3a0; border-radius: 6px; padding: 1px 6px; }
+    @keyframes roadReady {
+      0%   { box-shadow: 0 0 0 0 rgba(70,227,160,.7); }
+      70%  { box-shadow: 0 0 0 9px rgba(70,227,160,0); }
+      100% { box-shadow: 0 0 0 0 rgba(70,227,160,0); }
+    }
+    @media (prefers-reduced-motion: reduce) { #road-bar.ready { animation: none; } }
+    /* Reward Road pop-up bits (the tier rows reuse the .chal-row look). */
+    .road-top-row { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 2px 5px; }
+    .road-rp { font: 800 15px "Arial Black", Arial; color: #46e3a0; }
+    .road-next { font: 700 11px Arial; color: #b7c6d8; }
+    .chal-row.ready { background: rgba(70,227,160,0.12); border-color: rgba(70,227,160,0.5); }
+    .chal-btn.go[data-claim] { background: rgba(70,227,160,0.95); color: #06231a; border: 2px solid #8ff0cf; }
+    .road-endless { text-align: center; font: 700 11px Arial; color: #8fb0d8; margin: 8px 0 2px; opacity: .9; }
+
     /* Section headers inside the pop-up. */
     .trophy-sec { display: flex; align-items: baseline; gap: 8px; margin: 15px 0 9px; text-align: left;
       font: 800 12px "Arial Black", Arial; letter-spacing: .1em; text-transform: uppercase; color: #ffd54a;
@@ -1315,6 +1347,14 @@
     <span class="chal-bar-go">›</span>
   </div>
 
+  <!-- 🎟️ Reward-Road bar (menu only) — road.js fills it + opens the modal. -->
+  <div id="road-bar">
+    <span class="chal-bar-ic">🎟️</span>
+    <span class="chal-bar-lab">REWARD ROAD</span>
+    <span id="road-bar-sum">T1</span>
+    <span class="chal-bar-go">›</span>
+  </div>
+
   <!-- Difficulty picker (Easy / Medium / Hard) — shown on the menu, above PLAY -->
   <div id="tm-diff">
     <div class="tm-diff-lab">DIFFICULTY</div>
@@ -1542,6 +1582,17 @@
     </div>
   </div>
 
+  <!-- 🎟️ THE REWARD ROAD — road.js draws the tier ladder & CLAIM buttons. -->
+  <div class="ov" id="road-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎟️ REWARD ROAD</div>
+      <div class="ov-sub">Earn road points every game — climb for prizes. All free!</div>
+      <div id="road-top"></div>
+      <div id="road-list"></div>
+      <div class="ov-btn" id="road-close">DONE</div>
+    </div>
+  </div>
+
   <!-- 😈 RIVAL NEMESIS — nemesis.js fills in your rival, the record & the taunt. -->
   <div class="ov" id="nemesis-modal">
     <div class="ov-card">
@@ -1595,23 +1646,24 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=58"></script>
-  <script src="src/sound.js?v=58"></script>
-  <script src="src/shop.js?v=58"></script>
-  <script src="src/spin.js?v=58"></script>
-  <script src="src/challenges.js?v=58"></script>
-  <script src="src/progress.js?v=58"></script>
-  <script src="src/streak.js?v=58"></script>
-  <script src="src/achievements.js?v=58"></script>
-  <script src="src/trophy.js?v=58"></script>
-  <script src="src/records.js?v=58"></script>
-  <script src="src/nemesis.js?v=58"></script>
-  <script src="src/weather.js?v=58"></script>
-  <script src="src/season.js?v=58"></script>
-  <script src="src/draft.js?v=58"></script>
-  <script src="src/ads.js?v=58"></script>
-  <script src="src/tour.js?v=58"></script>
-  <script src="src/kick.js?v=58"></script>
-  <script src="src/main.js?v=58"></script>
+  <script src="src/stats.js?v=59"></script>
+  <script src="src/sound.js?v=59"></script>
+  <script src="src/shop.js?v=59"></script>
+  <script src="src/spin.js?v=59"></script>
+  <script src="src/challenges.js?v=59"></script>
+  <script src="src/progress.js?v=59"></script>
+  <script src="src/streak.js?v=59"></script>
+  <script src="src/achievements.js?v=59"></script>
+  <script src="src/trophy.js?v=59"></script>
+  <script src="src/records.js?v=59"></script>
+  <script src="src/road.js?v=59"></script>
+  <script src="src/nemesis.js?v=59"></script>
+  <script src="src/weather.js?v=59"></script>
+  <script src="src/season.js?v=59"></script>
+  <script src="src/draft.js?v=59"></script>
+  <script src="src/ads.js?v=59"></script>
+  <script src="src/tour.js?v=59"></script>
+  <script src="src/kick.js?v=59"></script>
+  <script src="src/main.js?v=59"></script>
 </body>
 </html>

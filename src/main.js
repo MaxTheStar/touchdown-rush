@@ -2686,6 +2686,10 @@ function endGame() {
   // 📖 Record Book: check the "whole game" bests (most points, biggest win) and
   // flash a "NEW RECORD!" ribbon for anything you beat this game.
   if (window.TDRecords) TDRecords.gameOver({ my: G.score, opp: G.oppScore, won: G.score > G.oppScore });
+
+  // 🎟️ Reward Road: finishing a game earns road points (a win earns more) —
+  // they push you toward the next free reward tier.
+  if (window.TDRoad) TDRoad.addPoints(G.score > G.oppScore);
 }
 
 function buildGameOverOverlay() {
@@ -2854,6 +2858,7 @@ function enterMenu() {
   if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
   if (window.TDAchieve) TDAchieve.onMenu();      // 🏅 check for any newly-earned achievement badges
   if (window.TDStreak) TDStreak.onMenu();        // 🔥 show/hide the win-streak flame pill
+  if (window.TDRoad) TDRoad.onMenu();            // 🎟️ refresh the Reward Road bar (glows when claimable)
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel

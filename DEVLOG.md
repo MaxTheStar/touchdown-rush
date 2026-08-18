@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.41 — cache-buster is `?v=58` in `index.html`.
+- **Version:** v1.42 — cache-buster is `?v=59` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -64,8 +64,16 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   (reuses the `.trec` tiles; beaten-this-game records glow gold). Wiring: four one-line `TDRecords.*`
   hooks in `src/main.js` (startGame / td / fg / gameOver); button + modal + toast + CSS in `index.html`;
   `?v=58`.
+- **✅ v1.42 (🎟️ REWARD ROAD) is PUSHED & LIVE** — the 3rd Round-5 pick, shipped 2026-08-17. New
+  `src/road.js` (`window.TDRoad`, key `tdr-road` = `{rp,claimed}`): a free tier ladder — finishing a game
+  earns +10 road points (a win adds +10 more), and passing a tier's line lights up its 🎁 CLAIM button
+  (rewards are coins via `TDShop.earn` and/or free spins via `TDSpin.grantFreeSpins`, escalating; the
+  road never ends — every +300 RP past the last tier is another 200-coin bonus). A 3rd slim menu bar
+  (`#road-bar`, teal, glows when a reward is ready) opens `#road-modal`, which draws the tier track with
+  CLAIM buttons (a 400 ms debounce stops one tap claiming two tiers). Wiring: one `TDRoad.addPoints()` in
+  `endGame` + one `onMenu()` hook in `src/main.js`; bar + modal + CSS in `index.html`; `?v=59`.
 
-## ✅ Sync status — v1.11–v1.41 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
+## ✅ Sync status — v1.11–v1.42 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
