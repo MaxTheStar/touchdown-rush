@@ -2690,6 +2690,11 @@ function endGame() {
   // 🎟️ Reward Road: finishing a game earns road points (a win earns more) —
   // they push you toward the next free reward tier.
   if (window.TDRoad) TDRoad.addPoints(G.score > G.oppScore);
+
+  // 🃏 Card Packs: tick the free-pack meter — every few games earns a pack.
+  if (window.TDCards && TDCards.gameDone()) {
+    if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '🃏', 'CARD PACK EARNED!');
+  }
 }
 
 function buildGameOverOverlay() {
@@ -2859,6 +2864,7 @@ function enterMenu() {
   if (window.TDAchieve) TDAchieve.onMenu();      // 🏅 check for any newly-earned achievement badges
   if (window.TDStreak) TDStreak.onMenu();        // 🔥 show/hide the win-streak flame pill
   if (window.TDRoad) TDRoad.onMenu();            // 🎟️ refresh the Reward Road bar (glows when claimable)
+  if (window.TDCards) TDCards.onMenu();          // 🃏 refresh the unopened-packs badge on SHOP
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel

@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.42 — cache-buster is `?v=59` in `index.html`.
+- **Version:** v1.43 — cache-buster is `?v=60` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -72,8 +72,17 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   (`#road-bar`, teal, glows when a reward is ready) opens `#road-modal`, which draws the tier track with
   CLAIM buttons (a 400 ms debounce stops one tap claiming two tiers). Wiring: one `TDRoad.addPoints()` in
   `endGame` + one `onMenu()` hook in `src/main.js`; bar + modal + CSS in `index.html`; `?v=59`.
+- **✅ v1.43 (🃏 CARD PACKS) is PUSHED & LIVE** — the 4th Round-5 pick, shipped 2026-08-17. New
+  `src/cards.js` (`window.TDCards`, key `tdr-cards` = `{owned,packs,plays}`): an 18-card collectible set
+  across 4 rarities (Common/Rare/Epic/Legendary, weighted 60/27/10/3). Open a pack → 3 cards (the 3rd is
+  always Rare-or-better), new ones fill the album, doubles auto-sell for coins (5/15/40/120). Earn a free
+  pack every 3 games (starter pack on first load) or 🃏 BUY PACK for 150 🪙 (`TDShop.spend`). Opened from
+  the Pro Shop via a "🃏 CARD PACKS" button → `#cards-modal` (opener + animated reveal strip with NEW!/
+  dupe tags + the album grid); an unopened-packs badge sits on the 🛍 SHOP menu button. Wiring: one
+  `TDCards.gameDone()` in `endGame` (celebrates an earned pack) + one `onMenu()` hook in `src/main.js`;
+  shop button + badge + modal + CSS in `index.html`; `?v=60`.
 
-## ✅ Sync status — v1.11–v1.42 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
+## ✅ Sync status — v1.11–v1.43 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

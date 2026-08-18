@@ -930,6 +930,59 @@
     .chal-btn.go[data-claim] { background: rgba(70,227,160,0.95); color: #06231a; border: 2px solid #8ff0cf; }
     .road-endless { text-align: center; font: 700 11px Arial; color: #8fb0d8; margin: 8px 0 2px; opacity: .9; }
 
+    /* ---- 🃏 CARD PACKS (src/cards.js) ---------------------------------- */
+    /* Unopened-packs badge on the 🛍 SHOP menu button + on the in-shop button. */
+    #shop-badge {
+      display: none; position: absolute; top: -5px; right: -5px;
+      min-width: 17px; height: 17px; padding: 0 3px; box-sizing: border-box;
+      align-items: center; justify-content: center;
+      background: #ff7a4d; color: #2a0d00; border-radius: 999px;
+      font: 800 10px "Arial Black", Arial; border: 1.5px solid #2a0d00;
+    }
+    #cards-btn-badge {
+      display: none; margin-left: 7px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+      align-items: center; justify-content: center; vertical-align: middle;
+      background: #ff7a4d; color: #2a0d00; border-radius: 999px; font: 800 11px "Arial Black", Arial;
+    }
+    /* pack controls */
+    #cards-packctl { display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+    .cards-packn { font: 800 13px "Arial Black", Arial; color: #ffd8a8; display: flex; align-items: center; gap: 5px; }
+    .cards-packn b { color: #ff9a3d; font-size: 18px; }
+    #cards-open, #cards-buy { -webkit-tap-highlight-color: transparent; touch-action: none;
+      padding: 9px 12px; border-radius: 11px; font: 800 13px "Arial Black", Arial; white-space: nowrap; text-align: center; }
+    #cards-open { background: linear-gradient(180deg,#ffb24d,#ff7a1c); color: #2a0d00; border: 2px solid #ffd9a8; flex: 1; }
+    #cards-open.disabled { opacity: .42; filter: grayscale(.6); }
+    #cards-open:active { transform: scale(.96); }
+    #cards-buy { background: rgba(255,214,10,.18); color: #ffe066; border: 2px solid rgba(255,214,10,.5); }
+    #cards-buy:active { transform: scale(.96); }
+    #cards-buy.nope { animation: cardsNope .45s ease; }
+    @keyframes cardsNope { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+    /* the pack-opening reveal strip */
+    #cards-reveal { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 4px 0; }
+    #cards-reveal:empty { margin: 0; }
+    .rv-card { position: relative; width: 92px; padding: 12px 6px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,.06); border: 2px solid #9fb0c3; color: #9fb0c3;
+      opacity: 0; transform: scale(.62) rotate(-4deg); animation: rvIn .5s cubic-bezier(.2,.8,.2,1) forwards; }
+    .rv-card.r-E, .rv-card.r-L { box-shadow: 0 0 16px -2px currentColor; }
+    .rv-ic { font-size: 30px; line-height: 1; }
+    .rv-nm { font: 800 11px "Arial Black", Arial; color: #fff; margin-top: 5px; }
+    .rv-rar { font: 700 9px Arial; letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
+    .rv-tag { position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+      padding: 2px 7px; border-radius: 999px; font: 800 9px "Arial Black", Arial; white-space: nowrap; }
+    .rv-new { background: #37d36f; color: #062314; }
+    .rv-dupe { background: #223a5e; color: #ffe27a; }
+    @keyframes rvIn { to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .rv-card { animation: none; opacity: 1; transform: none; } }
+    /* the album grid */
+    #cards-album { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 8px 0 2px; }
+    .card-cell { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px; padding: 9px 4px; text-align: center; }
+    .card-cell.locked { opacity: .55; }
+    .card-ic { font-size: 24px; line-height: 1; }
+    .card-cell.locked .card-ic { filter: grayscale(1) brightness(.7); }
+    .card-nm { font: 800 10px "Arial Black", Arial; color: #fff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-rar { font: 700 8.5px Arial; letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
+
     /* Section headers inside the pop-up. */
     .trophy-sec { display: flex; align-items: baseline; gap: 8px; margin: 15px 0 9px; text-align: left;
       font: 800 12px "Arial Black", Arial; letter-spacing: .1em; text-transform: uppercase; color: #ffd54a;
@@ -1313,7 +1366,7 @@
     <div id="coin-chip">🪙&nbsp;<b id="coin-amt">0</b></div>
     <div class="meta-btn" id="open-team">🏟<small>TEAM</small><span id="team-grow-badge">🌱</span></div>
     <div class="meta-btn" id="open-season">🏆<small>SEASON</small></div>
-    <div class="meta-btn" id="open-shop">🛍<small>SHOP</small></div>
+    <div class="meta-btn" id="open-shop">🛍<small>SHOP</small><span id="shop-badge"></span></div>
     <div class="meta-btn" id="open-daily">🎁<small>DAILY</small></div>
     <div class="meta-btn" id="open-spin">🎡<small>SPIN</small><span id="spin-badge"></span></div>
     <div class="meta-btn" id="open-howto">📖<small>HOW TO</small></div>
@@ -1485,6 +1538,7 @@
       <div class="ov-title">🛍 THE PRO SHOP</div>
       <div class="ov-sub">Gear up! Every upgrade really changes how you play.</div>
       <div id="shop-coins"></div>
+      <div class="ov-btn" id="open-cards">🃏 CARD PACKS<span id="cards-btn-badge"></span></div>
       <div id="shop-items"></div>
       <div class="shop-section">🎽 STYLES — new looks for your squad</div>
       <div id="shop-uniforms"></div>
@@ -1582,6 +1636,24 @@
     </div>
   </div>
 
+  <!-- 🃏 CARD PACKS — cards.js draws the opener, the reveal & your album.
+       Opened from the Pro Shop; sits after it so it stacks on top. -->
+  <div class="ov" id="cards-modal">
+    <div class="ov-card">
+      <div class="ov-title">🃏 CARD PACKS</div>
+      <div class="ov-sub">Collect the whole squad — <span id="cards-count">0 / 18</span> cards</div>
+      <div id="cards-packctl">
+        <span class="cards-packn">Packs: <b id="cards-packs">0</b> 🃏</span>
+        <div id="cards-open">OPEN PACK</div>
+        <div id="cards-buy">BUY PACK · 150 🪙</div>
+      </div>
+      <div id="cards-reveal"></div>
+      <div class="trophy-sec">📚 Your Album</div>
+      <div id="cards-album"></div>
+      <div class="ov-btn" id="cards-close">DONE</div>
+    </div>
+  </div>
+
   <!-- 🎟️ THE REWARD ROAD — road.js draws the tier ladder & CLAIM buttons. -->
   <div class="ov" id="road-modal">
     <div class="ov-card">
@@ -1646,24 +1718,25 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=59"></script>
-  <script src="src/sound.js?v=59"></script>
-  <script src="src/shop.js?v=59"></script>
-  <script src="src/spin.js?v=59"></script>
-  <script src="src/challenges.js?v=59"></script>
-  <script src="src/progress.js?v=59"></script>
-  <script src="src/streak.js?v=59"></script>
-  <script src="src/achievements.js?v=59"></script>
-  <script src="src/trophy.js?v=59"></script>
-  <script src="src/records.js?v=59"></script>
-  <script src="src/road.js?v=59"></script>
-  <script src="src/nemesis.js?v=59"></script>
-  <script src="src/weather.js?v=59"></script>
-  <script src="src/season.js?v=59"></script>
-  <script src="src/draft.js?v=59"></script>
-  <script src="src/ads.js?v=59"></script>
-  <script src="src/tour.js?v=59"></script>
-  <script src="src/kick.js?v=59"></script>
-  <script src="src/main.js?v=59"></script>
+  <script src="src/stats.js?v=60"></script>
+  <script src="src/sound.js?v=60"></script>
+  <script src="src/shop.js?v=60"></script>
+  <script src="src/spin.js?v=60"></script>
+  <script src="src/challenges.js?v=60"></script>
+  <script src="src/progress.js?v=60"></script>
+  <script src="src/streak.js?v=60"></script>
+  <script src="src/achievements.js?v=60"></script>
+  <script src="src/trophy.js?v=60"></script>
+  <script src="src/records.js?v=60"></script>
+  <script src="src/road.js?v=60"></script>
+  <script src="src/cards.js?v=60"></script>
+  <script src="src/nemesis.js?v=60"></script>
+  <script src="src/weather.js?v=60"></script>
+  <script src="src/season.js?v=60"></script>
+  <script src="src/draft.js?v=60"></script>
+  <script src="src/ads.js?v=60"></script>
+  <script src="src/tour.js?v=60"></script>
+  <script src="src/kick.js?v=60"></script>
+  <script src="src/main.js?v=60"></script>
 </body>
 </html>
