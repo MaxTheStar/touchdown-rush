@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.40 — cache-buster is `?v=57` in `index.html`.
+- **Version:** v1.41 — cache-buster is `?v=58` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -55,8 +55,17 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   shows top-right on the menu only while a streak is alive (tap it to flare). Wiring: one
   `TDStreak.recordResult()` in `endGame` + one `onMenu()` hook in `src/main.js`; pill + banner + CSS in
   `index.html`; `?v=57`.
+- **✅ v1.41 (📖 RECORD BOOK) is PUSHED & LIVE** — the 2nd Round-5 pick, shipped 2026-08-17. New
+  `src/records.js` (`window.TDRecords`, key `tdr-records`): tracks personal bests — most points in a
+  game, biggest win, longest TD, longest FG, most TDs in a game (best win streak read live from
+  streak.js) — plus a live-read Career shelf (games, level, Max Bowls, coins, badges). Beat a best and a
+  gold `#rec-toast` "NEW RECORD!" ribbon flashes at game's end (queued, capped at 3 so a big game can't
+  spam). Opened from the Trophy Case via an "📖 OPEN RECORD BOOK" button → its own `#records-modal`
+  (reuses the `.trec` tiles; beaten-this-game records glow gold). Wiring: four one-line `TDRecords.*`
+  hooks in `src/main.js` (startGame / td / fg / gameOver); button + modal + toast + CSS in `index.html`;
+  `?v=58`.
 
-## ✅ Sync status — v1.11–v1.40 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
+## ✅ Sync status — v1.11–v1.41 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

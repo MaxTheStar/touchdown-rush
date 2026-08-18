@@ -876,6 +876,28 @@
     #streak-fire.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
     @media (prefers-reduced-motion: reduce) { #streak-fire { transition: opacity .2s ease; } }
 
+    /* ---- 📖 RECORD BOOK (src/records.js) -------------------------------- */
+    /* Reuses the Trophy Case's .trec tiles; two 3-wide shelves. A record you
+       just beat this game glows gold (.rec-new). */
+    #rec-bests, #rec-career { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 2px; }
+    .trec.rec-new { border-color: rgba(255,214,10,.7); background: rgba(255,214,10,.12);
+      box-shadow: 0 0 0 1px rgba(255,214,10,.25); }
+    .trec.rec-new .trec-v { color: #ffe066; }
+    /* The "📖 NEW RECORD!" ribbon during play — a navy book cover with gold ink,
+       stacked below the achievement ribbon so the two never overlap. */
+    #rec-toast {
+      position: fixed; z-index: 47; left: 50%;
+      top: calc(max(8px, env(safe-area-inset-top)) + 124px);
+      transform: translateX(-50%) translateY(-140%); opacity: 0;
+      padding: 7px 16px; border-radius: 999px; pointer-events: none; white-space: nowrap;
+      background: linear-gradient(180deg, #2b3c66, #16234a); color: #ffe27a;
+      font: 800 13px "Arial Black", Arial;
+      box-shadow: 0 3px 14px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,214,10,.32);
+      transition: transform .3s ease, opacity .3s ease;
+    }
+    #rec-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (prefers-reduced-motion: reduce) { #rec-toast { transition: none; } }
+
     /* Section headers inside the pop-up. */
     .trophy-sec { display: flex; align-items: baseline; gap: 8px; margin: 15px 0 9px; text-align: left;
       font: 800 12px "Arial Black", Arial; letter-spacing: .1em; text-transform: uppercase; color: #ffd54a;
@@ -1488,17 +1510,35 @@
   <!-- 🔥 The fiery "on fire!" banner when a win extends your streak (streak.js). -->
   <div id="streak-fire"></div>
 
+  <!-- 📖 A brief "new record!" ribbon at game's end (records.js). -->
+  <div id="rec-toast"></div>
+
   <!-- 🏆 THE TROPHY CASE — trophy.js draws your records, uniform cabinet & badges. -->
   <div class="ov" id="trophy-modal">
     <div class="ov-card">
       <div class="ov-title">🏆 TROPHY CASE</div>
       <div class="ov-sub">Everything you've earned — show it off!</div>
       <div id="trophy-records"></div>
+      <div class="ov-btn" id="open-records">📖 OPEN RECORD BOOK</div>
       <div class="trophy-sec">🎽 Uniform Cabinet <span id="trophy-uni-count" class="trophy-sec-n">0/9</span></div>
       <div id="trophy-uniforms"></div>
       <div class="trophy-sec">🏅 Badges <span id="trophy-badge-count" class="trophy-sec-n">0/20</span></div>
       <div id="trophy-badges"></div>
       <div class="ov-btn" id="trophy-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 📖 THE RECORD BOOK — records.js draws your personal bests & career totals.
+       Opened from the Trophy Case; sits after it so it stacks on top. -->
+  <div class="ov" id="records-modal">
+    <div class="ov-card">
+      <div class="ov-title">📖 RECORD BOOK</div>
+      <div class="ov-sub">Your personal bests — go beat them!</div>
+      <div class="trophy-sec">🥇 Personal Bests</div>
+      <div id="rec-bests"></div>
+      <div class="trophy-sec">📊 Career</div>
+      <div id="rec-career"></div>
+      <div class="ov-btn" id="records-close">DONE</div>
     </div>
   </div>
 
@@ -1555,22 +1595,23 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=57"></script>
-  <script src="src/sound.js?v=57"></script>
-  <script src="src/shop.js?v=57"></script>
-  <script src="src/spin.js?v=57"></script>
-  <script src="src/challenges.js?v=57"></script>
-  <script src="src/progress.js?v=57"></script>
-  <script src="src/streak.js?v=57"></script>
-  <script src="src/achievements.js?v=57"></script>
-  <script src="src/trophy.js?v=57"></script>
-  <script src="src/nemesis.js?v=57"></script>
-  <script src="src/weather.js?v=57"></script>
-  <script src="src/season.js?v=57"></script>
-  <script src="src/draft.js?v=57"></script>
-  <script src="src/ads.js?v=57"></script>
-  <script src="src/tour.js?v=57"></script>
-  <script src="src/kick.js?v=57"></script>
-  <script src="src/main.js?v=57"></script>
+  <script src="src/stats.js?v=58"></script>
+  <script src="src/sound.js?v=58"></script>
+  <script src="src/shop.js?v=58"></script>
+  <script src="src/spin.js?v=58"></script>
+  <script src="src/challenges.js?v=58"></script>
+  <script src="src/progress.js?v=58"></script>
+  <script src="src/streak.js?v=58"></script>
+  <script src="src/achievements.js?v=58"></script>
+  <script src="src/trophy.js?v=58"></script>
+  <script src="src/records.js?v=58"></script>
+  <script src="src/nemesis.js?v=58"></script>
+  <script src="src/weather.js?v=58"></script>
+  <script src="src/season.js?v=58"></script>
+  <script src="src/draft.js?v=58"></script>
+  <script src="src/ads.js?v=58"></script>
+  <script src="src/tour.js?v=58"></script>
+  <script src="src/kick.js?v=58"></script>
+  <script src="src/main.js?v=58"></script>
 </body>
 </html>

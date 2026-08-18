@@ -1433,6 +1433,7 @@ function endPlay(result, customMsg) {
     if (window.TDProgress) TDProgress.addXP(12);  // 📈 …and 12 XP toward your team's next level
     if (window.TDChallenge) TDChallenge.bump('td');   // 📋 daily challenge progress
     if (window.TDAchieve) TDAchieve.td({ yds: 100 - G.losYards, pickSix: wasPickSix, trick: G.trickActive });   // 🏅 long-bomb / hat-trick / pick-six / trickster badges
+    if (window.TDRecords) TDRecords.td(100 - G.losYards);   // 📖 longest-TD / most-TDs-in-a-game records
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
@@ -1573,6 +1574,7 @@ function onKickDone(result) {
     if (window.TDProgress) TDProgress.addXP(6);   // 📈 +6 XP
     if (window.TDChallenge) TDChallenge.bump('fg');   // 📋 daily challenge progress
     if (window.TDAchieve) TDAchieve.fg(G.kickDist);   // 🏅 Long Range badge if it was a long one
+    if (window.TDRecords) TDRecords.fg(G.kickDist);   // 📖 Longest FG record
   } else if (result.mode === 'fg') {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else {
@@ -2680,6 +2682,10 @@ function endGame() {
   // plus a refresh of the milestone badges (a win may have leveled you up or
   // won a title). Runs last so any fresh title is already counted.
   if (window.TDAchieve) TDAchieve.gameOver({ won: G.score > G.oppScore, my: G.score, opp: G.oppScore });
+
+  // 📖 Record Book: check the "whole game" bests (most points, biggest win) and
+  // flash a "NEW RECORD!" ribbon for anything you beat this game.
+  if (window.TDRecords) TDRecords.gameOver({ my: G.score, opp: G.oppScore, won: G.score > G.oppScore });
 }
 
 function buildGameOverOverlay() {
@@ -2987,6 +2993,7 @@ function beginGame(team, opp, isSeason, isRival) {
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
   if (window.TDAchieve) TDAchieve.startGame();   // 🏅 fresh per-game counters (hat trick, comeback)
+  if (window.TDRecords) TDRecords.startGame();   // 📖 fresh per-game record watching
 
   // Paint both teams onto their players.
   makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);
