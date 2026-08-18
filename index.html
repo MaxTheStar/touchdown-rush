@@ -838,6 +838,44 @@
     #trophy-bar-sum { font: 800 12px "Arial Black", Arial; color: #ffd54a; white-space: nowrap; }
     #trophy-bar .chal-bar-go { color: #ffd54a; }
 
+    /* ---- 🔥 STREAK HEATER (src/streak.js) ------------------------------- */
+    /* A little flame pill, top-right under the mute button. Shows ONLY while
+       a win streak is alive (streak.js adds .on), so the menu stays clean. */
+    #streak-flame {
+      position: fixed; z-index: 41; display: none; align-items: center; gap: 4px;
+      right: max(12px, env(safe-area-inset-right));
+      top: calc(max(12px, env(safe-area-inset-top)) + 52px);
+      height: 30px; padding: 0 11px; box-sizing: border-box;
+      background: linear-gradient(180deg, rgba(255,138,48,.30), rgba(255,72,26,.22));
+      border: 2px solid rgba(255,150,60,.72); border-radius: 999px;
+      color: #ffe1c2; font: 800 14px "Arial Black", Arial; white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(255,90,30,.28);
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer;
+    }
+    body.menu #streak-flame.on { display: inline-flex; }
+    #streak-flame:active { transform: scale(0.94); }
+    #streak-flame .sf-ic { font-size: 13px; }
+
+    /* The big fiery banner that flies in when a win extends your streak
+       (or a cold "snapped!" flash when a hot run ends). Sits high enough to
+       clear the FINAL score underneath it. */
+    #streak-fire {
+      position: fixed; z-index: 60; left: 50%; top: 21%;
+      transform: translateX(-50%) translateY(-24px) scale(.82); opacity: 0;
+      padding: 11px 22px; border-radius: 14px; pointer-events: none; white-space: nowrap;
+      background: linear-gradient(180deg, #ff9a3d, #ff4d1c 70%, #d62f12);
+      color: #2a0d00; font: 800 clamp(15px, 4.4vw, 22px) "Arial Black", Arial;
+      letter-spacing: .3px; text-shadow: 0 1px 0 rgba(255,255,255,.28);
+      box-shadow: 0 6px 26px rgba(255,70,20,.55), inset 0 0 0 2px rgba(255,255,255,.25);
+      transition: transform .42s cubic-bezier(.2,.8,.2,1), opacity .42s ease;
+    }
+    #streak-fire.cold {
+      background: linear-gradient(180deg, #9fb6c6, #5f7688 70%, #465a69);
+      color: #0d1620; box-shadow: 0 6px 22px rgba(70,90,105,.5), inset 0 0 0 2px rgba(255,255,255,.22);
+    }
+    #streak-fire.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    @media (prefers-reduced-motion: reduce) { #streak-fire { transition: opacity .2s ease; } }
+
     /* Section headers inside the pop-up. */
     .trophy-sec { display: flex; align-items: baseline; gap: 8px; margin: 15px 0 9px; text-align: left;
       font: 800 12px "Arial Black", Arial; letter-spacing: .1em; text-transform: uppercase; color: #ffd54a;
@@ -1227,6 +1265,9 @@
     <div class="meta-btn" id="open-howto">📖<small>HOW TO</small></div>
   </div>
 
+  <!-- 🔥 Win-streak flame pill (menu only, shown while a streak is alive — streak.js). -->
+  <div id="streak-flame" title="Win streak"></div>
+
   <!-- 📈 Team level + XP progress bar (menu only — filled in by progress.js) -->
   <div id="xp-bar">
     <div id="xp-badge">LVL 1</div>
@@ -1444,6 +1485,9 @@
   <!-- 🏅 A brief "achievement unlocked!" ribbon during play (achievements.js). -->
   <div id="ach-toast"></div>
 
+  <!-- 🔥 The fiery "on fire!" banner when a win extends your streak (streak.js). -->
+  <div id="streak-fire"></div>
+
   <!-- 🏆 THE TROPHY CASE — trophy.js draws your records, uniform cabinet & badges. -->
   <div class="ov" id="trophy-modal">
     <div class="ov-card">
@@ -1511,21 +1555,22 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=56"></script>
-  <script src="src/sound.js?v=56"></script>
-  <script src="src/shop.js?v=56"></script>
-  <script src="src/spin.js?v=56"></script>
-  <script src="src/challenges.js?v=56"></script>
-  <script src="src/progress.js?v=56"></script>
-  <script src="src/achievements.js?v=56"></script>
-  <script src="src/trophy.js?v=56"></script>
-  <script src="src/nemesis.js?v=56"></script>
-  <script src="src/weather.js?v=56"></script>
-  <script src="src/season.js?v=56"></script>
-  <script src="src/draft.js?v=56"></script>
-  <script src="src/ads.js?v=56"></script>
-  <script src="src/tour.js?v=56"></script>
-  <script src="src/kick.js?v=56"></script>
-  <script src="src/main.js?v=56"></script>
+  <script src="src/stats.js?v=57"></script>
+  <script src="src/sound.js?v=57"></script>
+  <script src="src/shop.js?v=57"></script>
+  <script src="src/spin.js?v=57"></script>
+  <script src="src/challenges.js?v=57"></script>
+  <script src="src/progress.js?v=57"></script>
+  <script src="src/streak.js?v=57"></script>
+  <script src="src/achievements.js?v=57"></script>
+  <script src="src/trophy.js?v=57"></script>
+  <script src="src/nemesis.js?v=57"></script>
+  <script src="src/weather.js?v=57"></script>
+  <script src="src/season.js?v=57"></script>
+  <script src="src/draft.js?v=57"></script>
+  <script src="src/ads.js?v=57"></script>
+  <script src="src/tour.js?v=57"></script>
+  <script src="src/kick.js?v=57"></script>
+  <script src="src/main.js?v=57"></script>
 </body>
 </html>

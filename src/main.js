@@ -2639,6 +2639,10 @@ function endGame() {
   // 🪙 the game check: +25 for a win, +5 for a good try (before the FINAL
   // screen is built, so it can show everything you earned today).
   if (window.TDShop) TDShop.earn(G.score > G.oppScore ? 25 : 5);
+  // 🔥 Streak Heater: extend (or snap) your win streak. On a win it pays an
+  // escalating bonus into "coins this game" — do it BEFORE the FINAL screen is
+  // built so the payday total already includes it — and flies in a fiery banner.
+  if (window.TDStreak) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2843,6 +2847,7 @@ function enterMenu() {
   if (window.TDChallenge) TDChallenge.onMenu();  // 📋 refresh the daily-challenges bar
   if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
   if (window.TDAchieve) TDAchieve.onMenu();      // 🏅 check for any newly-earned achievement badges
+  if (window.TDStreak) TDStreak.onMenu();        // 🔥 show/hide the win-streak flame pill
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel

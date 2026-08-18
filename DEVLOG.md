@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.39 — cache-buster is `?v=56` in `index.html`.
+- **Version:** v1.40 — cache-buster is `?v=57` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -39,7 +39,24 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   💪 broken tackle, 🛡️ shutout, 💥 blowout, 😤 comeback). Each pops a gold `#ach-toast` ribbon + pays
   coins; the Trophy Case badge wall now draws the full set (with a `0/20` count). Old saves are seeded
   silently (no spam). Wiring: eight one-line `TDAchieve.*` hooks in `src/main.js`, a `listForCase()`
-  read in `src/trophy.js`, toast element + CSS + `0/20` label in `index.html`; `?v=56`. — v1.11–v1.38 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15)
+  read in `src/trophy.js`, toast element + CSS + `0/20` label in `index.html`; `?v=56`.
+
+### 🆕 Round 5 — "The Hook Board" (a fresh chart, opened 2026-08-17)
+
+A new Add-On Draft Board (Artifact `ad034ff2-f062-455c-b022-01881a083ab2`) with eight retention add-ons
+ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak Heater, 📖 Record Book,
+🎟️ Reward Road, 🃏 Card Packs (on deck: 🏟️ Stadium Builder, 🏅 Ranked Ladder, 🎯 Practice Arcade,
+🎬 Film Room).
+
+- **✅ v1.40 (🔥 STREAK HEATER) is PUSHED & LIVE** — the 1st Round-5 pick, shipped 2026-08-17. New
+  `src/streak.js` (`window.TDStreak`, key `tdr-streak` = `{cur,best}`): back-to-back wins pay an
+  escalating coin bonus (×2 = +5 … +30 cap) folded into the payday total, a fiery `#streak-fire` banner
+  flies in on a streak win (and a cold "snapped!" flash when a hot run ends), and a `#streak-flame` pill
+  shows top-right on the menu only while a streak is alive (tap it to flare). Wiring: one
+  `TDStreak.recordResult()` in `endGame` + one `onMenu()` hook in `src/main.js`; pill + banner + CSS in
+  `index.html`; `?v=57`.
+
+## ✅ Sync status — v1.11–v1.40 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
