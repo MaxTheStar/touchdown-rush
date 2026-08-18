@@ -90,10 +90,14 @@
       ).join('');
     }
 
-    // 🏆 The badge wall.
+    // 🏅 The badge wall — the full Achievement Badges set when achievements.js
+    // is loaded, otherwise our own built-in milestones as a safe fallback.
+    const badges = (window.TDAchieve && TDAchieve.listForCase) ? TDAchieve.listForCase() : badgesFor(g);
+    const bc = $('trophy-badge-count');
+    if (bc) bc.textContent = badges.filter(b => b.got).length + '/' + badges.length;
     const bg = $('trophy-badges');
     if (bg) {
-      bg.innerHTML = badgesFor(g).map(b =>
+      bg.innerHTML = badges.map(b =>
         `<div class="tbadge${b.got ? '' : ' locked'}">
            <div class="tbadge-ic">${b.got ? b.icon : '🔒'}</div>
            <div class="tbadge-nm">${b.name}</div>

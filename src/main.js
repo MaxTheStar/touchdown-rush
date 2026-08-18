@@ -1339,6 +1339,7 @@ function checkTackle() {
         d.s.x += Math.cos(ang) * 28;                // knock him off you (past tackle range)
         d.s.y += Math.sin(ang) * 28;
         if (window.TDSound) TDSound.sting('td');
+        if (window.TDAchieve) TDAchieve.brokeTackle();   // 🏅 Truck Stick badge
         sayComment(pick(['💪 STIFF ARM!', 'Shrugs him off!', 'Breaks the tackle!']));
         return;
       }
@@ -1396,6 +1397,7 @@ function checkTouchdown() {
 // Decide what the next play is, show a banner, and pause briefly.
 function endPlay(result, customMsg) {
   freezeEveryone();
+  const wasPickSix = G.pickSix;     // 🏅 grab this before we clear it (for the Pick Six badge)
   G.pickSix = false;                // a pick-six return that reached the endzone is done
   if (routeGfx) routeGfx.clear();   // the route lines vanish when the play ends
 
@@ -1430,6 +1432,7 @@ function endPlay(result, customMsg) {
     if (window.TDShop)  TDShop.earn(10);       // 🪙 touchdowns pay 10 coins
     if (window.TDProgress) TDProgress.addXP(12);  // 📈 …and 12 XP toward your team's next level
     if (window.TDChallenge) TDChallenge.bump('td');   // 📋 daily challenge progress
+    if (window.TDAchieve) TDAchieve.td({ yds: 100 - G.losYards, pickSix: wasPickSix, trick: G.trickActive });   // 🏅 long-bomb / hat-trick / pick-six / trickster badges
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
@@ -1516,6 +1519,7 @@ function chooseFourthDown(which) {
 function startKick(mode) {
   G.state = 'kick';
   G.kickKind = mode;   // 'fg' or 'punt' — an extra point comes through startExtraPoint()
+  G.kickDist = fieldGoalDistance();   // 🏅 remember how far, for the Long Range badge
   document.body.classList.add('kicking');   // hide the football buttons
   G.scene.cameras.main.stopFollow();
   KickGame.enter(G.scene, {
@@ -1568,6 +1572,7 @@ function onKickDone(result) {
     if (window.TDShop)  TDShop.earn(5);        // 🪙 field goals pay 5 coins
     if (window.TDProgress) TDProgress.addXP(6);   // 📈 +6 XP
     if (window.TDChallenge) TDChallenge.bump('fg');   // 📋 daily challenge progress
+    if (window.TDAchieve) TDAchieve.fg(G.kickDist);   // 🏅 Long Range badge if it was a long one
   } else if (result.mode === 'fg') {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else {
@@ -1633,6 +1638,7 @@ function resolveTwoPoint(result) {
     // 🎉 A gutsy two-pointer deserves a party — a burst of confetti + a floating
     // shout (reuses the shop's celebrate; it respects "reduce motion" on its own).
     if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '🎉', 'TWO POINTS!  +2');
+    if (window.TDAchieve) TDAchieve.twoPoint();   // 🏅 Two & Through badge
   } else {
     // 🥁 The defense stuffed your two-point try — a dramatic "bum bum bum".
     if (window.TDSound) TDSound.sting('stuff');
@@ -2394,6 +2400,7 @@ function cpuDriveEnd(kind, customMsg) {
 
   G.oppScore += pts;
   updateHUD();
+  if (window.TDAchieve) TDAchieve.oppScored(G.oppScore - G.score);   // 🏅 track the biggest hole (for the Comeback badge)
   showBanner(msg, big);
   G.scene.time.delayedCall(1700, finishCpuDrive);
 }
@@ -2664,6 +2671,11 @@ function endGame() {
   // auto-plays the other teams' games, and moves the schedule/playoffs along.
   // We do it LAST, so the FINAL screen above still shows just THIS game's coins.
   if (G.seasonGame && window.TDSeason) TDSeason.reportResult(G.score, G.oppScore);
+
+  // 🏅 Achievement badges: the "whole game" ones (shutout / blowout / comeback)
+  // plus a refresh of the milestone badges (a win may have leveled you up or
+  // won a title). Runs last so any fresh title is already counted.
+  if (window.TDAchieve) TDAchieve.gameOver({ won: G.score > G.oppScore, my: G.score, opp: G.oppScore });
 }
 
 function buildGameOverOverlay() {
@@ -2830,6 +2842,7 @@ function enterMenu() {
   if (window.TDProgress) TDProgress.onMenu();    // 📈 refresh the team level + XP bar
   if (window.TDChallenge) TDChallenge.onMenu();  // 📋 refresh the daily-challenges bar
   if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
+  if (window.TDAchieve) TDAchieve.onMenu();      // 🏅 check for any newly-earned achievement badges
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
@@ -2968,6 +2981,7 @@ function beginGame(team, opp, isSeason, isRival) {
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
+  if (window.TDAchieve) TDAchieve.startGame();   // 🏅 fresh per-game counters (hat trick, comeback)
 
   // Paint both teams onto their players.
   makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);

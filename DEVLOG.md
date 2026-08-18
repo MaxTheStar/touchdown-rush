@@ -8,14 +8,14 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.38 — cache-buster is `?v=55` in `index.html`.
+- **Version:** v1.39 — cache-buster is `?v=56` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-15.
+- **Last updated:** 2026-08-17.
 - **✅ v1.33 (the 🎡 Lucky Spin) is PUSHED & LIVE** — the first Round-3 feature, shipped 2026-08-15
   (`src/spin.js` new; `index.html` + `src/shop.js` edited; commit `6adfd4b`).
 - **✅ v1.34 (🎡 FREE SPINS in the daily rewards) is PUSHED & LIVE** — shipped 2026-08-15 (commit `693127f`).
@@ -33,8 +33,13 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 - **✅ v1.38 (😈 RIVAL NEMESIS) is PUSHED & LIVE** — the 1st Round-4 pick, shipped 2026-08-15. New
   `src/nemesis.js`; a `startRivalGame` on the `window.TDGame` bridge + a `rivalGame` flag/buff/record hooks
   in `src/main.js`; a 😈 RIVAL button + modal & CSS in `index.html`; `?v=55`.
-
-## ✅ Sync status — v1.11–v1.38 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15)
+- **✅ v1.39 (🏅 ACHIEVEMENT BADGES) is PUSHED & LIVE** — the 2nd Round-4 pick, shipped 2026-08-17. New
+  `src/achievements.js` (`window.TDAchieve`): 20 badges — 10 milestones read from career totals + 10
+  live "big first" moments (💣 40-yd TD, 🔥 hat trick, 🦅 pick-six, 🥅 long FG, 🎩 trick score, ✌️ 2-pt,
+  💪 broken tackle, 🛡️ shutout, 💥 blowout, 😤 comeback). Each pops a gold `#ach-toast` ribbon + pays
+  coins; the Trophy Case badge wall now draws the full set (with a `0/20` count). Old saves are seeded
+  silently (no spam). Wiring: eight one-line `TDAchieve.*` hooks in `src/main.js`, a `listForCase()`
+  read in `src/trophy.js`, toast element + CSS + `0/20` label in `index.html`; `?v=56`. — v1.11–v1.38 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
