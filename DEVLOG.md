@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.44 — cache-buster is `?v=61` in `index.html`.
+- **Version:** v1.45 — cache-buster is `?v=62` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -90,8 +90,17 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   Packs reveal used content-box 92px cards that wrapped 2+1 on phones; now `box-sizing:border-box`,
   `width: calc((100% - 16px)/3)`, `max-width:116px`, `flex-wrap:nowrap` → three cards always fill one row
   (shrink on phones, capped on iPad). `?v=61`. Verified all four Round-5 modals on both phone & iPad.
+- **✅ v1.45 (📱 iPad TITLE FIX) is PUSHED & LIVE** — shipped 2026-08-18. The centered Phaser "CHOOSE YOUR
+  TEAM" title (world x 121–419) reached LEFT into the fixed top-left status bars on wide screens (measured
+  39px overlap on iPad — its left edge at screen x≈187 vs the bars' right at x≈226), and there's no
+  vertical room to drop it below them (the huge team code sits right underneath). Fix in `src/main.js`
+  `buildTeamMenu`: a `fitTitle()` that, on wide screens (`innerWidth ≥ 700`), shrinks the title just enough
+  for its left edge to clear the bars — `scale = max(0.62, (270 − 232·540/vw)/halfWidth)` — and re-runs on
+  `scene.scale` resize. Phones (bars compacted up out of the way) keep the title full size. Verified +6px
+  clearance on iPad mini 744 (scale .68), iPad 834 (.80) & iPad Pro 1024 (.99, near full); phone untouched
+  (scale 1, clears vertically). `?v=62`.
 
-## ✅ Sync status — v1.11–v1.44 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17)
+## ✅ Sync status — v1.11–v1.45 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.45 pushed 2026-08-18)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

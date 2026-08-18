@@ -2801,6 +2801,23 @@ function buildTeamMenu(scene) {
     { fontFamily: 'Arial Black, Arial', fontSize: '25px', color: '#ffe066',
       stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(94);
 
+  // 📱 On WIDE screens (iPad/desktop) the game canvas fills the width, so this
+  // centered title reaches left into the fixed top-left status bars (challenges /
+  // trophy / Reward Road). There's no vertical room to drop it below them (the
+  // huge team code sits right underneath), so instead we shrink the title just
+  // enough that its left edge clears the bars. On phones the bars are compacted
+  // up out of the way (see the max-width media query in index.html), so the
+  // title is left full-size there. Re-runs on resize/rotate so it always fits.
+  const fitTitle = () => {
+    const vw = window.innerWidth || 540;
+    const barsRightWorld = 232 * 540 / vw;     // bars end ~226px; FIT-by-width ⇒ canvasW ≈ vw
+    const maxHalf = 270 - barsRightWorld;       // the title is centered on x = 270
+    const halfW = M.title.width / 2;            // .width is the UNscaled text width
+    M.title.setScale((vw >= 700 && halfW > maxHalf) ? Math.max(0.62, maxHalf / halfW) : 1);
+  };
+  fitTitle();
+  scene.scale.on('resize', fitTitle);
+
   // The huge 3-letter team code (SEA, PIT, ...).
   M.abbr = scene.add.text(mid, 120, '', { fontFamily: 'Arial Black, Arial',
     fontSize: '64px', color: '#ffffff', stroke: '#000', strokeThickness: 8 })
