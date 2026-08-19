@@ -35,8 +35,9 @@
       margin: 22px 0 10px; color: #ffe066;
       font: 800 14px "Arial Black", Arial; letter-spacing: 1px;
     }
-    #refresh { color: #8fd0ff; font-size: 13px; cursor: pointer; user-select: none; }
-    #refresh:hover { text-decoration: underline; }
+    .sec-btns { display: flex; gap: 14px; align-items: center; }
+    #refresh, #deepscan { color: #8fd0ff; font-size: 13px; cursor: pointer; user-select: none; white-space: nowrap; }
+    #refresh:hover, #deepscan:hover { text-decoration: underline; }
 
     #stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     @media (max-width: 520px) { #stats { grid-template-columns: 1fr 1fr; } }
@@ -71,7 +72,12 @@
       <a href="index.html">▶ play the game</a>
     </header>
 
-    <div class="sec">🌍 PLAYER TRACKER <span id="refresh">🔄 refresh</span></div>
+    <div class="sec">🌍 PLAYER TRACKER
+      <span class="sec-btns">
+        <span id="refresh">🔄 refresh</span>
+        <span id="deepscan" title="Strolls every country to find new ones — this one pokes empty countries, so it's a bit chatty in the console on purpose.">🔍 find countries</span>
+      </span>
+    </div>
     <div id="stats"></div>
     <div id="countries"></div>
     <div id="progress"></div>
@@ -140,7 +146,7 @@
     let refreshing = false;
     let scanStamp = 0;      // bumps every scan — an old scan sees it changed and stops
 
-    function refreshWorld() {
+    function refreshWorld(deep) {
       if (refreshing) return;
       refreshing = true;
       const myScan = ++scanStamp;
@@ -149,33 +155,52 @@
       Promise.all([T.peek('plays'), T.peek('players'), T.peek('reviews')])
         .then(([plays, players, reviews]) => renderStats({ plays, players, reviews }));
 
-      scanCountries(myScan).finally(() => { if (myScan === scanStamp) refreshing = false; });
+      scanCountries(myScan, deep).finally(() => { if (myScan === scanStamp) refreshing = false; });
     }
 
-    async function scanCountries(myScan) {
-      const known = T.load('known-countries', []);        // flags found on earlier scans
+    // Abacus /get answers 404 for a country nobody has played from — and the
+    // browser prints every one of those to the console, which a fetch can't
+    // hide. Countries only ever get counters by being HIT, so there's no way to
+    // ask "which countries exist?" without poking the empty ones. So:
+    //   • a normal refresh only re-checks the flags we ALREADY found (those all
+    //     exist → all clean 200s → a quiet console), and
+    //   • the 🔍 button does the full stroll of the whole world to DISCOVER new
+    //     countries (that's the only way, and it will 404 the empty ones — but
+    //     only when you press it on purpose).
+    async function scanCountries(myScan, deep) {
+      const known = T.load('known-countries', []);        // flags found on earlier deep scans
       const mine  = (T.load('country', {}) || {}).cc;     // this device's own country
-      const first = [...new Set([...known, mine, ...POPULAR].filter(Boolean))].slice(0, 25);
-      const rest  = T.ALL_COUNTRIES.filter(cc => !first.includes(cc));
+      const seeds = [...new Set([...known, mine].filter(Boolean))];   // known to have players
 
       const found = [];
-      function show(done, total) {
+      const show = (done, total) => {
         found.sort((a, b) => b.n - a.n);
         renderCountries(found);
         $('progress').textContent =
-          (done < total) ? `🌍 checking the world… ${done} of ${total} countries` : '';
+          (deep && done < total) ? `🌍 checking the world… ${done} of ${total} countries` : '';
+      };
+
+      // Quick pass: the flags we already know about — all exist, so no 404s.
+      if (seeds.length) {
+        const quick = await Promise.all(seeds.map(cc => T.peekCareful('geo-' + cc)));
+        quick.forEach((r, i) => { if (r.n > 0) found.push({ cc: seeds[i], n: r.n }); });
+      }
+      if (myScan !== scanStamp) return;
+
+      if (!deep) {                                         // a normal refresh stops here — quiet
+        if (found.length) show(seeds.length, seeds.length);
+        else { renderCountries([]); $('progress').textContent = '↑ tap 🔍 find countries to discover new ones'; }
+        return;                                            // NOTE: never overwrite known-countries here
       }
 
-      const quick = await Promise.all(first.map(cc => T.peekCareful('geo-' + cc)));
-      const queue = [...rest];
-      quick.forEach((r, i) => {
-        if (r.n > 0) found.push({ cc: first[i], n: r.n });
-        else if (r.limited) queue.push(first[i]);         // "slow down" ≠ zero — ask again later
-      });
-      const total = first.length + queue.length;
-      show(first.length, total);
+      // Deep scan: stroll the WHOLE world (popular places first) to find new
+      // countries. This is the part that pokes empty countries and 404s — on
+      // purpose, and only when the 🔍 button was pressed.
+      const queue = [...new Set([...POPULAR, ...T.ALL_COUNTRIES])].filter(cc => !seeds.includes(cc));
+      const total = seeds.length + queue.length;
+      show(seeds.length, total);
 
-      let done = first.length;
+      let done = seeds.length;
       while (queue.length) {
         if (myScan !== scanStamp) return;                 // a newer scan took over → stop quietly
         const cc = queue.shift();
@@ -185,12 +210,13 @@
         show(++done, total);
         await T.sleep(500);                               // stroll, don't sprint
       }
-      T.store('known-countries', found.map(c => c.cc));   // remember for next time
+      T.store('known-countries', found.map(c => c.cc));   // remember every flag found
     }
 
-    $('refresh').addEventListener('click', refreshWorld);
+    $('refresh').addEventListener('click', () => refreshWorld(false));
+    $('deepscan').addEventListener('click', () => refreshWorld(true));
     renderReviews();
-    refreshWorld();
+    refreshWorld(false);   // a normal visit = quiet: only the flags we already know
   </script>
 </body>
 </html>

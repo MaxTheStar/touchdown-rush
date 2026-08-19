@@ -108,6 +108,14 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   dashboard's `peekCareful` geo-scan is left ALONE on purpose (auto-creating ~250 country counters would be
   wrong). Also created the live `reviews` counter at 0 by hand so it's clean immediately, not after one
   residual 404. `?v=63`; `dashboard.html` stats.js bumped `?v=22→23`.
+- **✅ v1.47 (🔇 QUIET THE DASHBOARD SCAN) is PUSHED & LIVE** — shipped 2026-08-18. `dashboard.html` ONLY
+  (game unchanged, still `?v=63`). The 🌍 player-tracker used to scan all 249 country codes on every visit,
+  and the ~244 countries with no players each 404'd (Abacus has no "list keys" endpoint — probed, none —
+  and auto-creating 249 country counters would be wrong). Now a normal load / 🔄 refresh only re-checks the
+  flags already in `tdr-known-countries` (+ this device's own country) — those all exist, so the console
+  stays quiet — and a new **🔍 "find countries"** button runs the full world-discovery stroll on demand
+  (that's the only way to find new countries, and it necessarily 404s the empty ones — so it's opt-in, not
+  every visit). Verified: normal load = 0 console errors; 🔍 = full stroll runs (chatty on purpose).
 
 ## ✅ Sync status — v1.11–v1.45 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.45 pushed 2026-08-18)
 
