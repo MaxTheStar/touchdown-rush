@@ -70,11 +70,30 @@
     return fetch(`${API}/hit/${NS}/${counter}`).then(r => r.ok).catch(() => false);
   }
 
+  // A brand-new counter that nobody has ever hit yet — like the WORLD review
+  // count before the very first review anywhere — doesn't exist, so Abacus /get
+  // answers 404. The browser prints that 404 to the console ("Failed to load
+  // resource: 404") no matter how tidily we handle it in code — a fetch can't
+  // hide it. So the first time we meet a missing counter we quietly /create it
+  // at 0; from then on it exists (value 0) and every read is a clean 200. We
+  // only ever create a counter we JUST saw 404 on (never one that's already
+  // there — that would 409), and at most once, so we can't add new noise.
+  const seeding = {};
+  function ensureCounter(counter) {
+    if (seeding[counter] || load('seeded-' + counter, false)) return;
+    seeding[counter] = true;   // don't fire twice for the same counter this visit
+    fetch(`${API}/create/${NS}/${counter}`)
+      .then(r => { if (r.ok) store('seeded-' + counter, true); })   // remember for next time
+      .catch(() => {});
+  }
+
   // Read a counter without changing it (0 if it doesn't exist yet).
   function peek(counter) {
     return fetch(`${API}/get/${NS}/${counter}`)
-      .then(r => (r.ok ? r.json() : { value: 0 }))
-      .then(j => j.value || 0)
+      .then(r => {
+        if (r.status === 404) { ensureCounter(counter); return 0; }   // missing → create it at 0
+        return r.ok ? r.json().then(j => j.value || 0) : 0;
+      })
       .catch(() => 0);
   }
 

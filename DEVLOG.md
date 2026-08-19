@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.45 — cache-buster is `?v=62` in `index.html`.
+- **Version:** v1.46 — cache-buster is `?v=63` in `index.html`.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -99,6 +99,15 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   `scene.scale` resize. Phones (bars compacted up out of the way) keep the title full size. Verified +6px
   clearance on iPad mini 744 (scale .68), iPad 834 (.80) & iPad Pro 1024 (.99, near full); phone untouched
   (scale 1, clears vertically). `?v=62`.
+- **✅ v1.46 (🔇 QUIET THE 404s) is PUSHED & LIVE** — shipped 2026-08-18. The live console showed
+  "Failed to load resource: 404" from `stats.js` reading the **world review counter**: Abacus `/get` 404s
+  a counter nobody has ever hit (worldwide `reviews` was still 0/uncreated), and the browser logs that 404
+  no matter how the `fetch` is handled — code can't hide it. Fix: `peek()` now, on a 404, quietly
+  `/create`s the counter at 0 once (guarded by an in-memory flag + a persistent `tdr-seeded-<counter>` so
+  it can never fire twice or hit an existing counter → no 409), after which every read is a clean 200. The
+  dashboard's `peekCareful` geo-scan is left ALONE on purpose (auto-creating ~250 country counters would be
+  wrong). Also created the live `reviews` counter at 0 by hand so it's clean immediately, not after one
+  residual 404. `?v=63`; `dashboard.html` stats.js bumped `?v=22→23`.
 
 ## ✅ Sync status — v1.11–v1.45 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.45 pushed 2026-08-18)
 
