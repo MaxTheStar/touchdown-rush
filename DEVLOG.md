@@ -112,8 +112,9 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   (game unchanged, still `?v=63`). The 🌍 player-tracker used to scan all 249 country codes on every visit,
   and the ~244 countries with no players each 404'd (Abacus has no "list keys" endpoint — probed, none —
   and auto-creating 249 country counters would be wrong). Now a normal load / 🔄 refresh only re-checks the
-  flags already in `tdr-known-countries` (+ this device's own country) — those all exist, so the console
-  stays quiet — and a new **🔍 "find countries"** button runs the full world-discovery stroll on demand
+  flags already in `tdr-known-countries` — those all exist, so the console stays quiet (0 geo requests when
+  none are known yet; we deliberately don't probe the viewer's own country, which may have no counter) —
+  and a new **🔍 "find countries"** button runs the full world-discovery stroll on demand
   (that's the only way to find new countries, and it necessarily 404s the empty ones — so it's opt-in, not
   every visit). Verified: normal load = 0 console errors; 🔍 = full stroll runs (chatty on purpose).
 
