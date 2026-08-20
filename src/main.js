@@ -2663,6 +2663,9 @@ function endGame() {
     if (G.score > G.oppScore && window.TDShop) TDShop.earn(15);   // beating your rival pays extra
     TDNemesis.recordResult(G.score > G.oppScore);
   }
+  // 🏟️ Stadium gate receipts: your fans pay a bonus based on how big you've
+  // built your home stadium — done before the FINAL screen so it's in the payday.
+  if (window.TDStadium) TDStadium.gameBonus();
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons
@@ -2882,6 +2885,7 @@ function enterMenu() {
   if (window.TDStreak) TDStreak.onMenu();        // 🔥 show/hide the win-streak flame pill
   if (window.TDRoad) TDRoad.onMenu();            // 🎟️ refresh the Reward Road bar (glows when claimable)
   if (window.TDCards) TDCards.onMenu();          // 🃏 refresh the unopened-packs badge on SHOP
+  if (window.TDStadium) TDStadium.onMenu();      // 🏟️ refresh the "can afford an upgrade" badge
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel

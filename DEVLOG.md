@@ -44,9 +44,8 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 ### 🆕 Round 5 — "The Hook Board" (a fresh chart, opened 2026-08-17)
 
 A new Add-On Draft Board (Artifact `ad034ff2-f062-455c-b022-01881a083ab2`) with eight retention add-ons
-ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak Heater, 📖 Record Book,
-🎟️ Reward Road, 🃏 Card Packs (on deck: 🏟️ Stadium Builder, 🏅 Ranked Ladder, 🎯 Practice Arcade,
-🎬 Film Room).
+ranked easiest→hardest. Built so far: 🔥 Streak Heater, 📖 Record Book, 🎟️ Reward Road, 🃏 Card Packs,
+and now 🏟️ Stadium Builder (the 5th pick). On deck: 🏅 Ranked Ladder, 🎯 Practice Arcade, 🎬 Film Room.
 
 - **✅ v1.40 (🔥 STREAK HEATER) is PUSHED & LIVE** — the 1st Round-5 pick, shipped 2026-08-17. New
   `src/streak.js` (`window.TDStreak`, key `tdr-streak` = `{cur,best}`): back-to-back wins pay an
@@ -117,8 +116,25 @@ ranked easiest→hardest; the top four are being built this cycle: 🔥 Streak H
   and a new **🔍 "find countries"** button runs the full world-discovery stroll on demand
   (that's the only way to find new countries, and it necessarily 404s the empty ones — so it's opt-in, not
   every visit). Verified: normal load = 0 console errors; 🔍 = full stroll runs (chatty on purpose).
+- **✅ v1.48 (🏟️ STADIUM BUILDER) is PUSHED & LIVE** — shipped 2026-08-19 (`?v=64`), the 5th Round-5 pick. New
+  `src/stadium.js` (`window.TDStadium`, key `tdr-stadium` = `{stands,field,lights,screen,roof,extras}`, each
+  a tier index 0…3): build up your own home stadium by spending coins on SEATING, THE FIELD, LIGHTS,
+  JUMBOTRON, THE ROOF and GAME-DAY EXTRAS. Each upgrade grows a little emoji stadium in the pop-up (more
+  seat rows, day→night→laser sky, a dome, a jumbotron, a jet flyover, champion turf), raises your STADIUM
+  LEVEL (0…18) and packs in more FANS (8,000 → 97,900 maxed). The hook: **gate receipts** — bigger crowd =
+  bonus coins at the end of every game (`gateReceipts()` = `min(15, floor(capacity/6000))`), so it pays you
+  back the more you build. Lives INSIDE the 🛍 Pro Shop (a "🏟️ STADIUM" button next to Card Packs, with a
+  ⬆️ badge when you can afford an upgrade) — deliberately NO new menu bar/chip, so the delicate phone
+  status-bar/title layout (v1.44/v1.45) is untouched. Reuses the `.chal-row`/`.chal-btn` row look and a
+  400 ms buy debounce (same as Reward Road). Wiring: one `TDStadium.gameBonus()` in `endGame` (before the
+  FINAL screen, so gate receipts land in the payday) + one `onMenu()` hook in `src/main.js`; shop button +
+  `#stadium-modal` + `.stad-*` CSS in `index.html`; new `<script src="src/stadium.js?v=64">`; game bumped
+  `?v=63`→`?v=64`. Verified live via DOM/JS: clean boot (0 errors), buy deducts coins & grows the stadium,
+  can't-afford shows a gentle note (no purchase), debounce blocks double-taps, `gameBonus` pays into the
+  payday (a real `endGame()` tallied +15 with 0 errors), persistence works, maxed render is correct, and
+  the pop-up has no horizontal overflow on a 375 px phone.
 
-## ✅ Sync status — v1.11–v1.45 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.45 pushed 2026-08-18)
+## ✅ Sync status — v1.11–v1.48 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48 pushed 2026-08-19)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

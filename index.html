@@ -998,6 +998,52 @@
     .card-nm { font: 800 10px "Arial Black", Arial; color: #fff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .card-rar { font: 700 8.5px Arial; letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
 
+    /* ---- 🏟️ STADIUM BUILDER (src/stadium.js) --------------------------- */
+    /* The ⬆️ badge on the "🏟️ STADIUM" shop button (shows when you can afford
+       an upgrade — mirrors the Card Packs badge). */
+    #stadium-btn-badge {
+      display: none; margin-left: 7px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+      align-items: center; justify-content: center; vertical-align: middle;
+      background: #46e3a0; color: #06231a; border-radius: 999px; font: 800 11px "Arial Black", Arial;
+    }
+    /* The little stadium picture that grows as you build. */
+    #stad-scene {
+      position: relative; height: 168px; margin: 4px 0 10px; overflow: hidden;
+      border-radius: 14px; border: 2px solid rgba(255,255,255,.18);
+      display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+    }
+    #stad-scene.day   { background: linear-gradient(#7fc7ff, #d4ecff 72%); }
+    #stad-scene.night { background: linear-gradient(#0a1734, #23406e 78%); }
+    #stad-scene.laser { background: linear-gradient(#170b38, #3c2072 72%); }
+    .stad-roof { position: absolute; top: 0; left: 0; right: 0; height: 15px; z-index: 3;
+      background: rgba(18,24,42,.92); color: #cfe0ff; font: 800 10px "Arial Black", Arial;
+      display: flex; align-items: center; justify-content: center; letter-spacing: 1px; }
+    .stad-roof.r2 { height: 22px; }
+    .stad-roof.r3 { height: 30px; background: rgba(10,14,28,.96); border-bottom-left-radius: 40% 60%; border-bottom-right-radius: 40% 60%; }
+    .stad-lights { position: absolute; top: 3px; left: 0; right: 0; z-index: 2; text-align: center;
+      font-size: 11px; letter-spacing: 7px; filter: drop-shadow(0 0 6px #ffe9a0); }
+    .stad-jumbo { position: absolute; top: 20px; right: 10px; z-index: 2; line-height: 1;
+      filter: drop-shadow(0 0 5px rgba(120,200,255,.7)); }
+    .stad-jumbo.j1 { font-size: 20px; } .stad-jumbo.j2 { font-size: 28px; } .stad-jumbo.j3 { font-size: 36px; }
+    .stad-extras { position: absolute; top: 22px; left: 12px; z-index: 2; font-size: 20px; line-height: 1; }
+    .stad-seats { z-index: 1; display: flex; flex-direction: column; align-items: center; margin-bottom: 2px; }
+    .stad-seatrow { font-size: 13px; line-height: 1.02; letter-spacing: -1px; white-space: nowrap; }
+    .stad-field { width: 92%; height: 26px; margin-bottom: 8px; z-index: 1;
+      border-radius: 6px 6px 3px 3px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .stad-field.dirt  { background: #7a5a3a; }
+    .stad-field.grass { background: #2f8f3a; }
+    .stad-field.turf  { background: #1f9d47; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+    .stad-field.champ { background: linear-gradient(90deg,#1f9d47,#2fbf57,#1f9d47); box-shadow: inset 0 0 0 2px rgba(255,255,255,.45); }
+    /* The level + fans readout, and the gate-receipts note. */
+    #stad-head { display: flex; justify-content: space-between; align-items: center; margin: 0 2px 6px; }
+    .stad-lvl { font: 800 14px "Arial Black", Arial; color: #ffd54a; }
+    .stad-cap { font: 800 14px "Arial Black", Arial; color: #46e3a0; }
+    #stad-gate { font: 700 11px Arial; color: #b7c6d8; margin: 0 2px 8px; }
+    #stad-gate b { color: #ffe066; }
+    #stad-note { min-height: 15px; font: 700 11px Arial; color: #ff9a9a; margin-top: 6px; }
+    /* A part you've fully built reads a touch calmer. */
+    #stad-list .chal-row.done { opacity: .82; }
+
     /* Section headers inside the pop-up. */
     .trophy-sec { display: flex; align-items: baseline; gap: 8px; margin: 15px 0 9px; text-align: left;
       font: 800 12px "Arial Black", Arial; letter-spacing: .1em; text-transform: uppercase; color: #ffd54a;
@@ -1554,10 +1600,26 @@
       <div class="ov-sub">Gear up! Every upgrade really changes how you play.</div>
       <div id="shop-coins"></div>
       <div class="ov-btn" id="open-cards">🃏 CARD PACKS<span id="cards-btn-badge"></span></div>
+      <div class="ov-btn" id="open-stadium">🏟️ STADIUM<span id="stadium-btn-badge"></span></div>
       <div id="shop-items"></div>
       <div class="shop-section">🎽 STYLES — new looks for your squad</div>
       <div id="shop-uniforms"></div>
       <div class="ov-btn" id="shop-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 🏟️ STADIUM BUILDER — spend coins to build up your home stadium.
+       stadium.js draws the little stadium + the upgrade list. -->
+  <div class="ov" id="stadium-modal">
+    <div class="ov-card">
+      <div class="ov-title">🏟️ YOUR STADIUM</div>
+      <div class="ov-sub">Build your home! Bigger seats hold more fans — and more fans pay more coins each game.</div>
+      <div id="stad-scene"></div>
+      <div id="stad-head"></div>
+      <div id="stad-gate"></div>
+      <div id="stad-list"></div>
+      <div id="stad-note"></div>
+      <div class="ov-btn" id="stadium-close">DONE</div>
     </div>
   </div>
 
@@ -1733,25 +1795,26 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=63"></script>
-  <script src="src/sound.js?v=63"></script>
-  <script src="src/shop.js?v=63"></script>
-  <script src="src/spin.js?v=63"></script>
-  <script src="src/challenges.js?v=63"></script>
-  <script src="src/progress.js?v=63"></script>
-  <script src="src/streak.js?v=63"></script>
-  <script src="src/achievements.js?v=63"></script>
-  <script src="src/trophy.js?v=63"></script>
-  <script src="src/records.js?v=63"></script>
-  <script src="src/road.js?v=63"></script>
-  <script src="src/cards.js?v=63"></script>
-  <script src="src/nemesis.js?v=63"></script>
-  <script src="src/weather.js?v=63"></script>
-  <script src="src/season.js?v=63"></script>
-  <script src="src/draft.js?v=63"></script>
-  <script src="src/ads.js?v=63"></script>
-  <script src="src/tour.js?v=63"></script>
-  <script src="src/kick.js?v=63"></script>
-  <script src="src/main.js?v=63"></script>
+  <script src="src/stats.js?v=64"></script>
+  <script src="src/sound.js?v=64"></script>
+  <script src="src/shop.js?v=64"></script>
+  <script src="src/spin.js?v=64"></script>
+  <script src="src/challenges.js?v=64"></script>
+  <script src="src/progress.js?v=64"></script>
+  <script src="src/streak.js?v=64"></script>
+  <script src="src/achievements.js?v=64"></script>
+  <script src="src/trophy.js?v=64"></script>
+  <script src="src/records.js?v=64"></script>
+  <script src="src/road.js?v=64"></script>
+  <script src="src/cards.js?v=64"></script>
+  <script src="src/stadium.js?v=64"></script>
+  <script src="src/nemesis.js?v=64"></script>
+  <script src="src/weather.js?v=64"></script>
+  <script src="src/season.js?v=64"></script>
+  <script src="src/draft.js?v=64"></script>
+  <script src="src/ads.js?v=64"></script>
+  <script src="src/tour.js?v=64"></script>
+  <script src="src/kick.js?v=64"></script>
+  <script src="src/main.js?v=64"></script>
 </body>
 </html>
