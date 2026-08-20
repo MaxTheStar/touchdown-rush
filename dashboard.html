@@ -169,12 +169,12 @@
     //     only when you press it on purpose).
     async function scanCountries(myScan, deep) {
       const known = T.load('known-countries', []);        // flags found on earlier deep scans
-      // A normal refresh only re-checks countries we've ALREADY confirmed have
-      // players (their counters exist → clean 200s). We deliberately DON'T probe
-      // this device's own country here — if nobody from here has been counted
-      // yet, that counter doesn't exist and poking it would 404. The 🔍 deep
-      // scan (below) is what finds your country, and every other, the first time.
-      const seeds = [...new Set(known.filter(Boolean))];
+      const mine  = (T.load('country', {}) || {}).cc;     // this device's own country
+      // A normal refresh only re-checks countries we already know have players:
+      // the flags from earlier scans, plus your own country (its counter was
+      // created the first time you played from here). Those exist, so it's quiet.
+      // The 🔍 deep scan is what discovers OTHER new countries.
+      const seeds = [...new Set([...known, mine].filter(Boolean))];
 
       const found = [];
       const show = (done, total) => {
