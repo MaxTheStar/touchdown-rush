@@ -2580,6 +2580,10 @@ function startBreak(kind, resume) {
   if (G.banner) { G.banner.destroy(); G.banner = null; }
   document.body.classList.add('kicking');       // hide the football buttons
   buildBreakOverlay(kind);
+  // 🎉 Halftime Show: at the half, a quick tap-to-the-beat mini-game plays on
+  // top of the break screen. When it's done it tucks away and you tap to start
+  // the 2nd half as usual — the break/ad flow underneath is untouched.
+  if (kind === 'half' && window.TDHalftime) TDHalftime.start();
 }
 
 // Tap / SPACE ends the break and the game picks up where it left off.

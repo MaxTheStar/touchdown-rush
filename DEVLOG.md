@@ -161,8 +161,26 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   layout untouched). Verified live via DOM/JS: promotions/new-tier/demotion/tier-floor all correct, coins
   30/100/40 exact, Champion accrual + no champ demotion, `endGame` pays into the payday with the ribbon
   over the game-over screen (0 errors), and the pop-up has no overflow at 375 px.
+- **✅ v1.50 (🎉 HALFTIME SHOW) is PUSHED & LIVE** — shipped 2026-08-19 (`?v=66`), the 2nd Round-6 pick.
+  New `src/halftime.js` (`window.TDHalftime`, no persistence — it's an in-the-moment mini-game): at
+  HALFTIME a quick tap-to-the-beat show plays — the band strikes up, a big 🥁 pulses on the beat, and you
+  tap along to fill a HYPE METER before a 6-second timer runs out. Tap ON the beat (while the drum glows)
+  for a PERFECT (+11 vs +5). Fuller meter → better rating (1–3 ⭐) → more bonus coins (5…25, into the
+  game's payday), with a 🎉 celebration spray. **Integration is deliberately non-invasive:** it's a DOM
+  overlay (`#halftime-modal`) shown ON TOP of the existing halftime break via a single line in
+  `startBreak()` — `if (kind === 'half' && window.TDHalftime) TDHalftime.start();`. The overlay covers the
+  field so taps drive the show (the "tap to continue" listens on the game *canvas*, a sibling beneath, so
+  those taps never leak through), and the game keyboard is switched off while it's up so SPACE can't skip
+  the break. When the show finishes it awards coins, flashes the result, then tucks itself away after ~2 s
+  — revealing the untouched break screen (score + silly ad + "tap to continue") to tap through to the 2nd
+  half. Verified live via DOM/JS: taps fill the meter (+5 / on-beat +11), rating+coins correct (25 at
+  100%), the real `startBreak('half')` flow works end-to-end (show on top, break built underneath, keyboard
+  off, NO premature resume; then dismiss → keyboard back → `endBreak()` resumes the 2nd half), 0 errors,
+  no overflow at 375 px. **NOTE:** the 6-second timer means a `start()` left running between DOM-poke tool
+  calls will auto-finish on its own (that's correct behaviour, not a bug) — test the coin award in one
+  synchronous call.
 
-## ✅ Sync status — v1.11–v1.49 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.49 pushed 2026-08-19)
+## ✅ Sync status — v1.11–v1.50 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.50 pushed 2026-08-19)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

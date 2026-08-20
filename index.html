@@ -952,6 +952,58 @@
     .rk-stat b { display: block; font: 800 17px "Arial Black", Arial; color: #ffe066; font-variant-numeric: tabular-nums; }
     .rk-stat span { font: 700 10px Arial; color: #9fb0c3; }
 
+    /* ---- 🎉 HALFTIME SHOW (src/halftime.js) ----------------------------- */
+    /* A tap-to-the-beat mini-game that plays on top of the halftime break. */
+    #halftime-modal .ht-card { border-color: rgba(255,206,64,0.5); }
+    .ht-title { font: 800 22px "Arial Black", Arial; color: #ffe066; margin-bottom: 2px; }
+    .ht-sub { font: 12px Arial; color: #aab4c8; margin-bottom: 6px; }
+    .ht-scene { padding: 6px 0 2px; }
+    .ht-crowd { font-size: 20px; letter-spacing: 3px; margin-bottom: 2px; }
+    .ht-band  { font-size: 22px; letter-spacing: 5px; margin-top: 4px; }
+    .ht-drum  { font-size: 52px; display: inline-block; line-height: 1; }
+    .ht-drum.beat { animation: htBeat .3s ease-out; }
+    @keyframes htBeat {
+      0%   { transform: scale(1); filter: none; }
+      30%  { transform: scale(1.34); filter: drop-shadow(0 0 16px #ffd54a); }
+      100% { transform: scale(1); filter: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .ht-drum.beat { animation: none; } }
+    /* the hype meter */
+    .ht-meter { position: relative; height: 22px; border-radius: 999px; overflow: hidden;
+      margin: 12px 0 8px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16); }
+    .ht-fill { height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg, #ff8a3d, #ffd54a); transition: width .12s ease-out; }
+    .ht-meter-lab { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font: 800 12px "Arial Black", Arial; color: #1a1206; }
+    .ht-timerrow { font: 800 17px "Arial Black", Arial; color: #fff; margin-bottom: 4px; }
+    .ht-timer-ic { margin-right: 4px; }
+    /* the big tap button + its floating "+5 / PERFECT!" feedback */
+    .ht-tap { position: relative; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none;
+      display: block; margin: 10px auto 2px; padding: 16px; border-radius: 14px;
+      font: 800 22px "Arial Black", Arial; color: #2a0d00; letter-spacing: .5px;
+      background: linear-gradient(180deg, #ffd24d, #ff9a1c); border: 2px solid #ffe6a8;
+      box-shadow: 0 6px 18px rgba(255,150,30,.4); }
+    .ht-tap:active { transform: scale(0.97); }
+    .ht-tap.hidden { visibility: hidden; }
+    .ht-pop { position: absolute; left: 50%; top: 2px; transform: translateX(-50%);
+      font: 800 15px "Arial Black", Arial; color: #fff; pointer-events: none; white-space: nowrap;
+      text-shadow: 0 1px 3px rgba(0,0,0,.6); animation: htPop .65s ease-out forwards; }
+    .ht-pop.perfect { color: #fff2a8; font-size: 18px; }
+    @keyframes htPop {
+      0%   { opacity: 0; transform: translate(-50%, 6px) scale(.8); }
+      20%  { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, -34px) scale(1.05); }
+    }
+    @media (prefers-reduced-motion: reduce) { .ht-pop { animation-duration: .3s; } }
+    /* the finale result */
+    .ht-result { opacity: 0; transform: scale(.82); transition: opacity .3s ease, transform .3s ease; }
+    .ht-result.show { opacity: 1; transform: scale(1); margin-top: 8px; }
+    .ht-stars { font-size: 27px; line-height: 1; }
+    .ht-rlabel { font: 800 18px "Arial Black", Arial; color: #ffe066; margin-top: 2px; }
+    .ht-coins { font: 800 14px "Arial Black", Arial; color: #46e3a0; margin-top: 3px; }
+    .ht-skip { margin-top: 12px; font: 700 12px Arial; color: #8fb0d8;
+      -webkit-tap-highlight-color: transparent; touch-action: none; cursor: pointer; }
+
     /* ---- 🎟️ REWARD ROAD (src/road.js) ---------------------------------- */
     /* The 3rd slim menu bar, stacked under the Trophy Case (teal accent). */
     #road-bar {
@@ -1787,6 +1839,26 @@
     </div>
   </div>
 
+  <!-- 🎉 THE HALFTIME SHOW — halftime.js runs a tap-to-the-beat mini-game on top
+       of the normal halftime break (main.js). Covers the field so taps drive the
+       show; tucks away when it's done and the break is right there to tap through. -->
+  <div class="ov" id="halftime-modal">
+    <div class="ov-card ht-card">
+      <div class="ht-title">🎉 HALFTIME SHOW</div>
+      <div class="ht-sub">Tap on the beat to fire up the crowd!</div>
+      <div class="ht-scene" id="ht-scene">
+        <div class="ht-crowd">🙌 🎉 🙌 🎉 🙌</div>
+        <div class="ht-drum" id="ht-drum">🥁</div>
+        <div class="ht-band">🎺 🎷 🎸 🥁 🎺</div>
+      </div>
+      <div class="ht-meter"><div class="ht-fill" id="ht-fill"></div><span class="ht-meter-lab" id="ht-meter-lab">0%</span></div>
+      <div class="ht-timerrow"><span class="ht-timer-ic">⏱</span><span id="ht-timer">6</span></div>
+      <div class="ht-tap" id="ht-tap">TAP! 🥁</div>
+      <div class="ht-result" id="ht-result"></div>
+      <div class="ht-skip" id="ht-skip">skip ›</div>
+    </div>
+  </div>
+
   <!-- 🃏 CARD PACKS — cards.js draws the opener, the reveal & your album.
        Opened from the Pro Shop; sits after it so it stacks on top. -->
   <div class="ov" id="cards-modal">
@@ -1869,27 +1941,28 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=65"></script>
-  <script src="src/sound.js?v=65"></script>
-  <script src="src/shop.js?v=65"></script>
-  <script src="src/spin.js?v=65"></script>
-  <script src="src/challenges.js?v=65"></script>
-  <script src="src/progress.js?v=65"></script>
-  <script src="src/streak.js?v=65"></script>
-  <script src="src/achievements.js?v=65"></script>
-  <script src="src/trophy.js?v=65"></script>
-  <script src="src/records.js?v=65"></script>
-  <script src="src/road.js?v=65"></script>
-  <script src="src/cards.js?v=65"></script>
-  <script src="src/stadium.js?v=65"></script>
-  <script src="src/ranked.js?v=65"></script>
-  <script src="src/nemesis.js?v=65"></script>
-  <script src="src/weather.js?v=65"></script>
-  <script src="src/season.js?v=65"></script>
-  <script src="src/draft.js?v=65"></script>
-  <script src="src/ads.js?v=65"></script>
-  <script src="src/tour.js?v=65"></script>
-  <script src="src/kick.js?v=65"></script>
-  <script src="src/main.js?v=65"></script>
+  <script src="src/stats.js?v=66"></script>
+  <script src="src/sound.js?v=66"></script>
+  <script src="src/shop.js?v=66"></script>
+  <script src="src/spin.js?v=66"></script>
+  <script src="src/challenges.js?v=66"></script>
+  <script src="src/progress.js?v=66"></script>
+  <script src="src/streak.js?v=66"></script>
+  <script src="src/achievements.js?v=66"></script>
+  <script src="src/trophy.js?v=66"></script>
+  <script src="src/records.js?v=66"></script>
+  <script src="src/road.js?v=66"></script>
+  <script src="src/cards.js?v=66"></script>
+  <script src="src/stadium.js?v=66"></script>
+  <script src="src/ranked.js?v=66"></script>
+  <script src="src/halftime.js?v=66"></script>
+  <script src="src/nemesis.js?v=66"></script>
+  <script src="src/weather.js?v=66"></script>
+  <script src="src/season.js?v=66"></script>
+  <script src="src/draft.js?v=66"></script>
+  <script src="src/ads.js?v=66"></script>
+  <script src="src/tour.js?v=66"></script>
+  <script src="src/kick.js?v=66"></script>
+  <script src="src/main.js?v=66"></script>
 </body>
 </html>
