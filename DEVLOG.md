@@ -134,7 +134,35 @@ and now 🏟️ Stadium Builder (the 5th pick). On deck: 🏅 Ranked Ladder, �
   payday (a real `endGame()` tallied +15 with 0 errors), persistence works, maxed render is correct, and
   the pop-up has no horizontal overflow on a 375 px phone.
 
-## ✅ Sync status — v1.11–v1.48 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48 pushed 2026-08-19)
+### 🆕 Round 6 — "The Superstar Board" (a fresh chart, opened 2026-08-19)
+
+A new Add-On Draft Board (Artifact `e9e25465-46cc-429a-853b-fe0790815343`, a night-stadium football
+draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype Announcer ②🎉 Halftime Show
+③🎽 Uniform Designer ④⚡ Power-Up Plays ⑤🏅 Ranked Ladder ⑥🎯 Practice Arcade ⑦🏆 Playoff Tournament
+⑧🎬 Film Room. (Picks ⑤⑥⑧ carried over from Round 5.)
+
+- **↔️ Pick ①📣 Hype Announcer — SKIPPED as already-in-game.** The game already has a rich live
+  play-by-play system: `sayComment()` fires punchy calls on snaps / runs / sacks / picks / safeties (small
+  in-world text at 270,235) and `showBanner(msg,big)` shows the big score callouts ("TOUCHDOWN! +6"). A
+  second commentary layer would just duplicate/clutter it, so we moved on rather than build something
+  redundant. (If Max wants MORE hype later, the real gap is juicier *visuals* on marquee moments, not more
+  text — a separate polish task.)
+- **✅ v1.49 (🏅 RANKED LADDER) is PUSHED & LIVE** — shipped 2026-08-19 (`?v=65`), the 5th Round-6 pick
+  (built first, since Pick ① was redundant). New `src/ranked.js` (`window.TDRanked`, key `tdr-ranked` =
+  `{step,stars,peak,w,l,champ}`): a competitive rank you climb by WINNING — Bronze → Silver → Gold →
+  Platinum → Diamond → 👑 Champion, three divisions each (III→II→I), 3 ⭐ to fill a division. A win = +1 ⭐
+  (fill three → promote, +30 🪙, or +100 for a whole new tier); a loss = −1 ⭐ (can drop a division) but you
+  **never fall out of a tier once earned** (the division floor holds — keeps the badge safe). Champion is
+  the top: wins there add Champion stars. Distinct from the XP *level* (which only ever grows) — rank
+  reflects how you're playing NOW. Wiring: one `TDRanked.recordResult(won)` in `endGame` BEFORE the FINAL
+  screen (so promotion coins count in the payday) which also flies in a `#rank-toast` ribbon on any rank
+  change; opened from the 🏆 Trophy Case via a "🏅 RANKED LADDER" button → `#ranked-modal` (big rank badge +
+  ⭐ row, the full tier climb lit up to your peak, W–L / win-rate / best-rank). No new menu bar (phone
+  layout untouched). Verified live via DOM/JS: promotions/new-tier/demotion/tier-floor all correct, coins
+  30/100/40 exact, Champion accrual + no champ demotion, `endGame` pays into the payday with the ribbon
+  over the game-over screen (0 errors), and the pop-up has no overflow at 375 px.
+
+## ✅ Sync status — v1.11–v1.49 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.49 pushed 2026-08-19)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
