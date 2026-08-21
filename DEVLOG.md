@@ -215,8 +215,26 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   shows the equipped icon and all FOUR in-game buttons (⏱/🧩/🎩/⭐) fit a 375 px phone (right edge 363<375);
   picker no overflow. **NOTE:** checked the Spin overlap first (as promised) — kept it distinct by making
   it player-*triggered* + swapping in FREEZE (which the Spin has no equivalent of).
+- **✅ v1.53 (🎯 PRACTICE ARCADE) is PUSHED & LIVE** — shipped 2026-08-19 (`?v=69`), the 6th Round-6 pick.
+  New `src/arcade.js` (`window.TDArcade`, key `tdr-arcade` = `{target: best pts, fg: longest FG yd}`). A
+  self-contained hub of skill drills you can play any time (no full game) — **purely additive, ZERO edits
+  to main.js/shop.js** (like the Halftime Show, it's its own little DOM world and never touches the Phaser
+  sim; it just pays coins via `TDShop.earn`). Two drills: **🎯 TARGET PRACTICE** (targets pop up on a
+  yard-lined field, tap them before they vanish, 🔥 combo bonus for chains, 20 s clock — 10+combo pts/hit,
+  best pts saved) and **🦵 FIELD GOAL CHALLENGE** (a marker sweeps a meter, tap KICK to stop it in the
+  green zone; a make backs you up 5 yd — the green shrinks + sweep speeds up — miss and you're out; longest
+  made yd saved). Coins: target `min(20, pts/25)`, FG `min(25, makes×4)`; a 🏆 NEW BEST! ribbon + celebrate
+  on a record. Opened from the 🛍 Pro Shop ("🎯 PRACTICE ARCADE" button); `#arcade-modal` swaps
+  `#arc-stage` between hub / drill / result and shows `#arc-hud`. Verified live via DOM/JS: hub renders
+  both cards+bests; target hit scores (10→12 w/ combo); FG make/miss judging via `getBoundingClientRect`
+  (GOOD in-zone → makes+1/yard+5, wide → NO GOOD → result); result shows score+coins+NEW BEST and persists
+  `tdr-arcade`; nav (PLAY AGAIN / ← ARCADE); `close()` clears all spawn/timer intervals (no leak) + resets
+  mode + restores keyboard; hub/target/FG all fit a 375 px phone, 0 errors. **VERIFY GOTCHA:** the FG
+  drill's tap-judging needs real layout (`getBoundingClientRect`) — a HIDDEN browser pane reports
+  `innerWidth 0` so every rect is 0 and kicks read as "wide"; take a screenshot first to wake the pane,
+  and always `TDArcade.open()` (not just `_startFG()`) so the modal is actually laid out.
 
-## ✅ Sync status — v1.11–v1.52 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.52 pushed 2026-08-19)
+## ✅ Sync status — v1.11–v1.53 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

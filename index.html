@@ -1086,6 +1086,68 @@
       padding: 9px 16px; border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.45); }
     @media (prefers-reduced-motion: reduce) { #power-flash { transition: opacity .18s ease; } }
 
+    /* ---- 🎯 PRACTICE ARCADE (src/arcade.js) ----------------------------- */
+    .arc-hud { display: none; align-items: center; justify-content: space-between; gap: 8px;
+      margin: 4px 2px 8px; font: 800 15px "Arial Black", Arial; }
+    .arc-hud-s { color: #ffe066; } .arc-hud-c { color: #ff8a3d; flex: 1; text-align: center; }
+    .arc-hud-t { color: #46e3a0; font-variant-numeric: tabular-nums; }
+    .arc-stage { min-height: 268px; }
+    /* the hub cards */
+    .arc-cards { display: flex; flex-direction: column; gap: 12px; margin: 8px 0 2px; }
+    .arc-card { display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px 12px; border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      border: 2px solid rgba(255,255,255,0.14); -webkit-tap-highlight-color: transparent; touch-action: none; cursor: pointer; }
+    .arc-card:active { transform: scale(0.98); }
+    .arc-card-ic { font-size: 34px; width: 46px; text-align: center; flex: none; }
+    .arc-card-tx { flex: 1; min-width: 0; }
+    .arc-card-nm { font: 800 15px "Arial Black", Arial; color: #fff; }
+    .arc-card-bl { font: 600 12px Arial; color: #aeb9cc; margin-top: 3px; }
+    .arc-card-best { flex: none; text-align: center; font: 700 9px Arial; letter-spacing: .1em; color: #8fb0d8; }
+    .arc-card-best b { display: block; font: 800 20px "Arial Black", Arial; color: #ffd54a; }
+    .arc-card-best small { font-size: 10px; color: #8fb0d8; }
+    /* 🎯 target drill */
+    .arc-field { position: relative; height: 264px; border-radius: 14px; overflow: hidden;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 32px, rgba(255,255,255,0.08) 32px 34px),
+        linear-gradient(180deg, #1f8f3a, #14672a);
+      border: 2px solid rgba(255,255,255,0.15); touch-action: manipulation; }
+    .arc-tgt { position: absolute; font-size: 34px; line-height: 1; cursor: pointer; user-select: none;
+      transform: translate(-50%, -50%) scale(0); animation: arcPop .18s ease-out forwards;
+      -webkit-tap-highlight-color: transparent; touch-action: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+    @keyframes arcPop { to { transform: translate(-50%, -50%) scale(1); } }
+    .arc-tgt.hit { animation: arcHit .16s ease-out forwards; }
+    @keyframes arcHit { to { transform: translate(-50%, -50%) scale(1.8); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .arc-tgt { animation: none; transform: translate(-50%,-50%) scale(1); } }
+    /* 🦵 field-goal drill */
+    .arc-fg { padding: 6px 0 2px; text-align: center; }
+    .arc-posts { position: relative; height: 46px; display: flex; justify-content: center; gap: 58px; }
+    .arc-posts span { width: 7px; height: 46px; background: linear-gradient(180deg, #ffd60a, #e0a800); border-radius: 3px; }
+    .arc-posts::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 72px; height: 7px; background: #ffd60a; border-radius: 3px; }
+    .arc-ball { font-size: 26px; margin: 6px 0 12px; }
+    .arc-meter { position: relative; height: 26px; border-radius: 999px; overflow: hidden; margin: 0 2px 14px;
+      background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18); }
+    .arc-zone { position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(180deg, #3ee27a, #1f9d47); box-shadow: 0 0 12px rgba(62,226,122,.6); }
+    .arc-marker { position: absolute; top: -2px; bottom: -2px; left: 2%; width: 6px; border-radius: 3px;
+      background: #fff; box-shadow: 0 0 8px #fff; animation: arcSweep 1s linear infinite alternate; }
+    @keyframes arcSweep { from { left: 2%; } to { left: 95%; } }
+    .arc-kick { display: block; margin: 0 auto; padding: 14px; border-radius: 14px; max-width: 220px;
+      font: 800 20px "Arial Black", Arial; color: #2a0d00; letter-spacing: .5px;
+      background: linear-gradient(180deg, #ffd24d, #ff9a1c); border: 2px solid #ffe6a8;
+      box-shadow: 0 5px 16px rgba(255,150,30,.4); -webkit-tap-highlight-color: transparent; touch-action: none; }
+    .arc-kick:active { transform: scale(0.97); }
+    .arc-fg-msg { min-height: 18px; margin-top: 12px; font: 800 14px "Arial Black", Arial; color: #cdd6e6; }
+    .arc-fg-msg.good { color: #46e3a0; } .arc-fg-msg.bad { color: #ff9a9a; }
+    /* 🏁 result */
+    .arc-result { padding: 18px 6px 4px; text-align: center; }
+    .arc-res-t { font: 800 16px "Arial Black", Arial; color: #cdd6e6; }
+    .arc-res-best { font: 800 15px "Arial Black", Arial; color: #ffd60a; margin-top: 8px;
+      text-shadow: 0 0 16px rgba(255,214,10,.5); }
+    .arc-res-score { font: 800 26px "Arial Black", Arial; color: #fff; margin: 10px 0 4px; }
+    .arc-res-coins { font: 800 15px "Arial Black", Arial; color: #46e3a0; }
+    .arc-res-btns { display: flex; gap: 10px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+
     /* ---- 🎟️ REWARD ROAD (src/road.js) ---------------------------------- */
     /* The 3rd slim menu bar, stacked under the Trophy Case (teal accent). */
     #road-bar {
@@ -1792,6 +1854,7 @@
       <div class="ov-btn" id="open-stadium">🏟️ STADIUM<span id="stadium-btn-badge"></span></div>
       <div class="ov-btn" id="open-uniform">🎽 UNIFORM DESIGNER</div>
       <div class="ov-btn" id="open-power">⚡ POWER-UP PLAYS</div>
+      <div class="ov-btn" id="open-arcade">🎯 PRACTICE ARCADE</div>
       <div id="shop-items"></div>
       <div class="shop-section">🎽 STYLES — new looks for your squad</div>
       <div id="shop-uniforms"></div>
@@ -1853,6 +1916,19 @@
 
   <!-- ⚡ the big "POWER!" flash (and little hint toasts) — powerup.js drives it. -->
   <div id="power-flash" class="power-flash"></div>
+
+  <!-- 🎯 PRACTICE ARCADE — a self-contained hub of skill drills. arcade.js fills
+       #arc-stage (hub / target drill / field-goal drill / result) and #arc-hud. -->
+  <div class="ov" id="arcade-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎯 PRACTICE ARCADE</div>
+      <div class="ov-sub">Quick drills — beat your best and earn coins. No full game needed!</div>
+      <div id="arc-hud" class="arc-hud"></div>
+      <div id="arc-stage" class="arc-stage"></div>
+      <div class="ov-btn" id="arc-back">← ARCADE</div>
+      <div class="ov-btn" id="arcade-close">DONE</div>
+    </div>
+  </div>
 
   <!-- 🎁 DAILY REWARDS — the 14-day calendar. shop.js draws the days. -->
   <div class="ov" id="daily-modal">
@@ -2066,30 +2142,31 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=68"></script>
-  <script src="src/sound.js?v=68"></script>
-  <script src="src/shop.js?v=68"></script>
-  <script src="src/spin.js?v=68"></script>
-  <script src="src/challenges.js?v=68"></script>
-  <script src="src/progress.js?v=68"></script>
-  <script src="src/streak.js?v=68"></script>
-  <script src="src/achievements.js?v=68"></script>
-  <script src="src/trophy.js?v=68"></script>
-  <script src="src/records.js?v=68"></script>
-  <script src="src/road.js?v=68"></script>
-  <script src="src/cards.js?v=68"></script>
-  <script src="src/stadium.js?v=68"></script>
-  <script src="src/ranked.js?v=68"></script>
-  <script src="src/halftime.js?v=68"></script>
-  <script src="src/uniform.js?v=68"></script>
-  <script src="src/powerup.js?v=68"></script>
-  <script src="src/nemesis.js?v=68"></script>
-  <script src="src/weather.js?v=68"></script>
-  <script src="src/season.js?v=68"></script>
-  <script src="src/draft.js?v=68"></script>
-  <script src="src/ads.js?v=68"></script>
-  <script src="src/tour.js?v=68"></script>
-  <script src="src/kick.js?v=68"></script>
-  <script src="src/main.js?v=68"></script>
+  <script src="src/stats.js?v=69"></script>
+  <script src="src/sound.js?v=69"></script>
+  <script src="src/shop.js?v=69"></script>
+  <script src="src/spin.js?v=69"></script>
+  <script src="src/challenges.js?v=69"></script>
+  <script src="src/progress.js?v=69"></script>
+  <script src="src/streak.js?v=69"></script>
+  <script src="src/achievements.js?v=69"></script>
+  <script src="src/trophy.js?v=69"></script>
+  <script src="src/records.js?v=69"></script>
+  <script src="src/road.js?v=69"></script>
+  <script src="src/cards.js?v=69"></script>
+  <script src="src/stadium.js?v=69"></script>
+  <script src="src/ranked.js?v=69"></script>
+  <script src="src/halftime.js?v=69"></script>
+  <script src="src/uniform.js?v=69"></script>
+  <script src="src/powerup.js?v=69"></script>
+  <script src="src/arcade.js?v=69"></script>
+  <script src="src/nemesis.js?v=69"></script>
+  <script src="src/weather.js?v=69"></script>
+  <script src="src/season.js?v=69"></script>
+  <script src="src/draft.js?v=69"></script>
+  <script src="src/ads.js?v=69"></script>
+  <script src="src/tour.js?v=69"></script>
+  <script src="src/kick.js?v=69"></script>
+  <script src="src/main.js?v=69"></script>
 </body>
 </html>
