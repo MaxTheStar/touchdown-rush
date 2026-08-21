@@ -267,6 +267,7 @@ const G = {
   team: null,           // YOUR team (picked at the menu) — an entry from NFL_TEAMS
   oppTeam: null,        // the computer's team (a random other one)
   seasonGame: false,    // 🏆 true while playing a Season game (see beginGame / season.js)
+  playoffGame: false,   // 🏆 true while playing a Playoff Tournament game (see beginGame / playoffs.js)
   menuIndex: 0,         // which team the menu is showing right now
   menu: null,           // the menu's on-screen pieces (preview player, name, code)
   endzoneLabel: null,   // the team-name text painted in your home endzone
@@ -2693,6 +2694,11 @@ function endGame() {
   // We do it LAST, so the FINAL screen above still shows just THIS game's coins.
   if (G.seasonGame && window.TDSeason) TDSeason.reportResult(G.score, G.oppScore);
 
+  // 🏆 In a PLAYOFF TOURNAMENT game, report the score to the bracket — it advances
+  // you (or knocks you out) and auto-plays everyone else's games. Like the season
+  // line above, done here so the FINAL screen still shows just THIS game's coins.
+  if (G.playoffGame && window.TDPlayoffs) TDPlayoffs.reportResult(G.score, G.oppScore);
+
   // 🏅 Achievement badges: the "whole game" ones (shutout / blowout / comeback)
   // plus a refresh of the milestone badges (a win may have leveled you up or
   // won a title). Runs last so any fresh title is already counted.
@@ -2765,7 +2771,8 @@ function buildGameOverOverlay() {
     if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '⭐', 'LEVEL ' + G.leveledTo + '!');
   }
 
-  O.again = s.add.text(270, G.leveledTo ? 646 : 622, G.seasonGame ? 'tap for your season →' : 'tap to play again', {
+  O.again = s.add.text(270, G.leveledTo ? 646 : 622,
+    G.seasonGame ? 'tap for your season →' : G.playoffGame ? 'tap for the bracket →' : 'tap to play again', {
     fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#8fd0ff',
     stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(52);
   s.tweens.add({ targets: O.again, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
@@ -2778,11 +2785,16 @@ function returnToMenuFromGameOver() {
   if (O) { for (const k in O) if (O[k] && O[k].destroy) O[k].destroy(); G.gameOverOverlay = null; }
   document.body.classList.remove('kicking', 'returning', 'two-player');
   const wasSeason = G.seasonGame;
+  const wasPlayoff = G.playoffGame;
   G.seasonGame = false;
+  G.playoffGame = false;
   enterMenu();
   // 🏆 A season game drops you back on the SEASON screen (with updated standings,
   // your next game, or the championship trophy) — not the plain team menu.
   if (wasSeason && window.TDSeason) TDSeason.open();
+  // 🏆 A playoff game drops you back on the BRACKET screen (advanced / knocked out /
+  // champion), the same way — see playoffs.js.
+  else if (wasPlayoff && window.TDPlayoffs) TDPlayoffs.open();
 }
 
 // ---- small color helpers (for the opponent's on-screen colors) ----
@@ -2989,10 +3001,11 @@ function startGameWithTeam() {
 // The shared "start a brand-new game" routine, used by BOTH Quick Game and
 // 🏆 Season mode. `team`/`opp` are team objects; `isSeason` is true for a
 // season game (so endGame knows to report the final score back to the season).
-function beginGame(team, opp, isSeason, isRival) {
+function beginGame(team, opp, isSeason, isRival, isPlayoff) {
   G.team = team;
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
+  G.playoffGame = !!isPlayoff;        // 🏆 is this a Playoff Tournament game? (see playoffs.js)
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
   G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
 
@@ -3014,6 +3027,14 @@ function beginGame(team, opp, isSeason, isRival) {
   if (G.rivalGame) {
     G.oppOff *= 1.06; G.oppDef *= 1.06;
     if (window.TDNemesis && TDNemesis.introLine) sayComment(TDNemesis.introLine());
+  }
+
+  // 🏆 PLAYOFF BUFF — the deeper into the bracket you go, the tougher the opponent
+  // plays: no bump in the Round of 16, growing to +7.5% in THE FINAL. It ramps the
+  // tournament toward a real championship test, but stays a notch below the boss.
+  if (G.playoffGame && window.TDPlayoffs) {
+    const pb = TDPlayoffs.roundBuff();
+    G.oppOff *= pb; G.oppDef *= pb;
   }
 
   // 📈 Player progression: your leveled-up team plays a little stronger — a
@@ -3105,6 +3126,13 @@ window.TDGame = {
       do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp.abbr === team.abbr);
     }
     if (team && opp && G.scene) beginGame(team, opp, false, true);
+  },
+  // 🏆 start a PLAYOFF TOURNAMENT game: your team vs the bracket's next opponent
+  // (playoffs.js calls this from the PLAY button). Like a season game, but flagged
+  // as a playoff so endGame reports the score to the bracket and the round buff applies.
+  startPlayoffGame(youAbbr, oppAbbr) {
+    const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
+    if (team && opp && G.scene) beginGame(team, opp, false, false, true);
   }
 };
 

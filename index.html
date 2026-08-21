@@ -952,6 +952,55 @@
     .rk-stat b { display: block; font: 800 17px "Arial Black", Arial; color: #ffe066; font-variant-numeric: tabular-nums; }
     .rk-stat span { font: 700 10px Arial; color: #9fb0c3; }
 
+    /* ---- 🏆 PLAYOFF TOURNAMENT (src/playoffs.js) ------------------------ */
+    /* The single-elim bracket screen: an intro, your run as a ladder of rungs,
+       and a trophy shelf. Reuses the shared .ov / .ov-card / .ov-btn look. */
+    .po-intro { font: 13.5px/1.5 Arial; color: #cdd6e6; text-align: left;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 11px 13px; margin: 2px 0 8px; }
+    .po-intro b { color: #ffe066; }
+    .po-head { font: 800 13px "Arial Black", Arial; color: #fff; text-align: center; margin: 4px 0 8px; }
+    .po-head span { color: #ffd54a; }
+    .po-sec { font: 800 11px "Arial Black", Arial; letter-spacing: .06em; text-transform: uppercase;
+      color: #9fb0c3; text-align: left; margin: 10px 2px 5px; }
+
+    /* Your run — one rung per round, then the trophy cap. */
+    .po-ladder { display: flex; flex-direction: column; gap: 5px; }
+    .po-rung { display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 11px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+    .po-ic { font-size: 17px; line-height: 1; width: 22px; text-align: center; flex: none; }
+    .po-nm { flex: 1; font: 800 12.5px "Arial Black", Arial; color: #fff; text-align: left; }
+    .po-rt { font: 700 10.5px Arial; color: #9fb0c3; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .po-rung.po-w { border-color: rgba(80,200,120,0.5); background: rgba(80,200,120,0.10); }
+    .po-rung.po-w .po-rt { color: #7fe0a0; }
+    .po-rung.po-l { border-color: rgba(220,110,110,0.5); background: rgba(220,110,110,0.10); }
+    .po-rung.po-l .po-rt { color: #ff9d9d; }
+    .po-rung.po-now { border-color: rgba(255,214,74,0.7); background: rgba(255,214,74,0.10);
+      box-shadow: 0 0 0 1px rgba(255,214,74,0.35); }
+    .po-rung.po-now .po-nm, .po-rung.po-now .po-rt { color: #ffe066; }
+    .po-rung.po-up { opacity: .5; }
+    .po-rung.po-trophy { border-color: rgba(255,206,64,0.35); background: rgba(255,206,64,0.06); }
+    .po-rung.po-trophy .po-nm { color: #ffd54a; }
+    .po-rung.po-trophy.got { border-color: rgba(255,206,64,0.85);
+      background: rgba(255,206,64,0.16); box-shadow: 0 0 16px rgba(255,190,50,0.4); }
+
+    /* Result banners: advanced / champion / knocked out. */
+    .po-flash { font: 800 14px "Arial Black", Arial; color: #7fe0a0; text-align: center;
+      background: rgba(80,200,120,0.12); border: 1px solid rgba(80,200,120,0.4);
+      border-radius: 12px; padding: 9px; margin: 2px 0 8px; }
+    .po-flash span { display: block; font: 700 11.5px Arial; color: #cdd6e6; margin-top: 2px; }
+    .po-champ { font: 900 17px "Arial Black", Arial; color: #ffe066; text-align: center; line-height: 1.35;
+      background: rgba(255,206,64,0.12); border: 1px solid rgba(255,206,64,0.5);
+      border-radius: 12px; padding: 12px; margin: 2px 0 8px; text-shadow: 0 0 14px rgba(255,190,50,.5); }
+    .po-champ span { display: block; font: 700 12px Arial; color: #fff; margin-top: 4px; text-shadow: none; }
+    .po-out { font: 700 13px Arial; color: #ffc2c2; text-align: center; line-height: 1.4;
+      background: rgba(220,110,110,0.10); border: 1px solid rgba(220,110,110,0.4);
+      border-radius: 12px; padding: 11px; margin: 2px 0 8px; }
+    .po-out b { color: #fff; }
+    .po-best { font: 700 12px Arial; color: #cdd6e6; text-align: center; margin: 8px 0 2px;
+      padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .po-best b { color: #ffe066; }
+
     /* ---- 🎉 HALFTIME SHOW (src/halftime.js) ----------------------------- */
     /* A tap-to-the-beat mini-game that plays on top of the halftime break. */
     #halftime-modal .ht-card { border-color: rgba(255,206,64,0.5); }
@@ -1830,6 +1879,9 @@
       <div class="ov-title">🏆 SEASON</div>
       <div id="season-body"></div>
       <div class="ov-btn yes" id="season-play">START SEASON</div>
+      <!-- 🏆 Jump straight into a quick single-elim bracket (playoffs.js) — lives
+           here under the Season hub so it doesn't need its own menu button. -->
+      <div class="ov-btn" id="open-playoffs">🏆 PLAYOFF TOURNAMENT →</div>
       <div class="ov-btn" id="season-close">CLOSE</div>
     </div>
   </div>
@@ -2040,6 +2092,18 @@
     </div>
   </div>
 
+  <!-- 🏆 THE PLAYOFF TOURNAMENT — playoffs.js draws your bracket run & trophy shelf.
+       Opened from the Season hub; sits after the ranked modal so it stacks on top. -->
+  <div class="ov" id="playoffs-modal">
+    <div class="ov-card">
+      <div class="ov-title">🏆 PLAYOFF TOURNAMENT</div>
+      <div class="ov-sub">Single elimination — win 4 games in a row to lift the trophy!</div>
+      <div id="playoffs-body"></div>
+      <div class="ov-btn yes" id="playoffs-play">START TOURNAMENT</div>
+      <div class="ov-btn" id="playoffs-close">CLOSE</div>
+    </div>
+  </div>
+
   <!-- 🎉 THE HALFTIME SHOW — halftime.js runs a tap-to-the-beat mini-game on top
        of the normal halftime break (main.js). Covers the field so taps drive the
        show; tucks away when it's done and the break is right there to tap through. -->
@@ -2142,31 +2206,32 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=69"></script>
-  <script src="src/sound.js?v=69"></script>
-  <script src="src/shop.js?v=69"></script>
-  <script src="src/spin.js?v=69"></script>
-  <script src="src/challenges.js?v=69"></script>
-  <script src="src/progress.js?v=69"></script>
-  <script src="src/streak.js?v=69"></script>
-  <script src="src/achievements.js?v=69"></script>
-  <script src="src/trophy.js?v=69"></script>
-  <script src="src/records.js?v=69"></script>
-  <script src="src/road.js?v=69"></script>
-  <script src="src/cards.js?v=69"></script>
-  <script src="src/stadium.js?v=69"></script>
-  <script src="src/ranked.js?v=69"></script>
-  <script src="src/halftime.js?v=69"></script>
-  <script src="src/uniform.js?v=69"></script>
-  <script src="src/powerup.js?v=69"></script>
-  <script src="src/arcade.js?v=69"></script>
-  <script src="src/nemesis.js?v=69"></script>
-  <script src="src/weather.js?v=69"></script>
-  <script src="src/season.js?v=69"></script>
-  <script src="src/draft.js?v=69"></script>
-  <script src="src/ads.js?v=69"></script>
-  <script src="src/tour.js?v=69"></script>
-  <script src="src/kick.js?v=69"></script>
-  <script src="src/main.js?v=69"></script>
+  <script src="src/stats.js?v=70"></script>
+  <script src="src/sound.js?v=70"></script>
+  <script src="src/shop.js?v=70"></script>
+  <script src="src/spin.js?v=70"></script>
+  <script src="src/challenges.js?v=70"></script>
+  <script src="src/progress.js?v=70"></script>
+  <script src="src/streak.js?v=70"></script>
+  <script src="src/achievements.js?v=70"></script>
+  <script src="src/trophy.js?v=70"></script>
+  <script src="src/records.js?v=70"></script>
+  <script src="src/road.js?v=70"></script>
+  <script src="src/cards.js?v=70"></script>
+  <script src="src/stadium.js?v=70"></script>
+  <script src="src/ranked.js?v=70"></script>
+  <script src="src/halftime.js?v=70"></script>
+  <script src="src/uniform.js?v=70"></script>
+  <script src="src/powerup.js?v=70"></script>
+  <script src="src/arcade.js?v=70"></script>
+  <script src="src/nemesis.js?v=70"></script>
+  <script src="src/weather.js?v=70"></script>
+  <script src="src/season.js?v=70"></script>
+  <script src="src/playoffs.js?v=70"></script>
+  <script src="src/draft.js?v=70"></script>
+  <script src="src/ads.js?v=70"></script>
+  <script src="src/tour.js?v=70"></script>
+  <script src="src/kick.js?v=70"></script>
+  <script src="src/main.js?v=70"></script>
 </body>
 </html>
