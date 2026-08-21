@@ -1004,6 +1004,56 @@
     .ht-skip { margin-top: 12px; font: 700 12px Arial; color: #8fb0d8;
       -webkit-tap-highlight-color: transparent; touch-action: none; cursor: pointer; }
 
+    /* ---- 🎽 UNIFORM DESIGNER (src/uniform.js) --------------------------- */
+    .uni-preview { display: flex; justify-content: center; align-items: flex-end;
+      min-height: 150px; margin: 4px 0 8px; }
+    .uni-preview svg { filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+    .uni-namerow { display: flex; gap: 8px; align-items: center; margin: 2px 0 10px; }
+    .uni-name {
+      flex: 1; box-sizing: border-box; height: 42px; padding: 0 12px; border-radius: 11px;
+      background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.22); color: #fff;
+      font: 800 15px "Arial Black", Arial; text-align: center; letter-spacing: .5px;
+      -webkit-appearance: none; outline: none;
+    }
+    .uni-name::placeholder { color: #7f8ba0; font-weight: 700; letter-spacing: 0; }
+    .uni-name:focus { border-color: #ffd60a; background: rgba(255,214,10,0.08); }
+    .uni-dice {
+      flex: none; width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.35);
+      -webkit-tap-highlight-color: transparent; touch-action: none; cursor: pointer;
+    }
+    .uni-dice:active { transform: scale(0.92); }
+    .uni-lab { text-align: left; font: 800 11px "Arial Black", Arial; letter-spacing: .6px;
+      color: #ffd9a6; margin: 8px 2px 6px; }
+    .uni-swatches { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 2px; }
+    .uni-sw {
+      width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.35); box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent; touch-action: none; transition: transform .08s ease;
+    }
+    .uni-sw:active { transform: scale(0.9); }
+    .uni-sw.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,214,10,0.9), 0 0 10px rgba(255,214,10,0.5); transform: scale(1.12); }
+    .uni-msg { min-height: 16px; font: 700 12px Arial; margin-top: 8px; }
+    .uni-msg.good { color: #46e3a0; }
+    .uni-msg.warn { color: #ff9a9a; }
+    .uni-locker-head { display: flex; align-items: baseline; gap: 8px; text-align: left; margin: 16px 2px 9px;
+      font: 800 12px "Arial Black", Arial; letter-spacing: .1em; text-transform: uppercase; color: #ffd54a;
+      border-bottom: 1px solid rgba(255,213,74,.25); padding-bottom: 6px; }
+    .uni-cap { margin-left: auto; font: 700 11px Arial; color: #8fb0d8; letter-spacing: 0; text-transform: none; }
+    .uni-wardrobe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+    .uni-empty { grid-column: 1 / -1; color: #9fb0c3; font: 700 12px Arial; padding: 12px 4px; }
+    .uni-card { position: relative; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 9px 4px 8px; text-align: center;
+      -webkit-tap-highlight-color: transparent; touch-action: none; cursor: pointer; }
+    .uni-card:active { transform: scale(0.97); }
+    .uni-card.editing { border-color: #ffd60a; box-shadow: 0 0 0 1px rgba(255,214,10,.4); background: rgba(255,214,10,0.08); }
+    .uni-chip2 { width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 5px; border: 2px solid rgba(255,255,255,0.4); }
+    .uni-card-nm { font: 800 10px "Arial Black", Arial; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .uni-del { position: absolute; top: -7px; right: -6px; width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 11px;
+      background: #2a1620; border: 1.5px solid rgba(255,120,120,.6); }
+    .uni-del:active { transform: scale(0.9); }
+
     /* ---- 🎟️ REWARD ROAD (src/road.js) ---------------------------------- */
     /* The 3rd slim menu bar, stacked under the Trophy Case (teal accent). */
     #road-bar {
@@ -1707,6 +1757,7 @@
       <div id="shop-coins"></div>
       <div class="ov-btn" id="open-cards">🃏 CARD PACKS<span id="cards-btn-badge"></span></div>
       <div class="ov-btn" id="open-stadium">🏟️ STADIUM<span id="stadium-btn-badge"></span></div>
+      <div class="ov-btn" id="open-uniform">🎽 UNIFORM DESIGNER</div>
       <div id="shop-items"></div>
       <div class="shop-section">🎽 STYLES — new looks for your squad</div>
       <div id="shop-uniforms"></div>
@@ -1726,6 +1777,31 @@
       <div id="stad-list"></div>
       <div id="stad-note"></div>
       <div class="ov-btn" id="stadium-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 🎽 UNIFORM DESIGNER — design a custom kit (jersey + helmet colors + name).
+       uniform.js draws the preview, palettes & locker; main.js allTeams() adds
+       saved kits to CHOOSE YOUR TEAM so you can wear them on the field. -->
+  <div class="ov" id="uniform-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎽 UNIFORM DESIGNER</div>
+      <div class="ov-sub">Design your own kit — then wear it in CHOOSE YOUR TEAM!</div>
+      <div id="uni-preview" class="uni-preview"></div>
+      <div class="uni-namerow">
+        <input id="uni-name" class="uni-name" type="text" maxlength="14" placeholder="Name your team…" autocomplete="off" />
+        <div class="uni-dice" id="uni-dice" title="Random name">🎲</div>
+      </div>
+      <div class="uni-lab">👕 JERSEY COLOR</div>
+      <div id="uni-jersey" class="uni-swatches"></div>
+      <div class="uni-lab">⛑ HELMET COLOR</div>
+      <div id="uni-helmet" class="uni-swatches"></div>
+      <div class="ov-btn yes" id="uni-save">💾 SAVE TO LOCKER</div>
+      <div id="uni-msg" class="uni-msg"></div>
+      <div class="uni-locker-head">🧰 YOUR LOCKER <span id="uni-cap" class="uni-cap"></span></div>
+      <div id="uni-wardrobe" class="uni-wardrobe"></div>
+      <div class="ov-btn" id="uni-new">＋ NEW KIT</div>
+      <div class="ov-btn" id="uniform-close">DONE</div>
     </div>
   </div>
 
@@ -1941,28 +2017,29 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=66"></script>
-  <script src="src/sound.js?v=66"></script>
-  <script src="src/shop.js?v=66"></script>
-  <script src="src/spin.js?v=66"></script>
-  <script src="src/challenges.js?v=66"></script>
-  <script src="src/progress.js?v=66"></script>
-  <script src="src/streak.js?v=66"></script>
-  <script src="src/achievements.js?v=66"></script>
-  <script src="src/trophy.js?v=66"></script>
-  <script src="src/records.js?v=66"></script>
-  <script src="src/road.js?v=66"></script>
-  <script src="src/cards.js?v=66"></script>
-  <script src="src/stadium.js?v=66"></script>
-  <script src="src/ranked.js?v=66"></script>
-  <script src="src/halftime.js?v=66"></script>
-  <script src="src/nemesis.js?v=66"></script>
-  <script src="src/weather.js?v=66"></script>
-  <script src="src/season.js?v=66"></script>
-  <script src="src/draft.js?v=66"></script>
-  <script src="src/ads.js?v=66"></script>
-  <script src="src/tour.js?v=66"></script>
-  <script src="src/kick.js?v=66"></script>
-  <script src="src/main.js?v=66"></script>
+  <script src="src/stats.js?v=67"></script>
+  <script src="src/sound.js?v=67"></script>
+  <script src="src/shop.js?v=67"></script>
+  <script src="src/spin.js?v=67"></script>
+  <script src="src/challenges.js?v=67"></script>
+  <script src="src/progress.js?v=67"></script>
+  <script src="src/streak.js?v=67"></script>
+  <script src="src/achievements.js?v=67"></script>
+  <script src="src/trophy.js?v=67"></script>
+  <script src="src/records.js?v=67"></script>
+  <script src="src/road.js?v=67"></script>
+  <script src="src/cards.js?v=67"></script>
+  <script src="src/stadium.js?v=67"></script>
+  <script src="src/ranked.js?v=67"></script>
+  <script src="src/halftime.js?v=67"></script>
+  <script src="src/uniform.js?v=67"></script>
+  <script src="src/nemesis.js?v=67"></script>
+  <script src="src/weather.js?v=67"></script>
+  <script src="src/season.js?v=67"></script>
+  <script src="src/draft.js?v=67"></script>
+  <script src="src/ads.js?v=67"></script>
+  <script src="src/tour.js?v=67"></script>
+  <script src="src/kick.js?v=67"></script>
+  <script src="src/main.js?v=67"></script>
 </body>
 </html>

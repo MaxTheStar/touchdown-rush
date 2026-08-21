@@ -225,7 +225,10 @@ function stars10(n) {
 // you've unlocked from the daily rewards (they live in src/shop.js and
 // have special:true, so the menu can brag about them).
 function allTeams() {
-  return (window.TDShop) ? NFL_TEAMS.concat(TDShop.unlockedUniforms()) : NFL_TEAMS;
+  let list = (window.TDShop) ? NFL_TEAMS.concat(TDShop.unlockedUniforms()) : NFL_TEAMS;
+  // 🎽 …plus any custom kits you designed in the Uniform Designer (uniform.js).
+  if (window.TDUniform) list = list.concat(TDUniform.customTeams());
+  return list;
 }
 
 const config = {
@@ -2941,6 +2944,15 @@ window.TDMenu = {
   showTeam(abbr) {
     const i = allTeams().findIndex(t => t.abbr === abbr);
     if (i >= 0 && G.state === 'menu') { G.menuIndex = i; renderMenu(); }
+  },
+  // 🎽 The team list can change while you're on the menu (the Uniform Designer
+  // can add or delete a custom kit). Clamp the index back into range and repaint
+  // so the card never points past the end of the list.
+  refresh() {
+    const n = allTeams().length;
+    if (G.state !== 'menu' || !n) return;
+    G.menuIndex = Math.max(0, Math.min(G.menuIndex, n - 1));
+    renderMenu();
   }
 };
 

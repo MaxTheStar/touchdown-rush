@@ -179,8 +179,26 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   no overflow at 375 px. **NOTE:** the 6-second timer means a `start()` left running between DOM-poke tool
   calls will auto-finish on its own (that's correct behaviour, not a bug) — test the coin award in one
   synchronous call.
+- **✅ v1.51 (🎽 UNIFORM DESIGNER) is PUSHED & LIVE** — shipped 2026-08-19 (`?v=67`), the 3rd Round-6 pick.
+  New `src/uniform.js` (`window.TDUniform`, key `tdr-custom-uniforms` = an array of
+  `{id,abbr,name,jersey,helmet}`, jersey/helmet as `0xRRGGBB` numbers — same shape as the built-in
+  uniforms). Design your OWN kit: pick a jersey + helmet color from a 16-swatch palette, name it (🎲
+  random-name button), with a live SVG jersey+helmet preview that recolors as you go. SAVE it to your
+  Locker (a wardrobe, cap 6, each editable/deletable). **Integration:** a saved kit is just a two-color
+  "team", so `allTeams()` in main.js now `.concat(TDUniform.customTeams())` → custom kits appear right in
+  CHOOSE YOUR TEAM and the field chibi wears them (the player texture is drawn from exactly
+  `jersey`+`helmet`, so NO new art). Saving jumps the menu to the new kit via the existing
+  `window.TDMenu.showTeam(abbr)` bridge; I also added a small `TDMenu.refresh()` (clamps `G.menuIndex` +
+  repaints) so deleting the kit you're currently "standing on" can't leave the menu card pointing past the
+  end of the list. Lives in the 🛍 Pro Shop (a "🎽 UNIFORM DESIGNER" button by Card Packs/Stadium) — NO new
+  menu chrome. Verified live via DOM/JS: design→save (hex→int colors, persisted), kit in
+  `allTeams()`/`teamByAbbr`, menu jumps to it, a real `startGameWithTeam()` wears it (`window.TEAM` = the
+  custom colors) w/ 0 errors; edit-in-place (same id, no dup); validation (empty name / identical colors
+  blocked); delete + the delete-while-worn clamp (start-game did NOT crash); the 6-kit cap (save blocked +
+  ＋NEW hidden at cap, back below); no overflow @375px. Two small main.js edits only (`allTeams()` concat +
+  `TDMenu.refresh`).
 
-## ✅ Sync status — v1.11–v1.50 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.50 pushed 2026-08-19)
+## ✅ Sync status — v1.11–v1.51 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.51 pushed 2026-08-19)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
