@@ -233,8 +233,45 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   drill's tap-judging needs real layout (`getBoundingClientRect`) — a HIDDEN browser pane reports
   `innerWidth 0` so every rect is 0 and kicks read as "wide"; take a screenshot first to wake the pane,
   and always `TDArcade.open()` (not just `_startFG()`) so the modal is actually laid out.
+- **✅ v1.54 (🏆 PLAYOFF TOURNAMENT) is PUSHED & LIVE** — shipped 2026-08-21 (`?v=70`), the 7th Round-6
+  pick. New `src/playoffs.js` (`window.TDPlayoffs`, key `tdr-playoffs` = `{v,titles,bestRound,run}`): a
+  16-team **single-elimination bracket** you jump into from the 🏆 SEASON hub — win FOUR games in a row
+  (Round of 16 → Quarterfinal → Semifinal → THE FINAL) to lift the trophy; lose once and you're OUT.
+  Everyone else's games auto-play (the same power-rated `simGame` upset math as `season.js`), so the
+  bracket fills in around you. Round wins pay +10/+15/+20 🪙 and the title pays a **+150 jackpot**; your
+  trophies & furthest run persist. **Mirrors the season.js pattern — the bracket file never touches Phaser.**
+  Surgical `main.js` hooks: a `G.playoffGame` flag + a rising `roundBuff()` (no bump R16 → +7.5% in THE
+  FINAL, applied to the opponent only) in `beginGame`; a `startPlayoffGame(you,opp)` on the `TDGame` bridge
+  (calls `beginGame(team,opp,false,false,true)`); a `TDPlayoffs.reportResult(G.score,G.oppScore)` line in
+  `endGame` beside the season one; and a return-to-bracket branch in `returnToMenuFromGameOver`. Opened from
+  a `#open-playoffs` button INSIDE the Season modal → its own `#playoffs-modal` (a "YOUR RUN" ladder of
+  rungs + trophy cap) — **no new menu chip/status bar** (phone layout untouched). Verified via DOM/JS: a
+  4-win run advances 0→1→2→3→champion with the buff rising exactly 1.000/1.025/1.050/1.075 and coins
+  +10/+15/+20/+150; a loss knocks you out and crowns the sim winner; the REAL integration (`startPlayoffGame`
+  → `beginGame` applies the buff [oppOff matched `tilt(off)×1.05` at round 2] → `__td.endGame()` reports →
+  bracket advances → return reopens the modal + clears the flag) is clean; persists across a real reload;
+  no overflow at 375px; 0 console errors.
+- **✅ v1.55 (🎬 FILM ROOM) is PUSHED & LIVE** — shipped 2026-08-21 (`?v=71`), the **8th & FINAL Round-6
+  pick — 🎉 the board is SWEPT!** New `src/film.js` (`window.TDFilm`, key `tdr-film` = an array of saved
+  highlights). A **persistent career highlight reel**, deliberately DISTINCT from the transient instant
+  replay (which films only the last ~2.5s of the current play and is reset every play). Every touchdown you
+  score, we harvest the ball's real route from `G.replay`, boil it to ~30 points, and keep your best dozen;
+  open the Film Room from the 🏆 Trophy Case to re-watch them traced out on a `<canvas>` mini-field (◀ ▶ to
+  flip clips, 🔁 to replay), each classified 💣 bomb (40+ yд) / 🦅 pick six / 🎩 trick / 🏈 TD, capped at 12
+  (weakest dropped when full). **Self-contained** (its own DOM + canvas theater, never touches Phaser) with
+  **exactly ONE guarded `main.js` hook**: a `TDFilm.capture({yds:100-G.losYards, opp, q, pickSix, trick,
+  frames:G.replay})` line beside the existing `TDRecords.td(...)` in the TD branch of `endPlay`. Opened from
+  a `#open-film` Trophy Case button → `#film-modal`. ⚠️ Its playback uses `setInterval` (rAF pauses in bg
+  tabs) so in a HIDDEN pane the route traces slowly — a screenshot wakes the pane. Verified via DOM/JS:
+  capture classifies types correctly + resamples the path + skips too-short plays; the cap keeps the best 12
+  (drops the 3 weakest of 15); the REAL hook fires through `__td.endPlay('touchdown')` (65-yд bomb vs the
+  right opp, correct path); ◀▶ nav wraps; the empty state shows a friendly nudge; no overflow at 375px;
+  0 console errors. **⚠️ Heads-up:** the `git add` for this commit (`bf23bf1`) also swept in a concurrent
+  session's uncommitted CrazyGames edits (a balance pass — `PLAYER_SPEED` 215→205, `DEF_SPEED` 186→190,
+  `PURSUE_SPEED` 190→194, `OL_SPEED` 188→193, `BLOCK_DIST` 27→30 — and the `#btn-fs{display:none!important}`
+  fullscreen-button hide). Those are good/intended changes and are now live; noted so the history is honest.
 
-## ✅ Sync status — v1.11–v1.53 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19)
+## ✅ Sync status — v1.11–v1.55 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
