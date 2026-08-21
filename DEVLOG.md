@@ -197,8 +197,26 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   blocked); delete + the delete-while-worn clamp (start-game did NOT crash); the 6-kit cap (save blocked +
   ＋NEW hidden at cap, back below); no overflow @375px. Two small main.js edits only (`allTeams()` concat +
   `TDMenu.refresh`).
+- **✅ v1.52 (⚡ POWER-UP PLAYS) is PUSHED & LIVE** — shipped 2026-08-19 (`?v=68`), the 4th Round-6 pick.
+  New `src/powerup.js` (`window.TDPowerup`, key `tdr-powerup` = the equipped power id). A once-a-game HERO
+  MOVE you equip ahead of time and fire YOURSELF at the right moment (vs the Lucky Spin's random buffs):
+  ⚡ TURBO LEGS (×1.7 run speed, 3 s), 🧤 STICKY HANDS (+0.6 catch, 4.5 s), ❄️ FREEZE DEFENSE (defenders
+  ×0.15 speed, 2.6 s). Equip one in the 🛍 Pro Shop ("⚡ POWER-UP PLAYS" button → `#power-modal` picker);
+  in a game, a `#btn-power` ⭐ button in `#ingame-ctrls` fires it — only mid-play (state `live`/`pass`),
+  once per game (button greys via the shared `.off`; a `#power-flash` splash + hint toasts). **Uses the
+  exact safe mechanism the Lucky Spin does — no game-loop rewrite:** `TDPowerup.speedMult()/catchAdd()/
+  defSlow()` are live multipliers folded in by shop.js (`speedMult() *= puSpeed()`, `gloveBoost` `extra +=
+  puCatch()`) and by ONE line in main.js `updateDefense` (`boost *= TDPowerup.defSlow()`); idle = ×1/+0/×1
+  so no-fire is byte-identical baseline. Only other main.js edit: `TDPowerup.newGame()` in `beginGame`
+  (resets your one use). Verified live via DOM/JS: equip+persist; fire TURBO in a live play → `speedMult`
+  1.2→2.04 (folds into `runSpeed`); STICKY → `gloveBoost.catchBonus` 0.2→0.8; FREEZE → `defSlow` 0.15 and
+  the `updateDefense` fold runs clean across 1.5 s of pumped frames (0 errors); once-per-game guard (2nd
+  fire blocked), must-be-live guard (presnap fire → hint, not used), `newGame` resets; the in-game button
+  shows the equipped icon and all FOUR in-game buttons (⏱/🧩/🎩/⭐) fit a 375 px phone (right edge 363<375);
+  picker no overflow. **NOTE:** checked the Spin overlap first (as promised) — kept it distinct by making
+  it player-*triggered* + swapping in FREEZE (which the Spin has no equivalent of).
 
-## ✅ Sync status — v1.11–v1.51 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.51 pushed 2026-08-19)
+## ✅ Sync status — v1.11–v1.52 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.52 pushed 2026-08-19)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**

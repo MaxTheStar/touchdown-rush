@@ -230,10 +230,13 @@
   const spinSafeThrow = () => { const s = spin(); return s ? s.safeThrow() : 0; };
   const spinSafeBall  = () => { const s = spin(); return s ? s.safeBall()  : 0; };
   const spinTruck     = () => { const s = spin(); return s ? s.truck()     : 0; };
+  // ⚡ Power-Up Plays fold in the same harmless way (×1 / +0 when nothing's firing).
+  const puSpeed = () => (window.TDPowerup ? window.TDPowerup.speedMult() : 1);
+  const puCatch = () => (window.TDPowerup ? window.TDPowerup.catchAdd()  : 0);
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed(); }
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -244,7 +247,7 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch();
+    const extra = spinCatch() + puCatch();
     return { catchBonus: 0.02 * gear.gloves + extra, dropCut: 0.02 * gear.gloves + extra };
   }
 

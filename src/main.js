@@ -1202,7 +1202,8 @@ function updateLine() {
 function updateDefense(elapsed) {
   const carrier = G.ballCarrier.s;
   const qbHasBall = G.ballCarrier === offense[0] && !G.hasPassed;
-  const boost = diff().defBoost * G.oppDef;   // HARD mode + ⭐ the opponent's defense rating
+  const boost = diff().defBoost * G.oppDef      // HARD mode + ⭐ the opponent's defense rating
+              * (window.TDPowerup ? TDPowerup.defSlow() : 1);   // ❄️ …× a Freeze Defense power-up (1 = none)
 
   for (const d of defense) {
     // In 2-player mode, one defender is driven by Player 2's fingers (or WASD),
@@ -3046,6 +3047,7 @@ function beginGame(team, opp, isSeason, isRival) {
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
   if (window.TDAchieve) TDAchieve.startGame();   // 🏅 fresh per-game counters (hat trick, comeback)
   if (window.TDRecords) TDRecords.startGame();   // 📖 fresh per-game record watching
+  if (window.TDPowerup) TDPowerup.newGame();     // ⚡ your one Power-Up Play is ready again
 
   // Paint both teams onto their players.
   makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);
