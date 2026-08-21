@@ -147,6 +147,13 @@
     }
     #btn-mode { right: max(12px, env(safe-area-inset-right)); }
     #btn-fs   { right: calc(max(12px, env(safe-area-inset-right)) + 60px); font-size: 22px; }
+    /* ⛶ FULLSCREEN BUTTON — HIDDEN ON PURPOSE (2026-08-21).
+       Game portals like CrazyGames add their OWN fullscreen button and don't
+       allow a game to have its own custom one (it clashes with theirs), so
+       ours stays hidden to keep us safely inside their rules.
+       The button and its code are still here, untouched — to bring it back,
+       just delete this one rule. Nothing else needs to change. */
+    #btn-fs { display: none !important; }
     /* The 3D/2D view toggle — sits with the football buttons (hidden on the menu). */
     #btn-view { right: calc(max(12px, env(safe-area-inset-right)) + 120px); font-size: 15px;
       background: rgba(46,230,255,0.20); border-color: rgba(46,230,255,0.6); }
@@ -1000,6 +1007,22 @@
     .po-best { font: 700 12px Arial; color: #cdd6e6; text-align: center; margin: 8px 0 2px;
       padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
     .po-best b { color: #ffe066; }
+
+    /* ---- 🎬 FILM ROOM (src/film.js) ------------------------------------- */
+    /* A little theater: a <canvas> mini-field that traces your saved TD routes. */
+    #film-stage { margin: 6px 0 8px; }
+    #film-canvas { width: 100%; height: auto; display: block; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14); background: #1f7a3a; }
+    .film-empty { text-align: center; font: 800 18px "Arial Black", Arial; color: #ffe066;
+      padding: 26px 12px; line-height: 1.5; }
+    .film-empty span { display: block; font: 400 12.5px/1.5 Arial; color: #aab4c8; margin-top: 8px; }
+    .film-title { font: 800 18px "Arial Black", Arial; color: #fff; text-align: center; }
+    .film-sub { font: 700 12px Arial; color: #9fb0c3; text-align: center; margin-top: 3px; }
+    .film-count { font: 700 10.5px Arial; color: #7d8da8; text-align: center; margin-top: 5px; letter-spacing: .04em; }
+    .film-nav { display: flex; gap: 8px; margin: 12px 0 2px; }
+    .film-nav .film-nub { margin: 0; min-width: 0; }
+    #film-prev, #film-next { flex: 0 0 54px; font-size: 18px; }
+    #film-replay { flex: 1; }
 
     /* ---- 🎉 HALFTIME SHOW (src/halftime.js) ----------------------------- */
     /* A tap-to-the-beat mini-game that plays on top of the halftime break. */
@@ -2051,11 +2074,29 @@
       <div id="trophy-records"></div>
       <div class="ov-btn" id="open-ranked">🏅 RANKED LADDER</div>
       <div class="ov-btn" id="open-records">📖 OPEN RECORD BOOK</div>
+      <div class="ov-btn" id="open-film">🎬 FILM ROOM</div>
       <div class="trophy-sec">🎽 Uniform Cabinet <span id="trophy-uni-count" class="trophy-sec-n">0/9</span></div>
       <div id="trophy-uniforms"></div>
       <div class="trophy-sec">🏅 Badges <span id="trophy-badge-count" class="trophy-sec-n">0/20</span></div>
       <div id="trophy-badges"></div>
       <div class="ov-btn" id="trophy-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 🎬 THE FILM ROOM — film.js replays your saved touchdown routes on a mini
+       field. Opened from the Trophy Case; sits after it so it stacks on top. -->
+  <div class="ov" id="film-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎬 FILM ROOM</div>
+      <div class="ov-sub">Your career highlight reel — re-watch your best plays!</div>
+      <div id="film-stage"></div>
+      <div id="film-cap"></div>
+      <div id="film-nav" class="film-nav">
+        <div class="ov-btn film-nub" id="film-prev">◀</div>
+        <div class="ov-btn film-nub yes" id="film-replay">🔁 REPLAY</div>
+        <div class="ov-btn film-nub" id="film-next">▶</div>
+      </div>
+      <div class="ov-btn" id="film-close">DONE</div>
     </div>
   </div>
 
@@ -2206,32 +2247,33 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=70"></script>
-  <script src="src/sound.js?v=70"></script>
-  <script src="src/shop.js?v=70"></script>
-  <script src="src/spin.js?v=70"></script>
-  <script src="src/challenges.js?v=70"></script>
-  <script src="src/progress.js?v=70"></script>
-  <script src="src/streak.js?v=70"></script>
-  <script src="src/achievements.js?v=70"></script>
-  <script src="src/trophy.js?v=70"></script>
-  <script src="src/records.js?v=70"></script>
-  <script src="src/road.js?v=70"></script>
-  <script src="src/cards.js?v=70"></script>
-  <script src="src/stadium.js?v=70"></script>
-  <script src="src/ranked.js?v=70"></script>
-  <script src="src/halftime.js?v=70"></script>
-  <script src="src/uniform.js?v=70"></script>
-  <script src="src/powerup.js?v=70"></script>
-  <script src="src/arcade.js?v=70"></script>
-  <script src="src/nemesis.js?v=70"></script>
-  <script src="src/weather.js?v=70"></script>
-  <script src="src/season.js?v=70"></script>
-  <script src="src/playoffs.js?v=70"></script>
-  <script src="src/draft.js?v=70"></script>
-  <script src="src/ads.js?v=70"></script>
-  <script src="src/tour.js?v=70"></script>
-  <script src="src/kick.js?v=70"></script>
-  <script src="src/main.js?v=70"></script>
+  <script src="src/stats.js?v=71"></script>
+  <script src="src/sound.js?v=71"></script>
+  <script src="src/shop.js?v=71"></script>
+  <script src="src/spin.js?v=71"></script>
+  <script src="src/challenges.js?v=71"></script>
+  <script src="src/progress.js?v=71"></script>
+  <script src="src/streak.js?v=71"></script>
+  <script src="src/achievements.js?v=71"></script>
+  <script src="src/trophy.js?v=71"></script>
+  <script src="src/records.js?v=71"></script>
+  <script src="src/road.js?v=71"></script>
+  <script src="src/cards.js?v=71"></script>
+  <script src="src/stadium.js?v=71"></script>
+  <script src="src/ranked.js?v=71"></script>
+  <script src="src/halftime.js?v=71"></script>
+  <script src="src/uniform.js?v=71"></script>
+  <script src="src/powerup.js?v=71"></script>
+  <script src="src/arcade.js?v=71"></script>
+  <script src="src/nemesis.js?v=71"></script>
+  <script src="src/weather.js?v=71"></script>
+  <script src="src/season.js?v=71"></script>
+  <script src="src/playoffs.js?v=71"></script>
+  <script src="src/film.js?v=71"></script>
+  <script src="src/draft.js?v=71"></script>
+  <script src="src/ads.js?v=71"></script>
+  <script src="src/tour.js?v=71"></script>
+  <script src="src/kick.js?v=71"></script>
+  <script src="src/main.js?v=71"></script>
 </body>
 </html>

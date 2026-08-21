@@ -26,11 +26,17 @@ const GRASS_DARK = 0x246b26;
 const GRASS_LIGHT = 0x2f8a33;
 
 // ---- Speeds (pixels/sec) — tune these to make it easier/harder ----
-const PLAYER_SPEED = 215;   // the player you control
-const WR_SPEED     = 195;   // receivers running routes (now a bit faster than coverage = they get open)
-const DEF_SPEED    = 186;   // defenders covering & rushing (slower than WRs = more space + more time to throw)
-const PURSUE_SPEED = 190;   // defenders CHASING the ball carrier on a run (faster now = running isn't a track meet)
-const OL_SPEED     = 188;   // your linemen mirroring the rush to protect the QB (better = the pocket holds longer)
+// ⚖️ BALANCE PASS (2026-08-21): the game was getting a little TOO easy — you
+// could outrun everybody. So: you're a touch slower, the defense is a touch
+// faster, and the pocket is stronger so the QB gets a fair beat to throw.
+// The ORDER of these numbers still matters (that's what keeps the game fun):
+//   WR_SPEED (195) > DEF_SPEED (190)     = receivers can still get open
+//   PLAYER_SPEED (205) > PURSUE_SPEED (194) = you can still break a long run
+const PLAYER_SPEED = 205;   // the player you control (was 215 — slowed a little so runs aren't automatic)
+const WR_SPEED     = 195;   // receivers running routes (still faster than coverage = they get open)
+const DEF_SPEED    = 190;   // defenders covering & rushing (was 186 — a tiny bit quicker now)
+const PURSUE_SPEED = 194;   // defenders CHASING the ball carrier on a run (was 190 — they close you down sooner)
+const OL_SPEED     = 193;   // your linemen mirroring the rush to protect the QB (was 188 — they keep up better = pocket holds)
 
 // ---- Swipe controls (touch): while RUNNING, swipe the field to dash or cut ----
 // A LONG swipe = a burst of speed (dash) in the swipe direction; a SHORT swipe =
@@ -46,7 +52,7 @@ const BALL_SPEED   = 520;   // how fast a pass flies
 
 // ---- Distances ----
 const TACKLE_DIST = 15;   // defender this close to the ball = tackle
-const BLOCK_DIST  = 27;   // lineman this close to a rusher = blocks him (bigger = stronger pocket)
+const BLOCK_DIST  = 30;   // lineman this close to a rusher = blocks him (bigger = stronger pocket; was 27 — the line now "reaches" a bit further, so the QB gets a real pocket like on TV)
 const CATCH_CONTEST = 15; // defender this close to the catch = contested
 const OVERTHROW_DIST = 55; // if the ball lands farther than this from the receiver, it's overthrown
 const HANDOFF_DIST = 60;  // QB must be this close to the RB to hand off (else the HAND button is disabled)
@@ -1439,6 +1445,7 @@ function endPlay(result, customMsg) {
     if (window.TDChallenge) TDChallenge.bump('td');   // 📋 daily challenge progress
     if (window.TDAchieve) TDAchieve.td({ yds: 100 - G.losYards, pickSix: wasPickSix, trick: G.trickActive });   // 🏅 long-bomb / hat-trick / pick-six / trickster badges
     if (window.TDRecords) TDRecords.td(100 - G.losYards);   // 📖 longest-TD / most-TDs-in-a-game records
+    if (window.TDFilm) TDFilm.capture({ yds: 100 - G.losYards, opp: G.oppTeam ? G.oppTeam.abbr : '', q: G.quarter, pickSix: wasPickSix, trick: G.trickActive, frames: G.replay });   // 🎬 save this TD's route to the Film Room
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
