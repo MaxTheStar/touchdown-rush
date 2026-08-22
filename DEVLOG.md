@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.60 — cache-buster is `?v=75` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.61 — cache-buster is `?v=76` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Touchdown Celebrations, v1.59 ⭐ Player of the Game + v1.60 📊 Box Score are live — 3/8 drafted.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score + v1.61 🎨 Field Designer are live — 4/8 drafted.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -347,7 +347,29 @@ all eight are genuinely new.)
   card closes that card); close restores the keyboard; 3-wide tiles, no overflow, sheet scrolls inside the
   card at 375px; 0 errors — then re-verified live.
 
-## ✅ Sync status — v1.11–v1.60 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.60 — Round-7 picks 1-3 — pushed 2026-08-22)
+- **✅ v1.61 (🎨 FIELD DESIGNER) is PUSHED & LIVE** — shipped 2026-08-22 (`?v=76`), the 4th Round-7 pick.
+  New `src/field.js` (`window.TDField`, key `tdr-field` = `{turf, endzone, logo}`): design your home field
+  — **8 turfs** (Classic Grass, Emerald, Blue Turf, Red Turf, Purple Reign, Teal Tide, Midnight, Snow Day —
+  each a pair of mown stripes), **8 end-zone colours**, and **12 midfield logos** (★ 🏈 ⚡ 🔥 👑 🦅 🐉 🌟 🦈
+  🐻 🚀 💎), with a live CSS mock-up of the field in the picker and a "↩︎ CLASSIC LOOK" reset.
+  **⚠️ Unlike the self-contained pop-ups, this one really changes the PHASER field:**
+  - `drawField` now reads `TDField.look()` for the stripe colours, end-zone colour, and midfield logo —
+    guarded, so with `field.js` absent it falls back to the original `GRASS_DARK`/`GRASS_LIGHT`/
+    `ENDZONE_COLOR` constants and `★` (byte-identical classic look; the reset restores exactly those).
+  - `drawField` collects **everything it creates** into `G.fieldParts`, and a new `repaintField()` destroys
+    those before redrawing. Exposed on the `TDGame` bridge, so the designer repaints the real field the
+    instant you tap a swatch. **Verified ZERO object leak** — the scene display list stayed at exactly 61
+    across three repaints (this was the main risk: `drawField` adds ~23 graphics/text objects each call).
+  - `drawField` also seeds the end-zone label from `G.team` now (was hard-coded `'MAX FC'`), so a mid-game
+    repaint keeps your team name painted in your end zone.
+  - **`field.js` must load BEFORE `main.js`** so a saved design is applied on the very first draw.
+  Lives in the 🛍 Pro Shop ("🎨 FIELD DESIGNER") — no new menu chip. Verified via DOM/JS: defaults match
+  the original constants exactly; tapping turf/end-zone/logo saves + repaints live (a real game showed a
+  genuinely blue field with crimson end zones); no leak; reset restores classic; the design survives a
+  reload and is applied at startup (midfield text object literally `👑`); 8 swatches/row at 375px with no
+  overflow; 0 errors — then re-verified live.
+
+## ✅ Sync status — v1.11–v1.61 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
