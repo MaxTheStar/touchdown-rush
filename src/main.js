@@ -1446,6 +1446,7 @@ function endPlay(result, customMsg) {
     if (window.TDAchieve) TDAchieve.td({ yds: 100 - G.losYards, pickSix: wasPickSix, trick: G.trickActive });   // 🏅 long-bomb / hat-trick / pick-six / trickster badges
     if (window.TDRecords) TDRecords.td(100 - G.losYards);   // 📖 longest-TD / most-TDs-in-a-game records
     if (window.TDFilm) TDFilm.capture({ yds: 100 - G.losYards, opp: G.oppTeam ? G.oppTeam.abbr : '', q: G.quarter, pickSix: wasPickSix, trick: G.trickActive, frames: G.replay });   // 🎬 save this TD's route to the Film Room
+    if (window.TDCeleb) TDCeleb.play();   // 🕺 your player's touchdown celebration!
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
