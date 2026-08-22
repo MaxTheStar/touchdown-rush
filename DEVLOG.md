@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.59 — cache-buster is `?v=74` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.60 — cache-buster is `?v=75` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Touchdown Celebrations + v1.59 ⭐ Player of the Game are live — 2/8 drafted.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Touchdown Celebrations, v1.59 ⭐ Player of the Game + v1.60 📊 Box Score are live — 3/8 drafted.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -329,7 +329,25 @@ all eight are genuinely new.)
   **📊 Foundation note:** `table()` returns the full stat sheet (every tracked player + side), which the
   next pick (Box Score) reads instead of duplicating the counting.
 
-## ✅ Sync status — v1.11–v1.59 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58 Touchdown Celebrations + v1.59 Player of the Game — Round-7 picks 1-2 — pushed 2026-08-22)
+- **✅ v1.60 (📊 BOX SCORE) is PUSHED & LIVE** — shipped 2026-08-22 (`?v=75`), the 3rd Round-7 pick. New
+  `src/boxscore.js` (`window.TDBoxScore`): a broadcast-style post-game sheet — a final-score strip
+  (win/loss tinted), six team-total tiles (total / rushing / receiving yards, TDs, FGs, takeaways) and a
+  row per player with exactly what they did, plus a ⭐ POTG tag on the Player of the Game and a gentle
+  "quiet day at the office" for anyone who didn't touch it. **It does NO counting of its own** — v1.59's
+  `gamestats.js` already keeps the book, so this only READS `table()` / `teamTotals()` / `game()`. That
+  means **zero new main.js hooks** and the two can never disagree. `gamestats.js` gained only the
+  scoreboard side: `finish(info)` now records `{my, opp, myAbbr, oppAbbr, myName, oppName}` and exposes
+  `game()` + `teamTotals()` (team yards = rushing + receiving; `passYds` is deliberately NOT added, since
+  it's the QB's view of the same yards). So the single main.js change is passing that info into `finish`.
+  Opened from the ⭐ card (`#open-box` "FULL BOX SCORE") or later from the 🏆 Trophy Case
+  (`#open-box-trophy` "LAST BOX SCORE") — it holds the last finished game until the next kickoff, with a
+  friendly empty state before your first game. Verified via DOM/JS: empty state; a real game (SEA 17–ARI
+  10) produced correct totals (54 total / 19 rush / 35 rec / 1 TD / 1 FG / 1 takeaway) and 7 player rows
+  with real roster names and exactly ONE ⭐ POTG tag; both entry points open it (and opening from the star
+  card closes that card); close restores the keyboard; 3-wide tiles, no overflow, sheet scrolls inside the
+  card at 375px; 0 errors — then re-verified live.
+
+## ✅ Sync status — v1.11–v1.60 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.60 — Round-7 picks 1-3 — pushed 2026-08-22)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
