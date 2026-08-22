@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.57 — cache-buster is `?v=72` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.58 — cache-buster is `?v=73` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Touchdown Celebrations is the 1st pick, live.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -281,7 +281,31 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   `PURSUE_SPEED` 190→194, `OL_SPEED` 188→193, `BLOCK_DIST` 27→30 — and the `#btn-fs{display:none!important}`
   fullscreen-button hide). Those are good/intended changes and are now live; noted so the history is honest.
 
-## ✅ Sync status — v1.11–v1.57 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21)
+### 🆕 Round 7 — "The Franchise Board" (a fresh chart, opened 2026-08-22)
+
+A new Add-On Draft Board (Artifact `b9a02152-c952-4f10-8c97-1f550e8128a5`, reusing the R6 night-stadium
+design) with eight brand-new picks ranked easiest→hardest — this round is about making the game feel like
+YOURS: ①🕺 Touchdown Celebrations ②⭐ Player of the Game ③📊 Box Score ④🎨 Field Designer ⑤🙋 Create-A-Player
+⑥🏈 Special Teams Tricks ⑦🎃 Season Events ⑧📚 Dynasty Mode. (Each was checked against the codebase first —
+all eight are genuinely new.)
+
+- **✅ v1.58 (🕺 TOUCHDOWN CELEBRATIONS) is PUSHED & LIVE** — shipped 2026-08-22 (`?v=73`), the 1st Round-7
+  pick. New `src/celebration.js` (`window.TDCeleb`, key `tdr-celebration` = `{owned, equipped}`): pick your
+  signature end-zone move and it plays a big splashy animation over the field every time YOU score. Eight
+  moves — 🙌 Raise the Roof / 🏈 Spike It / 🕺 The Dance (free) and 💪 Flex On 'Em (60) / 🔥 On Fire (120) /
+  ⚡ Electric (180) / 👑 Crown Me (300) / 🚀 Blast Off (450) bought with coins via `TDShop.spend` — each with
+  one of four animation styles (`bounce`/`spin`/`pulse`/`shake`), 10 flying particles and a name flash.
+  **Self-contained** (its own `#celeb-fx` DOM overlay, never touches Phaser) with **exactly ONE guarded
+  `main.js` hook**: `if (window.TDCeleb) TDCeleb.play();` beside the other TD hooks in the `endPlay`
+  touchdown branch. The picker lives in the 🛍 Pro Shop (a "🕺 CELEBRATIONS" button → `#celeb-modal`, big
+  looping preview + an 8-card grid) — no new menu chip/status bar. Honors `prefers-reduced-motion` (drops
+  the particles and the bounce, keeps a calm label). Verified via DOM/JS: grid renders 8 cards with correct
+  EQUIPPED/EQUIP/price tags; buying spends exactly the price, marks owned + auto-equips, and updates the
+  preview; buying while broke is blocked with a friendly note (nothing saved); a REAL `__td.endPlay(
+  'touchdown')` fires the equipped move (💪 + `celeb-pulse` + 10 particles, score→6); persists across a
+  reload; 3-column grid with no overflow at 375px; 0 console errors — then re-verified on the LIVE site.
+
+## ✅ Sync status — v1.11–v1.58 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58 Touchdown Celebrations — 1st Round-7 pick — pushed 2026-08-22)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
