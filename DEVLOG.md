@@ -8,14 +8,24 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.46 — cache-buster is `?v=63` in `index.html`.
+- **Version:** v1.57 — cache-buster is `?v=72` in `index.html`. (Round 6 board swept: v1.48 Stadium
+  Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
+  v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
+  image — all live.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-17.
+- **Last updated:** 2026-08-22.
+- **📦 CrazyGames portal build:** refreshed to v1.57 on 2026-08-22 and staged in
+  `~/Desktop/CrazyGames Submission/` (`touchdown-fun-READY.zip` — 568 KB, 33 files, index.html at root).
+  Recipe = a COPY of the repo with 3 changes so it makes ZERO external requests: vendor Phaser (CDN→local
+  `phaser.min.js`), swap `src/stats.js` for a no-network stub (keeps the `TDStats` API, local saves only),
+  strip the `#side-tracker` aside + the external `og:image`/`twitter:image`/`og:url` meta. Verified it
+  boots, plays, and makes 0 external requests with 0 console errors. Dad does the actual signup + upload
+  (see the folder's "READ ME FIRST" guide). Rebuild this zip from the repo before each upload.
 - **✅ v1.33 (the 🎡 Lucky Spin) is PUSHED & LIVE** — the first Round-3 feature, shipped 2026-08-15
   (`src/spin.js` new; `index.html` + `src/shop.js` edited; commit `6adfd4b`).
 - **✅ v1.34 (🎡 FREE SPINS in the daily rewards) is PUSHED & LIVE** — shipped 2026-08-15 (commit `693127f`).
@@ -271,7 +281,7 @@ draft-board design) with eight fun picks ranked easiest→hardest: ①📣 Hype 
   `PURSUE_SPEED` 190→194, `OL_SPEED` 188→193, `BLOCK_DIST` 27→30 — and the `#btn-fs{display:none!important}`
   fullscreen-button hide). Those are good/intended changes and are now live; noted so the history is honest.
 
-## ✅ Sync status — v1.11–v1.55 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept)
+## ✅ Sync status — v1.11–v1.57 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
