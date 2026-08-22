@@ -277,6 +277,7 @@ const G = {
   menuIndex: 0,         // which team the menu is showing right now
   menu: null,           // the menu's on-screen pieces (preview player, name, code)
   endzoneLabel: null,   // the team-name text painted in your home endzone
+  fieldParts: null,     // 🎨 every piece drawField made, so the Field Designer can repaint
   down: 1,
   losYards: 20,         // line of scrimmage, yards from own goal
   firstDownYards: 30,   // yards-from-own-goal needed for a first down
@@ -3161,7 +3162,10 @@ window.TDGame = {
   startPlayoffGame(youAbbr, oppAbbr) {
     const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
     if (team && opp && G.scene) beginGame(team, opp, false, false, true);
-  }
+  },
+  // 🎨 redraw the field with your latest Field Designer colours (field.js calls
+  // this the moment you pick a new turf, end zone or midfield logo).
+  repaintField
 };
 
 // ============================================================
@@ -3974,13 +3978,21 @@ function sayComment(text) {
 // ============================================================
 function drawField(scene) {
   const W = FIELD_WIDTH, L = FIELD_LENGTH;
+  // 🎨 FIELD DESIGNER (field.js): your saved turf + end-zone colours and your
+  // midfield logo. With the module absent these fall back to the classic look,
+  // so the field is byte-identical to before.
+  const look = window.TDField ? TDField.look()
+             : { dark: GRASS_DARK, light: GRASS_LIGHT, endzone: ENDZONE_COLOR, logo: '★', logoColor: '#ffe066' };
+  // Everything we create goes in here, so the Field Designer can repaint live.
+  const parts = [];
   const g = scene.add.graphics().setDepth(0);
+  parts.push(g);
 
   // --- 1) Mowed-grass stripes -------------------------------------------------
   // A real field has light + dark bands where the mower drove up and down. We
   // paint a band every 5 yards (24 bands over 120 yards) for a lush striped look.
   for (let i = 0; i < 24; i++) {
-    g.fillStyle(i % 2 === 0 ? GRASS_DARK : GRASS_LIGHT);
+    g.fillStyle(i % 2 === 0 ? look.dark : look.light);
     g.fillRect(0, i * 5 * PX_PER_YARD, W, 5 * PX_PER_YARD);
   }
 
@@ -3988,7 +4000,7 @@ function drawField(scene) {
   // A solid painted colour with a slightly darker inner block + diagonal paint
   // stripes, so they read as real end-zone turf instead of a flat rectangle.
   for (const top of [0, L - ENDZONE]) {
-    g.fillStyle(ENDZONE_COLOR);              g.fillRect(0, top, W, ENDZONE);
+    g.fillStyle(look.endzone);               g.fillRect(0, top, W, ENDZONE);
     g.fillStyle(0x000000, 0.16);             g.fillRect(6, top + 6, W - 12, ENDZONE - 12);
     g.lineStyle(2, 0xffffff, 0.14);          // faint diagonal "paint" hatching
     for (let x = -ENDZONE; x < W; x += 22) {
@@ -4025,37 +4037,51 @@ function drawField(scene) {
   for (let yd = 10; yd <= 90; yd += 10) {
     const label = String(yd <= 50 ? yd : 100 - yd);
     for (const x of [42, W - 42]) {
-      scene.add.text(x, ENDZONE + yd * PX_PER_YARD, label, {
+      parts.push(scene.add.text(x, ENDZONE + yd * PX_PER_YARD, label, {
         fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ffffff',
         stroke: '#0c3a12', strokeThickness: 3
-      }).setOrigin(0.5).setDepth(1).setAlpha(0.65);
+      }).setOrigin(0.5).setDepth(1).setAlpha(0.65));
     }
   }
 
-  // --- 7) Midfield star at the 50-yard line -----------------------------------
+  // --- 7) Midfield logo at the 50-yard line (your pick — 🎨 Field Designer) ---
   const midY = ENDZONE + 50 * PX_PER_YARD;
   g.lineStyle(2, 0xffffff, 0.25); g.strokeCircle(W / 2, midY, 34);
-  scene.add.text(W / 2, midY, '★', {
-    fontFamily: 'Arial Black, Arial', fontSize: '46px', color: '#ffe066'
-  }).setOrigin(0.5).setDepth(1).setAlpha(0.35);
+  parts.push(scene.add.text(W / 2, midY, look.logo, {
+    fontFamily: 'Arial Black, Arial', fontSize: '46px', color: look.logoColor
+  }).setOrigin(0.5).setDepth(1).setAlpha(0.35));
 
   // --- 8) End-zone team names (nudged toward the goal line so the goalposts,
   //        drawn next, sit clearly at the back of the zone) --------------------
-  scene.add.text(W / 2, ENDZONE * 0.78, 'TOUCHDOWN', {
+  parts.push(scene.add.text(W / 2, ENDZONE * 0.78, 'TOUCHDOWN', {
     fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#ffe066',
     stroke: '#000', strokeThickness: 4
-  }).setOrigin(0.5).setDepth(1).setAlpha(0.92);
+  }).setOrigin(0.5).setDepth(1).setAlpha(0.92));
   // Your home end zone shows your team's name once you've picked it (see
   // startGameWithTeam). Until then it just says MAX FC.
-  G.endzoneLabel = scene.add.text(W / 2, L - ENDZONE * 0.78, 'MAX FC', {
+  G.endzoneLabel = scene.add.text(W / 2, L - ENDZONE * 0.78, G.team ? G.team.name : 'MAX FC', {
     fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#ffffff',
     stroke: '#000', strokeThickness: 4
   }).setOrigin(0.5).setDepth(1).setAlpha(0.85);
+  parts.push(G.endzoneLabel);
 
   // --- 9) Goalposts — their own layer, drawn ON TOP so they always show -------
   const gp = scene.add.graphics().setDepth(1);
   drawGoalpost(gp, W / 2, 'top');
   drawGoalpost(gp, W / 2, 'bottom');
+  parts.push(gp);
+
+  G.fieldParts = parts;   // 🎨 so repaintField() can tear this down and redraw
+}
+
+// 🎨 Repaint the whole field with your latest Field Designer choices. Safe to
+// call any time (the designer calls it when you change a colour): it destroys
+// the old field pieces and draws fresh ones in their place.
+function repaintField() {
+  if (!G.scene) return;
+  if (G.fieldParts) { for (const p of G.fieldParts) { if (p && p.destroy) p.destroy(); } }
+  G.fieldParts = null;
+  drawField(G.scene);
 }
 
 // A classic yellow goalpost (base pole → crossbar → two uprights), tucked into
