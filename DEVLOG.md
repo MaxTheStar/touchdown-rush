@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.58 — cache-buster is `?v=73` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.59 — cache-buster is `?v=74` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Touchdown Celebrations is the 1st pick, live.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Touchdown Celebrations + v1.59 ⭐ Player of the Game are live — 2/8 drafted.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -305,7 +305,31 @@ all eight are genuinely new.)
   'touchdown')` fires the equipped move (💪 + `celeb-pulse` + 10 particles, score→6); persists across a
   reload; 3-column grid with no overflow at 375px; 0 console errors — then re-verified on the LIVE site.
 
-## ✅ Sync status — v1.11–v1.58 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58 Touchdown Celebrations — 1st Round-7 pick — pushed 2026-08-22)
+- **✅ v1.59 (⭐ PLAYER OF THE GAME) is PUSHED & LIVE** — shipped 2026-08-22 (`?v=74`), the 2nd Round-7
+  pick. New `src/gamestats.js` (`window.TDGameStats`, **no persistence** — these are this game's numbers):
+  a per-game STAT BOOK that counts catches, carries, yards, TDs, made FGs and takeaways for YOUR drafted
+  players, matching each on-field guy to his roster spot (`offense[0]`=QB, `[1]`=RB, `[2]/[3]`=WRs; the
+  three defensive starters rotate takeaway credit since the 1-player defense is the mini-map sim). Roster
+  names are read **read-only** from `tdr-roster` (no draft.js edits), with friendly fallbacks ("Your QB")
+  if you've never drafted. At the final whistle the top performer — scored by
+  `td*60 + takeaway*50 + fg*35 + rec*5 + yards + passTd*30 + passYds*0.5` — is crowned in a gold
+  `#mvp-modal` spotlight (emoji, name, position pill, stat line, coin bonus) that lands ON the FINAL
+  screen ~850 ms after the whistle; the bonus is `8–35` coins scaled by TDs/takeaways/yards. A game where
+  nobody did anything awards nothing and shows no card. **Seven guarded one-line main.js hooks:**
+  `newGame()` in `beginGame`, `play(result, carrierIdx, gain)` at the top of `endPlay` (after the 2-pt
+  early-return; gain = `100-losYards` on a TD, 0 on an incomplete, else `spot-losYards`), `noteCatch()` in
+  `catchAndRun`, `noteFG()` in `onKickDone`, `noteTakeaway()` at BOTH turnover spots, and `finish()` in
+  `endGame` **before** `buildGameOverOverlay` so the bonus lands in the payday. The game keyboard is
+  switched off while the card is up (SPACE can't restart behind it). Verified via DOM/JS: the engine
+  credits receptions vs carries correctly (a catch also gives the QB a completion + pass yards + pass TD),
+  incompletes credit nobody, FG/takeaway logged, MVP + stat line correct; a REAL `catchAndRun` →
+  `endPlay('touchdown')` → `endGame()` crowned the real roster name ("Max Vance · WR · 1 catch · 80 rec
+  yds · 1 TD · +19 🪙") with the card on top of FINAL and the keyboard off; dismiss restores it; quiet game
+  = no award; no overflow at 375px; 0 errors — then re-verified live.
+  **📊 Foundation note:** `table()` returns the full stat sheet (every tracked player + side), which the
+  next pick (Box Score) reads instead of duplicating the counting.
+
+## ✅ Sync status — v1.11–v1.59 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58 Touchdown Celebrations + v1.59 Player of the Game — Round-7 picks 1-2 — pushed 2026-08-22)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
