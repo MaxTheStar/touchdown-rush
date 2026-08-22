@@ -886,6 +886,7 @@ function catchAndRun(wr, x, y, msg) {
   G.ballCarrier = wr;
   G.state = 'live';
   if (window.TDChallenge) TDChallenge.bump('catch');   // 📋 daily challenge: a completed catch
+  if (window.TDGameStats) TDGameStats.noteCatch(offense.indexOf(wr));   // ⭐ stat book: he caught it
   ballFollow = true;
   G.scene.cameras.main.startFollow(wr.s, true, 0.12, 0.12);
   // 🔋 CATCH ENERGY (shop): a clean catch fires a burst of speed!
@@ -1417,6 +1418,13 @@ function endPlay(result, customMsg) {
   // no good. Either way the try is over, so settle it and hand off the ball.
   if (G.twoPtTry) { resolveTwoPoint(result); return; }
 
+  // ⭐ Stat book: log who had the ball and how far they got (gamestats.js turns
+  // this into catches / carries / yards, and picks the Player of the Game).
+  if (window.TDGameStats) TDGameStats.play(result, offense.indexOf(G.ballCarrier),
+    result === 'touchdown' ? 100 - G.losYards
+      : result === 'incomplete' ? 0
+      : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99) - G.losYards);
+
   let msg, next, big = false;
 
   // 🛑 SAFETY — you got tackled with the ball in your OWN end zone. That's 2
@@ -1588,6 +1596,7 @@ function onKickDone(result) {
     if (window.TDChallenge) TDChallenge.bump('fg');   // 📋 daily challenge progress
     if (window.TDAchieve) TDAchieve.fg(G.kickDist);   // 🏅 Long Range badge if it was a long one
     if (window.TDRecords) TDRecords.fg(G.kickDist);   // 📖 Longest FG record
+    if (window.TDGameStats) TDGameStats.noteFG(G.kickDist);   // ⭐ stat book: a made field goal
   } else if (result.mode === 'fg') {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else {
@@ -2257,6 +2266,7 @@ function startPickSix(picker, x, y) {
   if (window.TDShop)  TDShop.earn(3);        // 🪙 takeaways pay 3 coins
   if (window.TDProgress) TDProgress.addXP(8);   // 📈 a takeaway is worth 8 XP
   if (window.TDChallenge) TDChallenge.bump('takeaway');   // 📋 daily challenge progress
+  if (window.TDGameStats) TDGameStats.noteTakeaway();     // ⭐ stat book: your defense got one
   G.cpu = null;                              // their drive is over
   G.dpassTarget = null;
   G.ballCarrier = picker;
@@ -2411,7 +2421,8 @@ function cpuDriveEnd(kind, customMsg) {
   else                           { big = true; msg = customMsg || 'TURNOVER — YOUR BALL!';
                                    if (window.TDShop) TDShop.earn(3);
                                    if (window.TDProgress) TDProgress.addXP(8);
-                                   if (window.TDChallenge) TDChallenge.bump('takeaway'); }  // 🪙📈📋 takeaway
+                                   if (window.TDChallenge) TDChallenge.bump('takeaway');
+                                   if (window.TDGameStats) TDGameStats.noteTakeaway(); }  // 🪙📈📋⭐ takeaway
 
   G.oppScore += pts;
   updateHUD();
@@ -2687,6 +2698,10 @@ function endGame() {
   // a loss can cost a division. A rank-change ribbon flies in. Before the FINAL
   // screen so any promotion coins count in this game's payday.
   if (window.TDRanked) TDRanked.recordResult(G.score > G.oppScore);
+  // ⭐ PLAYER OF THE GAME: crown this game's star and pay their bonus — before
+  // the FINAL screen, so the coins land in the payday. The spotlight card rolls
+  // out a beat later, on top of the final score.
+  if (window.TDGameStats) TDGameStats.finish();
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons
@@ -3077,6 +3092,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
   if (window.TDAchieve) TDAchieve.startGame();   // 🏅 fresh per-game counters (hat trick, comeback)
   if (window.TDRecords) TDRecords.startGame();   // 📖 fresh per-game record watching
   if (window.TDPowerup) TDPowerup.newGame();     // ⚡ your one Power-Up Play is ready again
+  if (window.TDGameStats) TDGameStats.newGame(); // ⭐ a fresh stat book for this game
 
   // Paint both teams onto their players.
   makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);

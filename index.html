@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=73" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=73" />
+  <link rel="icon" type="image/png" href="favicon.png?v=74" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=74" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=73" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=74" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=73" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=74" />
   <style>
     html, body {
       margin: 0;
@@ -1726,6 +1726,21 @@
       @keyframes coinLabelCalm { 0%{opacity:0} 15%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
     }
 
+    /* ---- ⭐ PLAYER OF THE GAME (src/gamestats.js) ----------------------- */
+    /* A spotlight card that lands on top of the FINAL screen at game's end. */
+    #mvp-modal .mvp-card { border-color: rgba(255,214,64,0.75); box-shadow: 0 6px 34px rgba(255,190,50,0.28), 0 6px 30px rgba(0,0,0,.6); }
+    .mvp-title { font: 800 15px "Arial Black", Arial; letter-spacing: .06em; color: #ffe066; margin-bottom: 8px;
+      text-shadow: 0 0 16px rgba(255,190,50,.45); }
+    .mvp-emoji { font-size: 54px; line-height: 1; animation: mvpPop .55s cubic-bezier(0.2,0.8,0.2,1) both;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); }
+    @keyframes mvpPop { 0%{transform:scale(0) rotate(-18deg)} 60%{transform:scale(1.22) rotate(6deg)} 100%{transform:scale(1) rotate(0)} }
+    .mvp-name { font: 800 24px "Arial Black", Arial; color: #fff; margin-top: 4px; line-height: 1.15; }
+    .mvp-pos { font: 800 11px "Arial Black", Arial; letter-spacing: .12em; color: #0d1220; background: #ffd54a;
+      display: inline-block; padding: 3px 10px; border-radius: 999px; margin-top: 6px; }
+    .mvp-line { font: 700 13px Arial; color: #cdd6e6; margin: 10px 6px 2px; line-height: 1.5; }
+    .mvp-coins { font: 800 16px "Arial Black", Arial; color: #ffe066; margin-top: 10px; }
+    @media (prefers-reduced-motion: reduce) { .mvp-emoji { animation: none; } }
+
     /* ---- 🕺 TOUCHDOWN CELEBRATIONS (src/celebration.js) ----------------- */
     /* The in-game splash that plays over the field the instant you score. */
     #celeb-fx { position: fixed; inset: 0; z-index: 120; pointer-events: none; display: none; overflow: hidden; }
@@ -2161,6 +2176,16 @@
     </div>
   </div>
 
+  <!-- ⭐ PLAYER OF THE GAME — gamestats.js crowns this game's star at the final
+       whistle and shows their stat line + coin bonus on top of the FINAL screen. -->
+  <div class="ov" id="mvp-modal">
+    <div class="ov-card mvp-card">
+      <div class="mvp-title">⭐ PLAYER OF THE GAME</div>
+      <div id="mvp-body"></div>
+      <div class="ov-btn yes" id="mvp-close">NICE!</div>
+    </div>
+  </div>
+
   <!-- 🕺 TOUCHDOWN CELEBRATIONS — celebration.js. The picker lives in the Pro Shop;
        #celeb-fx is the in-game splash that plays over the field when you score. -->
   <div id="celeb-fx"></div>
@@ -2339,34 +2364,35 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=73"></script>
-  <script src="src/sound.js?v=73"></script>
-  <script src="src/shop.js?v=73"></script>
-  <script src="src/spin.js?v=73"></script>
-  <script src="src/challenges.js?v=73"></script>
-  <script src="src/progress.js?v=73"></script>
-  <script src="src/streak.js?v=73"></script>
-  <script src="src/achievements.js?v=73"></script>
-  <script src="src/trophy.js?v=73"></script>
-  <script src="src/records.js?v=73"></script>
-  <script src="src/road.js?v=73"></script>
-  <script src="src/cards.js?v=73"></script>
-  <script src="src/stadium.js?v=73"></script>
-  <script src="src/ranked.js?v=73"></script>
-  <script src="src/halftime.js?v=73"></script>
-  <script src="src/uniform.js?v=73"></script>
-  <script src="src/powerup.js?v=73"></script>
-  <script src="src/arcade.js?v=73"></script>
-  <script src="src/nemesis.js?v=73"></script>
-  <script src="src/weather.js?v=73"></script>
-  <script src="src/season.js?v=73"></script>
-  <script src="src/playoffs.js?v=73"></script>
-  <script src="src/film.js?v=73"></script>
-  <script src="src/celebration.js?v=73"></script>
-  <script src="src/draft.js?v=73"></script>
-  <script src="src/ads.js?v=73"></script>
-  <script src="src/tour.js?v=73"></script>
-  <script src="src/kick.js?v=73"></script>
-  <script src="src/main.js?v=73"></script>
+  <script src="src/stats.js?v=74"></script>
+  <script src="src/sound.js?v=74"></script>
+  <script src="src/shop.js?v=74"></script>
+  <script src="src/spin.js?v=74"></script>
+  <script src="src/challenges.js?v=74"></script>
+  <script src="src/progress.js?v=74"></script>
+  <script src="src/streak.js?v=74"></script>
+  <script src="src/achievements.js?v=74"></script>
+  <script src="src/trophy.js?v=74"></script>
+  <script src="src/records.js?v=74"></script>
+  <script src="src/road.js?v=74"></script>
+  <script src="src/cards.js?v=74"></script>
+  <script src="src/stadium.js?v=74"></script>
+  <script src="src/ranked.js?v=74"></script>
+  <script src="src/halftime.js?v=74"></script>
+  <script src="src/uniform.js?v=74"></script>
+  <script src="src/powerup.js?v=74"></script>
+  <script src="src/arcade.js?v=74"></script>
+  <script src="src/nemesis.js?v=74"></script>
+  <script src="src/weather.js?v=74"></script>
+  <script src="src/season.js?v=74"></script>
+  <script src="src/playoffs.js?v=74"></script>
+  <script src="src/film.js?v=74"></script>
+  <script src="src/celebration.js?v=74"></script>
+  <script src="src/gamestats.js?v=74"></script>
+  <script src="src/draft.js?v=74"></script>
+  <script src="src/ads.js?v=74"></script>
+  <script src="src/tour.js?v=74"></script>
+  <script src="src/kick.js?v=74"></script>
+  <script src="src/main.js?v=74"></script>
 </body>
 </html>
