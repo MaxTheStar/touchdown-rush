@@ -2701,7 +2701,11 @@ function endGame() {
   // ⭐ PLAYER OF THE GAME: crown this game's star and pay their bonus — before
   // the FINAL screen, so the coins land in the payday. The spotlight card rolls
   // out a beat later, on top of the final score.
-  if (window.TDGameStats) TDGameStats.finish();
+  if (window.TDGameStats) TDGameStats.finish({
+    my: G.score, opp: G.oppScore,
+    myAbbr: G.team ? G.team.abbr : 'YOU', oppAbbr: G.oppTeam ? G.oppTeam.abbr : 'OPP',
+    myName: G.team ? G.team.name : 'Your team', oppName: G.oppTeam ? G.oppTeam.name : 'Them'
+  });
   freezeEveryone();
   G.cpu = null;
   document.body.classList.add('kicking');   // hide the football buttons

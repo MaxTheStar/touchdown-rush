@@ -43,6 +43,7 @@
   let pendingCatch = -1; // set the moment a pass is caught, used when the play ends
   let defTurn = 0;       // rotates which defender gets credit for a takeaway
   let awarded = null;    // this game's winner (so the Box Score can show it too)
+  let game = null;       // 📊 the scoreboard side of things, filled in at the final whistle
 
   function blank() {
     return { rec: 0, recYds: 0, rush: 0, rushYds: 0, td: 0, fg: 0, longFg: 0,
@@ -51,7 +52,7 @@
 
   // Start (or restart) the book — called from beginGame.
   function newGame() {
-    stats = {}; pendingCatch = -1; awarded = null;
+    stats = {}; pendingCatch = -1; awarded = null; game = null;
     for (const s of SLOTS.concat(DEF_SLOTS)) stats[s.idx] = blank();
   }
   newGame();
@@ -147,7 +148,25 @@
   // ---- The final whistle: award it (main.js calls this from endGame) ------
   function gameKeyboard(on) { try { window.game.input.keyboard.enabled = on; } catch (e) {} }
 
-  function finish() {
+  // 📊 Team totals for the Box Score. Note `passYds` is the QB's view of the same
+  // yards the receivers gained, so team yards = rushing + receiving (never both).
+  function teamTotals() {
+    let rushYds = 0, recYds = 0, td = 0, fg = 0, takeaway = 0, rec = 0, rush = 0;
+    for (const slot of SLOTS.concat(DEF_SLOTS)) {
+      const s = stats[slot.idx]; if (!s) continue;
+      rushYds += s.rushYds; recYds += s.recYds; td += s.td;
+      fg += s.fg; takeaway += s.takeaway; rec += s.rec; rush += s.rush;
+    }
+    return { rushYds, recYds, total: rushYds + recYds, td, fg, takeaway, rec, rush };
+  }
+
+  // main.js fills this in at the final whistle so the Box Score has a scoreboard.
+  function setGame(info) { game = Object.assign({ when: Date.now() }, info || {}); }
+
+  // The final whistle. `info` is the scoreboard ({my, opp, myAbbr, oppAbbr}) which
+  // we keep for the 📊 Box Score — recorded even if nobody earned the star award.
+  function finish(info) {
+    setGame(info);
     const b = mvp();
     if (!b) return 0;                       // nobody did anything — no award this time
     const coins = bonusFor(b);
@@ -187,6 +206,8 @@
     finish,                                            // endGame: award the star
     mvp, lineFor, rosterName,                          // handy for the Box Score
     winner: () => awarded,
+    game: () => game,          // 📊 the scoreboard (null until a game has finished)
+    teamTotals,                // 📊 team-level yardage / TDs / turnovers
     // 📊 the full stat sheet — every tracked player with a name (Box Score uses this)
     table: () => SLOTS.concat(DEF_SLOTS).map(slot => ({
       pos: slot.pos, emoji: slot.emoji, name: rosterName(slot),
