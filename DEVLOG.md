@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.62 — cache-buster is `?v=77` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.65 — cache-buster is `?v=80` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer + v1.62 🙋 Create-A-Player are live — 5/8 drafted.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks are live — 6/8 drafted; v1.64/65 put a 🙋 PLAYER button on the front screen.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -393,7 +393,39 @@ all eight are genuinely new.)
   name; MY TEAM shows the tag; short names rejected; remove restores a normal player; survives a reload;
   no overflow at 375px; 0 errors — then re-verified live (test player cleaned up afterwards).
 
-## ✅ Sync status — v1.11–v1.62 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62 pick 5 pushed 2026-08-23)
+- **✅ v1.63 (🏈 SPECIAL TEAMS TRICKS) is PUSHED & LIVE** — shipped 2026-08-23 (`?v=78`), the 6th Round-7
+  pick. New `src/special.js` (`window.TDSpecial`, no persistence — per-game weapons):
+  - **🎭 FAKE PUNT / FAKE FIELD GOAL** — a third choice on the 4th-down panel (`#btn-fake`, worded by
+    range). You line up to kick, then run a normal down while the defense sells out for the block.
+    **Reuses the 🎩 trick play's proven "defense bites" window** instead of touching the play loop: the
+    snap sets `trickActive` + a LONGER `FAKE_BITE_MS` (1050ms vs the trick's 780) because they came to
+    block. Measured the real effect — on a normal snap coverage drifts **47.7px AWAY** from the line; on a
+    fake it collapses **30.7px TOWARD** it, opening the lane. **Two per game**, and a fake does NOT spend
+    your separate 🎩 trick play (verified).
+  - **⚡ ONSIDE KICK** — after you score, gamble on getting the ball right back. Offered only when a coach
+    really would (you're behind, or Q4). ~22% recovery (measured 23% over 4000 rolls). Recover → you keep
+    it at your own 45; fail → they take over at midfield via the existing `G.turnoverSpotCpu` lever.
+    **The flow is held open by parking `G.deadUntil` while the panel is up**, then releasing it — no new
+    game state was needed, which is what kept this safe.
+  - main.js hooks are all guarded: the fake button in `showFourthDownChoice`, a `'fake'` branch in
+    `chooseFourthDown`, the bite at the snap, per-play + per-game resets, and the onside offer at the end
+    of `onKickDone`. ⚠️ **CSS gotcha:** `#fourth-down .choice` (id+class) outranks a bare `#btn-fake`, so
+    the fake's font/padding silently lost until the selector became `.choice.fake` — remember this for any
+    button added inside an existing id-scoped panel.
+- **✅ v1.64 + v1.65 (🙋 PLAYER on the front screen) are PUSHED & LIVE** — shipped 2026-08-23 (`?v=79`,
+  then `?v=80`). **Max asked for Create-A-Player to be reachable straight from the menu** instead of only
+  through the Pro Shop, so `#menu-meta` gained a 🙋 PLAYER chip (next to 🏟 TEAM) wired to the same
+  `TDCreate.open()`; the Pro Shop button still works. That makes **EIGHT chips**, which needed the
+  narrow-screen rules tightened — and shipping it exposed a sizing bug worth remembering:
+  **the coin chip is the only variable-width item in that row.** At 641 coins it fit with 5px spare, but
+  9999 overflowed by 4px and 10,516 by 8px (Max has had 10k+). v1.65 fixes it two ways: `shop.js`
+  (+ draft.js's matching painter) now shorten the CHIP only — `10516 → "10.5k"`, `87400 → "87.4k"` (the
+  exact number still shows in the Pro Shop; no coin math changed) — and the ≤380px rules go to chips 32px
+  / gap 3 / coin 12px. Verified 641 / 9999 / 10.5k / 87.4k / 1001k all fit (worst case 22px slack), no
+  label spill. **The row's HEIGHT is unchanged**, so the XP/challenges/trophy/road bars and the delicate
+  Phaser "CHOOSE YOUR TEAM" clearance from v1.44/v1.45 are untouched.
+
+## ✅ Sync status — v1.11–v1.65 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.65 picks 5-6 + the front-screen PLAYER button pushed 2026-08-23)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
