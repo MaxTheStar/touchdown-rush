@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.65 — cache-buster is `?v=80` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.66 — cache-buster is `?v=82` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks are live — 6/8 drafted; v1.64/65 put a 🙋 PLAYER button on the front screen.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks + v1.66 🎃 Season Events are live — 7/8 drafted; v1.64/65 put a 🙋 PLAYER button on the front screen.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -425,7 +425,28 @@ all eight are genuinely new.)
   label spill. **The row's HEIGHT is unchanged**, so the XP/challenges/trophy/road bars and the delicate
   Phaser "CHOOSE YOUR TEAM" clearance from v1.44/v1.45 are untouched.
 
-## ✅ Sync status — v1.11–v1.65 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.65 picks 5-6 + the front-screen PLAYER button pushed 2026-08-23)
+- **✅ v1.66 (🎃 SEASON EVENTS) is PUSHED & LIVE** — shipped 2026-08-23 (`?v=82`), the 7th Round-7 pick.
+  New `src/events.js` (`window.TDEvents`, key `tdr-events` = `{played, won}`).
+  **⚠️ Max redirected this one mid-build and the redirect was right:** events are NOT a mode you pick from
+  a menu — you just start a game during Halloween week and it IS 🎃 HALLOWEEN NIGHT. Twelve events across
+  the year, each live for **about a week** (sitting on the real holiday where there is one — he chose
+  "auto, wider windows"), so one comes around roughly monthly and still feels like an occasion: Oct 15 is
+  a normal day, Oct 31 is not.
+  Each dresses the game up completely — **his ideas, built as asked**: 🎃 Halloween = night game, black/
+  orange field, 🎃👻🦇🕸️ in the end zones and 🧛🧙 in the stands; 🦃 Turkey Bowl = wind, 🦃🍂🥧 on the field
+  and a "TURKEY TIME! 🍽️" party on a win; 🎄 Snow Bowl = blizzard, 🎄🎁⛄ decorations with **🎅 Santa (+🤶🦌)
+  in the crowd** and "MERRY CHRISTMAS!" on a win — plus nine more, each with its own colours, weather,
+  decorations, crowd and themed win celebration (fired via the existing `TDShop.celebrate`). Playing pays
+  +15 🪙, winning +40 more; the events screen (opened from the 🏆 Season hub) tracks the 12-month collection.
+  Wiring is all guarded and reuses existing paths: `beginGame` asks `TDEvents.begin()` (no new arg, no new
+  bridge call — that's what made "automatic" simpler than the menu version), `drawField` takes the event's
+  look FIRST then the Field Designer's, decorations ride in `G.fieldParts` so `repaintField()` clears them,
+  `weather.js`'s `forGame()` gained an optional `force` argument, and `endGame` pays out.
+  🐛 **Caught in testing:** the field only repainted FOR an event, so last week's Santa was still standing
+  around during a normal game afterwards. `beginGame` now repaints EVERY game — verified event days theme
+  up (47 field parts) and normal days come back completely clean (23, zero decorations), toggling both ways.
+
+## ✅ Sync status — v1.11–v1.66 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.66 picks 5-7 + the front-screen PLAYER button pushed 2026-08-23)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
