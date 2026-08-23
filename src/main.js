@@ -274,6 +274,7 @@ const G = {
   oppTeam: null,        // the computer's team (a random other one)
   seasonGame: false,    // 🏆 true while playing a Season game (see beginGame / season.js)
   playoffGame: false,   // 🏆 true while playing a Playoff Tournament game (see beginGame / playoffs.js)
+  eventGame: false,     // 🎃 true while playing a themed Season Event game (see events.js)
   menuIndex: 0,         // which team the menu is showing right now
   menu: null,           // the menu's on-screen pieces (preview player, name, code)
   endzoneLabel: null,   // the team-name text painted in your home endzone
@@ -2746,6 +2747,8 @@ function endGame() {
   // a loss can cost a division. A rank-change ribbon flies in. Before the FINAL
   // screen so any promotion coins count in this game's payday.
   if (window.TDRanked) TDRanked.recordResult(G.score > G.oppScore);
+  // 🎃 Season Event payday — before the FINAL screen so it lands in the payday.
+  if (G.eventGame && window.TDEvents) TDEvents.finish(G.score > G.oppScore);
   // ⭐ PLAYER OF THE GAME: crown this game's star and pay their bonus — before
   // the FINAL screen, so the coins land in the payday. The spotlight card rolls
   // out a beat later, on top of the final score.
@@ -2863,6 +2866,12 @@ function returnToMenuFromGameOver() {
   const wasPlayoff = G.playoffGame;
   G.seasonGame = false;
   G.playoffGame = false;
+  // 🎃 the event is over — drop its theme and repaint YOUR field back.
+  if (G.eventGame) {
+    G.eventGame = false;
+    if (window.TDEvents) TDEvents.clear();
+    repaintField();
+  }
   enterMenu();
   // 🏆 A season game drops you back on the SEASON screen (with updated standings,
   // your next game, or the championship trophy) — not the plain team menu.
@@ -3081,6 +3090,9 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
   G.playoffGame = !!isPlayoff;        // 🏆 is this a Playoff Tournament game? (see playoffs.js)
+  // 🎃 SEASON EVENTS happen all by themselves: if today falls inside an event's
+  // week, EVERY game you start is that event — themed field, sky and bonus.
+  G.eventGame = !!(window.TDEvents && TDEvents.begin());
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
   G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
 
@@ -3172,7 +3184,15 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
 
   if (window.TDSound) TDSound.setMode('game');   // 🎵 kick the music into gear
   // 🌦 Pick this game's weather (rain / snow / night / clear) and announce it.
-  if (window.TDWeather) { const wx = TDWeather.forGame(); if (wx) sayComment(wx); }
+  // 🎃 A Season Event brings its own sky (and its own field, repainted below).
+  const forcedWx = (G.eventGame && window.TDEvents) ? TDEvents.weatherFor() : null;
+  if (window.TDWeather) { const wx = TDWeather.forGame(forcedWx); if (wx) sayComment(wx); }
+  // Repaint the field for EVERY game, not just event ones — otherwise last
+  // game's holiday decorations (Santa, pumpkins…) would still be sitting there
+  // when the event week is over. drawField picks the event theme if one is on,
+  // else your Field Designer look, so this always lands on the right field.
+  repaintField();
+  if (G.eventGame && window.TDEvents) sayComment(TDEvents.label() + ' — special game!');
   if (G.bossGame) sayComment('👑 BOSS BATTLE — it\'s MAXWELL! Can you beat the best?');
   startKickoff();   // the game opens with a kickoff for you to return
 }
@@ -4033,8 +4053,11 @@ function drawField(scene) {
   // 🎨 FIELD DESIGNER (field.js): your saved turf + end-zone colours and your
   // midfield logo. With the module absent these fall back to the classic look,
   // so the field is byte-identical to before.
-  const look = window.TDField ? TDField.look()
-             : { dark: GRASS_DARK, light: GRASS_LIGHT, endzone: ENDZONE_COLOR, logo: '★', logoColor: '#ffe066' };
+  // 🎃 A Season Event game gets ITS theme first (Halloween orange, Snow Bowl
+  // white…); otherwise it's whatever you designed, then the classic default.
+  const look = (window.TDEvents && TDEvents.fieldOverride())
+             || (window.TDField ? TDField.look()
+             : { dark: GRASS_DARK, light: GRASS_LIGHT, endzone: ENDZONE_COLOR, logo: '★', logoColor: '#ffe066' });
   // Everything we create goes in here, so the Field Designer can repaint live.
   const parts = [];
   const g = scene.add.graphics().setDepth(0);
@@ -4122,6 +4145,31 @@ function drawField(scene) {
   drawGoalpost(gp, W / 2, 'top');
   drawGoalpost(gp, W / 2, 'bottom');
   parts.push(gp);
+
+  // --- 10) 🎃 SEASON EVENT DECORATIONS ----------------------------------------
+  // Pumpkins in the end zones at Halloween, Santa up in the stands for the Snow
+  // Bowl, turkeys for the Turkey Bowl. Purely decorative text (no physics), so
+  // they can never get in the way of a play — and they ride in `parts`, so
+  // repaintField() clears them when the event game is over.
+  const dec = window.TDEvents && TDEvents.decorations();
+  if (dec) {
+    // pumpkins & friends dotted around BOTH end zones
+    for (const top of [0, L - ENDZONE]) {
+      for (let i = 0; i < 5; i++) {
+        const e = dec.deco[i % dec.deco.length];
+        parts.push(scene.add.text(38 + i * (W - 76) / 4, top + ENDZONE * 0.34, e, { fontSize: '26px' })
+          .setOrigin(0.5).setDepth(1).setAlpha(0.85));
+      }
+    }
+    // the crowd, watching from behind each end line
+    for (const y of [8, L - 8]) {
+      for (let i = 0; i < 7; i++) {
+        const e = dec.crowd[i % dec.crowd.length];
+        parts.push(scene.add.text(30 + i * (W - 60) / 6, y, e, { fontSize: '20px' })
+          .setOrigin(0.5).setDepth(1).setAlpha(0.8));
+      }
+    }
+  }
 
   G.fieldParts = parts;   // 🎨 so repaintField() can tear this down and redraw
 }

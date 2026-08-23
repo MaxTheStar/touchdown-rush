@@ -65,8 +65,11 @@
   // main.js calls this at the start of every game. It picks the weather (random
   // when you're on AUTO, weighted toward nicer days), shows it, and hands back a
   // friendly line to announce at the kickoff.
-  function forGame() {
+  // `force` lets a themed 🎃 Season Event set its own sky (a Halloween night
+  // game is always at night) — normal games pass nothing and behave as before.
+  function forGame(force) {
     let kind = pref;
+    if (force && KINDS.includes(force)) { apply(force); return INFO[current].say || ''; }
     if (pref === 'auto') {
       // Weighted toward nice days; the two EXTREMES are rare treats.
       const r = Math.random();   // clear 34 · night 18 · rain 14 · wind 12 · snow 10 · hot 7 · blizzard 5
