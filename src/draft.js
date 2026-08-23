@@ -183,6 +183,64 @@
   // How many players have grown since you last looked at the roster?
   function growthPending() { return roster.filter(p => p.grew).length; }
 
+  // ============================================================
+  // 🙋 CREATE-A-PLAYER (src/createplayer.js talks to these)
+  // ------------------------------------------------------------
+  // Your one custom superstar lives in a normal roster slot and is a completely
+  // normal player object (so growth, trades, payroll, the box score and the MVP
+  // award all treat him like anyone else) — he just carries `custom: true` plus
+  // the jersey number you picked. These little helpers exist because the roster
+  // lives in this file's closure: an outside module must go through us, or our
+  // in-memory copy would get stale and overwrite the change on the next save.
+  // ============================================================
+  const CUSTOM_OVR = 72;   // a solid starter — better than a rookie, no runaway star
+
+  function getCustom() {
+    const i = roster.findIndex(p => p && p.custom);
+    return i < 0 ? null : Object.assign({ slot: i }, roster[i]);
+  }
+
+  // Put your custom guy in the slot for `pos`. If he was already somewhere else,
+  // that old slot goes back to a normal generated player, so the team stays 8 deep.
+  function setCustom(pos, info) {
+    const slot = SLOTS.indexOf(pos);
+    if (slot < 0) return null;
+    const old = roster.findIndex(p => p && p.custom);
+    if (old >= 0 && old !== slot) {
+      roster[old] = makePlayer(SLOTS[old], 60, 70, { from: 'PRO', scouted: true });
+    }
+    const trait = TRAITS.find(t => t.n === (info && info.trait)) || null;
+    const prev = (old === slot) ? roster[slot] : null;      // editing in place keeps his growth
+    const ovr = prev ? prev.ovr : CUSTOM_OVR;
+    roster[slot] = {
+      id: prev ? prev.id : 'custom',
+      name: (info && info.name) || 'My Star',
+      pos, ovr, trait,
+      from: 'YOU', scouted: true,
+      salary: salaryOf(ovr, trait),
+      lo: ovr, hi: ovr,
+      pot: prev ? prev.pot : growthCap(ovr),
+      xp: prev ? prev.xp : 0,
+      custom: true,
+      num: (info && info.num) != null ? info.num : 1,
+    };
+    saveRoster();
+    return Object.assign({ slot }, roster[slot]);
+  }
+
+  // Send your custom guy home — the slot goes back to a normal player.
+  function clearCustom() {
+    const i = roster.findIndex(p => p && p.custom);
+    if (i < 0) return false;
+    roster[i] = makePlayer(SLOTS[i], 60, 70, { from: 'PRO', scouted: true });
+    saveRoster();
+    return true;
+  }
+
+  // The positions you can pick for him (same eight the roster uses).
+  function slotList() { return SLOTS.slice(); }
+  function traitList() { return TRAITS.map(t => ({ e: t.e, n: t.n })); }
+
   const avg = list => Math.round(list.reduce((s, p) => s + p.ovr, 0) / list.length);
   function teamOverall() {
     const off = avg(roster.slice(0, OFF_END));
@@ -269,10 +327,12 @@
         </div>`;
     }
     const grew = (showGrowth && p.grew) ? `<span class="dr-grew">▲+${p.grew}</span>` : '';
+    // 🙋 your own created superstar wears his jersey number and a little tag
+    const mine = p.custom ? `<span class="dr-mine">🙋 #${p.num != null ? p.num : 1} YOURS</span>` : '';
     return `<div class="dr-row">
         <div class="dr-pos">${POS_EMOJI[p.pos] || ''}<b>${p.pos}</b></div>
         <div class="dr-main">
-          <div class="dr-name">${p.name}</div>
+          <div class="dr-name">${p.name}${mine}</div>
           <div class="dr-sub">from ${p.from} ${sal} ${tr}</div>
           ${grow}
         </div>
@@ -849,6 +909,8 @@
     addGrowth,          // 🌱 main.js endGame: grow your players a little
     growthPending,      // how many players grew since last viewed (for the badge)
     onMenu,             // refresh the 🌱 TEAM-button badge when the menu shows
+    // 🙋 Create-A-Player (createplayer.js) — your one custom superstar
+    getCustom, setCustom, clearCustom, slotList, traitList,
     // Small dev helpers (handy for testing; harmless in play).
     _debug: {
       state: () => ({ nextDraftAt: nextDraftAt(), draftReady: draftReady(), payroll: teamPayroll(), requests: requests.length, draft }),

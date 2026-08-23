@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=76" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=76" />
+  <link rel="icon" type="image/png" href="favicon.png?v=77" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=77" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=76" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=77" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=76" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=77" />
   <style>
     html, body {
       margin: 0;
@@ -1741,6 +1741,60 @@
     .mvp-coins { font: 800 16px "Arial Black", Arial; color: #ffe066; margin-top: 10px; }
     @media (prefers-reduced-motion: reduce) { .mvp-emoji { animation: none; } }
 
+    /* ---- 🙋 CREATE-A-PLAYER (src/createplayer.js) ----------------------- */
+    #cap-preview { display: flex; align-items: center; gap: 12px; text-align: left;
+      padding: 10px 12px; border-radius: 12px; margin: 4px 0 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); }
+    .cap-jersey { flex: none; width: 52px; height: 60px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(180deg, #2b6cff, #1b4fc4);
+      border: 2px solid rgba(255,255,255,0.35); box-shadow: inset 0 -6px 12px rgba(0,0,0,0.25); }
+    .cap-jersey.big { width: 62px; height: 72px; margin: 0 auto 8px; }
+    .cap-num { font: 800 26px "Arial Black", Arial; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.45); }
+    .cap-jersey.big .cap-num { font-size: 32px; }
+    .cap-info { min-width: 0; }
+    .cap-nm { font: 800 17px "Arial Black", Arial; color: #fff; line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cap-nm.big { font-size: 20px; text-align: center; white-space: normal; }
+    .cap-pos { font: 700 11.5px Arial; color: #9fb0c3; margin-top: 3px; }
+    .cap-tr { font: 800 11px "Arial Black", Arial; color: #ffe066; margin-top: 4px; }
+    .cap-ovr { font: 800 13px "Arial Black", Arial; color: #7fe0a0; margin-top: 6px; }
+    .cap-note { font: 700 11px Arial; color: #9fb0c3; margin-top: 8px; }
+    .cap-card { text-align: center; padding: 12px; border-radius: 12px;
+      background: rgba(255,214,64,0.08); border: 1px solid rgba(255,214,64,0.4); }
+    .cap-fields { display: flex; gap: 8px; margin-bottom: 4px; }
+    .cap-field { flex: 1; text-align: left; }
+    .cap-field.num { flex: 0 0 92px; }
+    .cap-field span { display: block; font: 800 9.5px "Arial Black", Arial; letter-spacing: .08em;
+      color: #9fb0c3; margin-bottom: 4px; }
+    .cap-field input { width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff;
+      font: 800 15px "Arial Black", Arial; }
+    .cap-field input:focus { outline: none; border-color: rgba(255,214,64,0.7); }
+    .cap-sec { font: 800 10.5px "Arial Black", Arial; letter-spacing: .06em; text-transform: uppercase;
+      color: #9fb0c3; text-align: left; margin: 10px 2px 6px; }
+    #cap-positions { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .cap-pos-btn { display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 6px 2px; border-radius: 9px; background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.12);
+      -webkit-tap-highlight-color: transparent; touch-action: none; }
+    .cap-pos-btn span { font-size: 15px; line-height: 1; }
+    .cap-pos-btn b { font: 800 9px "Arial Black", Arial; color: #cdd6e6; }
+    .cap-pos-btn.on { border-color: #ffd54a; background: rgba(255,214,64,0.16); }
+    .cap-pos-btn.on b { color: #ffe066; }
+    #cap-traits { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+    .cap-tr-btn { padding: 7px 6px; border-radius: 9px; font: 800 9.5px "Arial Black", Arial;
+      color: #cdd6e6; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.12);
+      -webkit-tap-highlight-color: transparent; touch-action: none; text-align: center; }
+    .cap-tr-btn.on { border-color: #ffd54a; background: rgba(255,214,64,0.16); color: #ffe066; }
+    #cap-msg { text-align: center; font: 700 12px Arial; color: #ff9d9d; min-height: 15px;
+      opacity: 0; transition: opacity .2s; margin: 4px 0 0; }
+    #cap-msg.show { opacity: 1; }
+    /* the "🙋 #N YOURS" tag on the MY TEAM roster row (draft.js) */
+    .dr-mine { font: 800 8.5px "Arial Black", Arial; letter-spacing: .04em; color: #0d1220;
+      background: #7fe0a0; padding: 2px 6px; border-radius: 999px; margin-left: 6px;
+      display: inline-block; vertical-align: middle; }
+
     /* ---- 🎨 FIELD DESIGNER (src/field.js) ------------------------------- */
     /* A little CSS mock-up of the field, then rows of colour swatches. */
     #fld-preview { position: relative; height: 128px; border-radius: 12px; overflow: hidden;
@@ -2085,6 +2139,7 @@
       <div class="ov-btn" id="open-arcade">🎯 PRACTICE ARCADE</div>
       <div class="ov-btn" id="open-celeb">🕺 CELEBRATIONS</div>
       <div class="ov-btn" id="open-field">🎨 FIELD DESIGNER</div>
+      <div class="ov-btn" id="open-cap">🙋 CREATE-A-PLAYER</div>
       <div id="shop-items"></div>
       <div class="shop-section">🎽 STYLES — new looks for your squad</div>
       <div id="shop-uniforms"></div>
@@ -2247,6 +2302,41 @@
       <div id="mvp-body"></div>
       <div class="ov-btn" id="open-box">📊 FULL BOX SCORE</div>
       <div class="ov-btn yes" id="mvp-close">NICE!</div>
+    </div>
+  </div>
+
+  <!-- 🙋 CREATE-A-PLAYER — createplayer.js. Build one custom superstar who joins
+       your MY TEAM roster for real (draft.js owns the roster; we go through it). -->
+  <div class="ov" id="cap-modal">
+    <div class="ov-card">
+      <div class="ov-title">🙋 CREATE-A-PLAYER</div>
+      <div class="ov-sub">Make your own superstar and put him on your team!</div>
+
+      <div id="cap-have"></div>
+
+      <div id="cap-form">
+        <div id="cap-preview"></div>
+        <div class="cap-fields">
+          <label class="cap-field"><span>NAME</span>
+            <input id="cap-name" type="text" maxlength="16" placeholder="Your name" autocomplete="off" />
+          </label>
+          <label class="cap-field num"><span>NUMBER</span>
+            <input id="cap-num" type="number" min="0" max="99" value="1" />
+          </label>
+        </div>
+        <div id="cap-picks">
+          <div class="cap-sec">🏈 Position</div>
+          <div id="cap-positions"></div>
+          <div class="cap-sec">⭐ Special Skill</div>
+          <div id="cap-traits"></div>
+        </div>
+      </div>
+
+      <div id="cap-msg"></div>
+      <div class="ov-btn yes" id="cap-edit" style="display:none">✏️ EDIT MY PLAYER</div>
+      <div class="ov-btn yes" id="cap-make">✨ CREATE MY PLAYER</div>
+      <div class="ov-btn" id="cap-delete">🗑 REMOVE HIM</div>
+      <div class="ov-btn" id="cap-close">DONE</div>
     </div>
   </div>
 
@@ -2460,37 +2550,38 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=76"></script>
-  <script src="src/sound.js?v=76"></script>
-  <script src="src/shop.js?v=76"></script>
-  <script src="src/spin.js?v=76"></script>
-  <script src="src/challenges.js?v=76"></script>
-  <script src="src/progress.js?v=76"></script>
-  <script src="src/streak.js?v=76"></script>
-  <script src="src/achievements.js?v=76"></script>
-  <script src="src/trophy.js?v=76"></script>
-  <script src="src/records.js?v=76"></script>
-  <script src="src/road.js?v=76"></script>
-  <script src="src/cards.js?v=76"></script>
-  <script src="src/stadium.js?v=76"></script>
-  <script src="src/ranked.js?v=76"></script>
-  <script src="src/halftime.js?v=76"></script>
-  <script src="src/uniform.js?v=76"></script>
-  <script src="src/powerup.js?v=76"></script>
-  <script src="src/arcade.js?v=76"></script>
-  <script src="src/nemesis.js?v=76"></script>
-  <script src="src/weather.js?v=76"></script>
-  <script src="src/season.js?v=76"></script>
-  <script src="src/playoffs.js?v=76"></script>
-  <script src="src/film.js?v=76"></script>
-  <script src="src/celebration.js?v=76"></script>
-  <script src="src/gamestats.js?v=76"></script>
-  <script src="src/boxscore.js?v=76"></script>
-  <script src="src/field.js?v=76"></script>
-  <script src="src/draft.js?v=76"></script>
-  <script src="src/ads.js?v=76"></script>
-  <script src="src/tour.js?v=76"></script>
-  <script src="src/kick.js?v=76"></script>
-  <script src="src/main.js?v=76"></script>
+  <script src="src/stats.js?v=77"></script>
+  <script src="src/sound.js?v=77"></script>
+  <script src="src/shop.js?v=77"></script>
+  <script src="src/spin.js?v=77"></script>
+  <script src="src/challenges.js?v=77"></script>
+  <script src="src/progress.js?v=77"></script>
+  <script src="src/streak.js?v=77"></script>
+  <script src="src/achievements.js?v=77"></script>
+  <script src="src/trophy.js?v=77"></script>
+  <script src="src/records.js?v=77"></script>
+  <script src="src/road.js?v=77"></script>
+  <script src="src/cards.js?v=77"></script>
+  <script src="src/stadium.js?v=77"></script>
+  <script src="src/ranked.js?v=77"></script>
+  <script src="src/halftime.js?v=77"></script>
+  <script src="src/uniform.js?v=77"></script>
+  <script src="src/powerup.js?v=77"></script>
+  <script src="src/arcade.js?v=77"></script>
+  <script src="src/nemesis.js?v=77"></script>
+  <script src="src/weather.js?v=77"></script>
+  <script src="src/season.js?v=77"></script>
+  <script src="src/playoffs.js?v=77"></script>
+  <script src="src/film.js?v=77"></script>
+  <script src="src/celebration.js?v=77"></script>
+  <script src="src/gamestats.js?v=77"></script>
+  <script src="src/boxscore.js?v=77"></script>
+  <script src="src/field.js?v=77"></script>
+  <script src="src/draft.js?v=77"></script>
+  <script src="src/createplayer.js?v=77"></script>
+  <script src="src/ads.js?v=77"></script>
+  <script src="src/tour.js?v=77"></script>
+  <script src="src/kick.js?v=77"></script>
+  <script src="src/main.js?v=77"></script>
 </body>
 </html>
