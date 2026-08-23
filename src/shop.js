@@ -151,9 +151,17 @@
     paintChip();
     return true;
   }
+  // Big piles get shortened (12,340 → "12.3k") so the coin chip stays narrow —
+  // the menu row has eight chips on it now and a five-digit number pushed the
+  // last one off the edge of a phone. The real number is always in the Pro Shop.
+  function shortCoins(n) {
+    if (n < 10000) return String(n);
+    const k = n / 1000;
+    return (k < 100 ? k.toFixed(1) : Math.round(k)) + 'k';
+  }
   function paintChip() {
     const el = $('coin-amt');
-    if (el) el.textContent = coins;
+    if (el) el.textContent = shortCoins(coins);
   }
 
   // ============================================================

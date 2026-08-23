@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=79" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=79" />
+  <link rel="icon" type="image/png" href="favicon.png?v=80" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=80" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=79" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=80" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=79" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=80" />
   <style>
     html, body {
       margin: 0;
@@ -677,10 +677,12 @@
        ONE line — a second row would collide with the Phaser "CHOOSE YOUR TEAM"
        title (the v1.44/v1.45 headache), so the row must never wrap. */
     @media (max-width: 380px) {
-      #menu-meta { gap: 4px; }
-      .meta-btn { width: 35px; font-size: 14px; }
+      #menu-meta { gap: 3px; }
+      .meta-btn { width: 32px; font-size: 14px; }
       .meta-btn small { font-size: 6px; letter-spacing: 0; }
-      #coin-chip { padding: 0 6px; font-size: 13px; }
+      /* the coin chip is the only variable-width one (the number grows), so it
+         gets the tightest treatment — shop.js also shortens 10516 → "10.5k" */
+      #coin-chip { padding: 0 5px; font-size: 12px; }
     }
     /* …and on the tiniest screens, tighter still. */
     @media (max-width: 345px) {
@@ -2611,39 +2613,39 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=79"></script>
-  <script src="src/sound.js?v=79"></script>
-  <script src="src/shop.js?v=79"></script>
-  <script src="src/spin.js?v=79"></script>
-  <script src="src/challenges.js?v=79"></script>
-  <script src="src/progress.js?v=79"></script>
-  <script src="src/streak.js?v=79"></script>
-  <script src="src/achievements.js?v=79"></script>
-  <script src="src/trophy.js?v=79"></script>
-  <script src="src/records.js?v=79"></script>
-  <script src="src/road.js?v=79"></script>
-  <script src="src/cards.js?v=79"></script>
-  <script src="src/stadium.js?v=79"></script>
-  <script src="src/ranked.js?v=79"></script>
-  <script src="src/halftime.js?v=79"></script>
-  <script src="src/uniform.js?v=79"></script>
-  <script src="src/powerup.js?v=79"></script>
-  <script src="src/arcade.js?v=79"></script>
-  <script src="src/nemesis.js?v=79"></script>
-  <script src="src/weather.js?v=79"></script>
-  <script src="src/season.js?v=79"></script>
-  <script src="src/playoffs.js?v=79"></script>
-  <script src="src/film.js?v=79"></script>
-  <script src="src/celebration.js?v=79"></script>
-  <script src="src/gamestats.js?v=79"></script>
-  <script src="src/boxscore.js?v=79"></script>
-  <script src="src/field.js?v=79"></script>
-  <script src="src/draft.js?v=79"></script>
-  <script src="src/createplayer.js?v=79"></script>
-  <script src="src/special.js?v=79"></script>
-  <script src="src/ads.js?v=79"></script>
-  <script src="src/tour.js?v=79"></script>
-  <script src="src/kick.js?v=79"></script>
-  <script src="src/main.js?v=79"></script>
+  <script src="src/stats.js?v=80"></script>
+  <script src="src/sound.js?v=80"></script>
+  <script src="src/shop.js?v=80"></script>
+  <script src="src/spin.js?v=80"></script>
+  <script src="src/challenges.js?v=80"></script>
+  <script src="src/progress.js?v=80"></script>
+  <script src="src/streak.js?v=80"></script>
+  <script src="src/achievements.js?v=80"></script>
+  <script src="src/trophy.js?v=80"></script>
+  <script src="src/records.js?v=80"></script>
+  <script src="src/road.js?v=80"></script>
+  <script src="src/cards.js?v=80"></script>
+  <script src="src/stadium.js?v=80"></script>
+  <script src="src/ranked.js?v=80"></script>
+  <script src="src/halftime.js?v=80"></script>
+  <script src="src/uniform.js?v=80"></script>
+  <script src="src/powerup.js?v=80"></script>
+  <script src="src/arcade.js?v=80"></script>
+  <script src="src/nemesis.js?v=80"></script>
+  <script src="src/weather.js?v=80"></script>
+  <script src="src/season.js?v=80"></script>
+  <script src="src/playoffs.js?v=80"></script>
+  <script src="src/film.js?v=80"></script>
+  <script src="src/celebration.js?v=80"></script>
+  <script src="src/gamestats.js?v=80"></script>
+  <script src="src/boxscore.js?v=80"></script>
+  <script src="src/field.js?v=80"></script>
+  <script src="src/draft.js?v=80"></script>
+  <script src="src/createplayer.js?v=80"></script>
+  <script src="src/special.js?v=80"></script>
+  <script src="src/ads.js?v=80"></script>
+  <script src="src/tour.js?v=80"></script>
+  <script src="src/kick.js?v=80"></script>
+  <script src="src/main.js?v=80"></script>
 </body>
 </html>

@@ -48,7 +48,13 @@
   const coins = () => (window.TDShop ? TDShop.coins() : 0);
   const spend = n => (window.TDShop && TDShop.spend ? TDShop.spend(n) : false);
   const earn  = n => { if (window.TDShop) TDShop.earn(n); };
-  const paintCoins = () => { const el = $('coin-amt'); if (el) el.textContent = coins(); };
+  // (matches shop.js's shortCoins so the chip never grows wide enough to push
+  // the last menu button off a phone screen)
+  const paintCoins = () => {
+    const el = $('coin-amt'); if (!el) return;
+    const n = coins();
+    el.textContent = n < 10000 ? String(n) : ((n / 1000 < 100 ? (n / 1000).toFixed(1) : Math.round(n / 1000)) + 'k');
+  };
   const party = (el, emoji, label) => { if (window.TDShop && TDShop.celebrate) TDShop.celebrate(el, emoji, label); };
   const sting = k => { if (window.TDSound && TDSound.sting) TDSound.sting(k); };
 
