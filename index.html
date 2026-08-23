@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=77" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=77" />
+  <link rel="icon" type="image/png" href="favicon.png?v=78" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=78" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=77" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=78" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=77" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=78" />
   <style>
     html, body {
       margin: 0;
@@ -292,6 +292,50 @@
     #btn-kick { background: rgba(255,214,10,0.28); border-color: rgba(255,214,10,0.75); }
     #fourth-down .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
     #btn-kick:active { background: rgba(255,214,10,0.55); }
+
+    /* ---- 🏈 SPECIAL TEAMS TRICKS (src/special.js) ----------------------- */
+    /* 🎭 the fake, sitting under the two normal 4th-down choices */
+    /* a touch smaller than the two main choices so the label stays on ONE line
+       even on a 375px phone (it's the longest button on the panel) */
+    /* NOTE the selector: `#fourth-down .choice` (id + class) outranks a bare
+       `#btn-fake`, so we match the same way or the size below never applies. */
+    #fourth-down .choice.fake { background: rgba(180,90,255,0.28); border-color: rgba(196,132,255,0.8);
+      font-size: clamp(12px, 3.6vw, 17px); padding: 15px 12px; }
+    #btn-fake:active { background: rgba(180,90,255,0.55); }
+    /* ⚡ the onside-kick decision, shown right after you score */
+    #onside-panel {
+      position: fixed; z-index: 30; inset: 0;
+      display: none;                          /* special.js flips this to flex */
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; background: rgba(10,16,32,0.72);
+    }
+    #onside-panel .title { font: 800 26px "Arial Black", Arial; color: #ffe066;
+      text-shadow: 0 2px 6px #000; letter-spacing: 1px; }
+    #onside-panel .sub { font: 700 13px Arial; color: #cdd6e6; text-align: center;
+      max-width: min(80vw, 320px); text-shadow: 0 1px 4px #000; }
+    #onside-panel .choice {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      width: min(78vw, 300px); text-align: center;
+      padding: 17px 16px; border-radius: 16px;
+      font: 800 clamp(15px, 4.8vw, 20px) "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
+      box-shadow: 0 3px 10px rgba(0,0,0,.4);
+    }
+    #onside-panel .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
+    #btn-onside { background: rgba(46,230,255,0.26); border-color: rgba(46,230,255,0.8); }
+    #btn-onside:active { background: rgba(46,230,255,0.5); }
+    /* the result banner after the gamble */
+    #onside-flash {
+      position: fixed; z-index: 46; left: 50%; top: 38%;
+      transform: translate(-50%,-50%) scale(0.7); opacity: 0; pointer-events: none;
+      padding: 12px 22px; border-radius: 14px; white-space: nowrap;
+      font: 900 20px "Arial Black", Arial; text-shadow: 0 2px 6px #000;
+      transition: opacity .25s ease, transform .25s cubic-bezier(0.2,0.8,0.2,1);
+    }
+    #onside-flash.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    #onside-flash.good { background: rgba(46,230,140,0.22); color: #7fe0a0; border: 2px solid rgba(46,230,140,.7); }
+    #onside-flash.bad  { background: rgba(230,90,90,0.20); color: #ff9d9d; border: 2px solid rgba(230,90,90,.6); }
+    @media (prefers-reduced-motion: reduce) { #onside-flash { transition: opacity .2s; } }
 
     /* 🛡 DEFENSE mini-map (1-player, tap-to-progress) */
     #defense-sim {
@@ -2046,7 +2090,19 @@
     <div class="title">4TH DOWN!</div>
     <div class="choice" id="btn-go">① PLAY 4TH DOWN</div>
     <div class="choice" id="btn-kick">② FIELD GOAL</div>
+    <!-- 🎭 the fake (special.js decides when it shows) -->
+    <div class="choice fake" id="btn-fake" style="display:none">③ 🎭 FAKE THE PUNT!</div>
   </div>
+
+  <!-- ⚡ ONSIDE KICK — after you score, gamble on getting the ball right back.
+       special.js shows this; main.js parks the dead-ball timer while it's up. -->
+  <div id="onside-panel">
+    <div class="title">⚡ ONSIDE KICK?</div>
+    <div class="sub">Risky! Get it back, or they start near midfield.</div>
+    <div class="choice go" id="btn-onside">⚡ TRY THE ONSIDE KICK</div>
+    <div class="choice" id="btn-kickoff">▶ NORMAL KICKOFF</div>
+  </div>
+  <div id="onside-flash"></div>
 
   <!-- 🏈 After a touchdown: kick the extra point (+1) or go for two (+2).
        main.js shows/hides this and wires the two buttons. -->
@@ -2550,38 +2606,39 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=77"></script>
-  <script src="src/sound.js?v=77"></script>
-  <script src="src/shop.js?v=77"></script>
-  <script src="src/spin.js?v=77"></script>
-  <script src="src/challenges.js?v=77"></script>
-  <script src="src/progress.js?v=77"></script>
-  <script src="src/streak.js?v=77"></script>
-  <script src="src/achievements.js?v=77"></script>
-  <script src="src/trophy.js?v=77"></script>
-  <script src="src/records.js?v=77"></script>
-  <script src="src/road.js?v=77"></script>
-  <script src="src/cards.js?v=77"></script>
-  <script src="src/stadium.js?v=77"></script>
-  <script src="src/ranked.js?v=77"></script>
-  <script src="src/halftime.js?v=77"></script>
-  <script src="src/uniform.js?v=77"></script>
-  <script src="src/powerup.js?v=77"></script>
-  <script src="src/arcade.js?v=77"></script>
-  <script src="src/nemesis.js?v=77"></script>
-  <script src="src/weather.js?v=77"></script>
-  <script src="src/season.js?v=77"></script>
-  <script src="src/playoffs.js?v=77"></script>
-  <script src="src/film.js?v=77"></script>
-  <script src="src/celebration.js?v=77"></script>
-  <script src="src/gamestats.js?v=77"></script>
-  <script src="src/boxscore.js?v=77"></script>
-  <script src="src/field.js?v=77"></script>
-  <script src="src/draft.js?v=77"></script>
-  <script src="src/createplayer.js?v=77"></script>
-  <script src="src/ads.js?v=77"></script>
-  <script src="src/tour.js?v=77"></script>
-  <script src="src/kick.js?v=77"></script>
-  <script src="src/main.js?v=77"></script>
+  <script src="src/stats.js?v=78"></script>
+  <script src="src/sound.js?v=78"></script>
+  <script src="src/shop.js?v=78"></script>
+  <script src="src/spin.js?v=78"></script>
+  <script src="src/challenges.js?v=78"></script>
+  <script src="src/progress.js?v=78"></script>
+  <script src="src/streak.js?v=78"></script>
+  <script src="src/achievements.js?v=78"></script>
+  <script src="src/trophy.js?v=78"></script>
+  <script src="src/records.js?v=78"></script>
+  <script src="src/road.js?v=78"></script>
+  <script src="src/cards.js?v=78"></script>
+  <script src="src/stadium.js?v=78"></script>
+  <script src="src/ranked.js?v=78"></script>
+  <script src="src/halftime.js?v=78"></script>
+  <script src="src/uniform.js?v=78"></script>
+  <script src="src/powerup.js?v=78"></script>
+  <script src="src/arcade.js?v=78"></script>
+  <script src="src/nemesis.js?v=78"></script>
+  <script src="src/weather.js?v=78"></script>
+  <script src="src/season.js?v=78"></script>
+  <script src="src/playoffs.js?v=78"></script>
+  <script src="src/film.js?v=78"></script>
+  <script src="src/celebration.js?v=78"></script>
+  <script src="src/gamestats.js?v=78"></script>
+  <script src="src/boxscore.js?v=78"></script>
+  <script src="src/field.js?v=78"></script>
+  <script src="src/draft.js?v=78"></script>
+  <script src="src/createplayer.js?v=78"></script>
+  <script src="src/special.js?v=78"></script>
+  <script src="src/ads.js?v=78"></script>
+  <script src="src/tour.js?v=78"></script>
+  <script src="src/kick.js?v=78"></script>
+  <script src="src/main.js?v=78"></script>
 </body>
 </html>

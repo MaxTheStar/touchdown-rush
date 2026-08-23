@@ -320,6 +320,7 @@ const G = {
   trickArmed: false,    // you tapped 🎩 pre-snap — the coming snap is the trick
   trickActive: false,   // the trick is running RIGHT NOW (defense is fooled)
   trickBiteUntil: 0,    // time until which the defense "bites" on the fake (ms)
+  fakeKick: false,      // 🎭 this 4th-down snap is a FAKE punt / field goal (special.js)
 
   // ---- v1.9: team-rating strength tilt (all default to 1 = neutral) ----
   myOff: 1, myDef: 1,   // YOUR team's offense/defense multipliers (from teamRating)
@@ -672,6 +673,12 @@ function snap(time) {
     G.trickActive = true;
     G.trickBiteUntil = time + TRICK_BITE_MS;
     sayComment('🎩 The defense BITES on the fake!');
+  } else if (G.fakeKick) {
+    // 🎭 FAKE PUNT / FIELD GOAL — they charged in to block a kick that never
+    // came, so they're caught out of position a beat LONGER than a trick play.
+    G.trickActive = true;
+    G.trickBiteUntil = time + FAKE_BITE_MS;
+    sayComment('🎭 IT\'S A FAKE!  Nobody\'s home!');
   } else {
     G.trickActive = false;
   }
@@ -1522,6 +1529,14 @@ function showFourthDownChoice() {
       ? '② FIELD GOAL · ' + Math.round(fieldGoalDistance()) + ' yd'
       : '② PUNT';
   }
+  // 🎭 SPECIAL TEAMS TRICKS: the fake shows up while you've still got one left.
+  const fakeBtn = document.getElementById('btn-fake');
+  if (fakeBtn) {
+    const can = window.TDSpecial && TDSpecial.canFake();
+    fakeBtn.style.display = can ? '' : 'none';
+    if (can) fakeBtn.textContent = TDSpecial.fakeLabel(inFieldGoalRange()) +
+      ' · ' + TDSpecial.fakesRemaining() + ' left';
+  }
   if (panel) panel.style.display = 'flex';
 }
 
@@ -1535,6 +1550,16 @@ function chooseFourthDown(which) {
   if (G.state !== 'decision') return;   // ignore stray taps
   hideFourthDownChoice();
   if (which === 'play') { G.state = 'presnap'; return; }
+  // 🎭 FAKE PUNT / FAKE FIELD GOAL: it's a normal down, but the defense is about
+  // to sell out for the block — the snap (below) hands them the fake.
+  if (which === 'fake') {
+    if (!(window.TDSpecial && TDSpecial.canFake())) { G.state = 'presnap'; return; }
+    TDSpecial.useFake();
+    G.fakeKick = true;
+    G.state = 'presnap';
+    sayComment(pick(['🎭 Lining up to kick…', '🎭 Kick team out there…', '🎭 Sending out the kick team…']));
+    return;
+  }
   startKick(inFieldGoalRange() ? 'fg' : 'punt');
 }
 
@@ -1613,6 +1638,28 @@ function onKickDone(result) {
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1600;
   showBanner(msg, true);
+
+  // ⚡ ONSIDE KICK — you just SCORED, so instead of handing the ball straight
+  // over you may gamble on stealing it right back. We park the dead-ball timer
+  // while the panel is up, then let the game roll on with whatever you chose.
+  const justScored = (G.kickKind === 'xp' && result.made) || (result.mode === 'fg' && result.made);
+  if (justScored && window.TDSpecial &&
+      TDSpecial.onsideOffered(G.score, G.oppScore, G.quarter)) {
+    G.deadUntil = Number.MAX_SAFE_INTEGER;      // hold here until you answer
+    TDSpecial.askOnside(choice => {
+      if (choice === 'onside') {
+        if (TDSpecial.rollOnside()) {           // 🎉 you got it back!
+          G.next = { los: TDSpecial.winSpot(), down: 1, fd: Math.min(TDSpecial.winSpot() + 10, 100) };
+          if (window.TDSound) TDSound.sting('td');
+          TDSpecial.onsideFlash(true);
+        } else {                                 // they fell on it near midfield
+          G.turnoverSpotCpu = TDSpecial.loseSpot();
+          TDSpecial.onsideFlash(false);
+        }
+      }
+      G.deadUntil = G.scene.time.now + 900;      // let the game breathe, then play on
+    });
+  }
 }
 
 // ============================================================
@@ -3091,6 +3138,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
   G.trickAvailable = true; G.trickArmed = false; G.trickActive = false;   // 🎩 a fresh trick play each game
+  G.fakeKick = false;
+  if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
@@ -3519,6 +3568,7 @@ function setupPlay(next) {
   // On 4th down, don't snap right away — first offer the choice:
   // go for it, or kick (a field goal if you're close, otherwise a punt).
   G.trickActive = false; G.trickArmed = false;   // 🎩 fresh play — trick not armed yet
+  G.fakeKick = false;                            // 🎭 a fake only lasts the one snap
 
   if (G.down === 4) {
     G.state = 'decision';
@@ -3577,6 +3627,7 @@ function setupTouchButtons() {
   // The 4th-down choice buttons (① play the down, ② kick)
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
+  bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
   bindTapEl('btn-xp', () => choosePAT('kick'));    // 🏈 after a TD: kick the extra point
   bindTapEl('btn-two', () => choosePAT('two'));    // 🏈 …or go for two
   DefenseSim.wire();                               // 🛡 the 1-player tap-to-progress defense map
@@ -3696,6 +3747,7 @@ function loadMaxwell() {
 // run for a beat — creeping toward the line — so somebody comes wide open deep.
 // You only get ONE a game, so save it for when you really need a big play!
 const TRICK_BITE_MS = 780;   // how long the defense stays fooled after the snap
+const FAKE_BITE_MS  = 1050;  // 🎭 a fake kick fools them even longer (they came to block)
 
 // Show the 🎩 button only before the snap, and only while you still have your
 // trick this game (and haven't already armed it for this snap).
