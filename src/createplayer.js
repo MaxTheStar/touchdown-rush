@@ -207,7 +207,8 @@
 
   function tap(id, fn) { const el = $(id); if (el) el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); }); }
   function wire() {
-    tap('open-cap', open);
+    tap('open-cap', open);        // the 🛍 Pro Shop button
+    tap('open-cap-menu', open);   // …and the 🙋 PLAYER chip on the front screen
     tap('cap-close', closeOverlay);
     tap('cap-edit', edit);
     tap('cap-make', make);
