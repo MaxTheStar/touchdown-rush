@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.61 — cache-buster is `?v=76` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.62 — cache-buster is `?v=77` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score + v1.61 🎨 Field Designer are live — 4/8 drafted.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer + v1.62 🙋 Create-A-Player are live — 5/8 drafted.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -369,7 +369,31 @@ all eight are genuinely new.)
   reload and is applied at startup (midfield text object literally `👑`); 8 swatches/row at 375px with no
   overflow; 0 errors — then re-verified live.
 
-## ✅ Sync status — v1.11–v1.61 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22)
+- **✅ v1.62 (🙋 CREATE-A-PLAYER) is PUSHED & LIVE** — shipped 2026-08-23 (`?v=77`), the 5th Round-7 pick.
+  New `src/createplayer.js` (`window.TDCreate`): build ONE custom superstar — name (≤16 chars), jersey
+  number (0–99), one of **7 positions** and one of the **10 existing ⭐ traits** — and he joins your MY TEAM
+  roster as a real **72 OVR** starter, with a live jersey preview as you type.
+  **⚠️ Roster integration is the whole trick here.** The roster lives in `draft.js`'s closure, so writing
+  `tdr-roster` from outside would go stale and get overwritten on draft.js's next save. Instead **draft.js
+  gained a small API** — `getCustom / setCustom / clearCustom / slotList / traitList` — and createplayer.js
+  goes through it, so there's exactly one copy of the truth and MY TEAM, 🌱 growth, trades, payroll, the
+  📊 Box Score and the ⭐ MVP award all just work. Your guy is a **completely normal player object** (plus
+  `custom: true` and `num`), so nothing downstream needed special-casing. `setCustom(pos)` moves him
+  between slots and hands the vacated slot back to a generated 60–70 player, so the team is **always 8
+  deep** and there's **only ever one** custom player; `clearCustom()` sends him home the same way.
+  draft.js's `playerRow` shows him a "🙋 #N YOURS" tag.
+  **UX fix found in testing:** the card and the editor now have SEPARATE buttons (`#cap-edit` ✏️ opens the
+  form, `#cap-make` 💾/✨ only ever saves). One button doing both jobs mis-saved the position (picking QB
+  landed him at WR) because the first tap re-seeded the draft from the existing player — worth remembering
+  if a similar two-mode pop-up shows up again. The game keyboard is off while the editor is open so typing
+  a name can't hike the ball. Lives in the 🛍 Pro Shop — no new menu chip. Verified via DOM/JS: create →
+  right slot/ovr/trait/number and saved to disk; team overall 64→65 (a fair nudge, still inside the +8%
+  cap); EDIT prefills and moving RB→QB lands at slot 0 with the old RB slot refilled (roster still 8,
+  exactly 1 custom); 3 growth cycles treat him normally (xp 0→54, potential 79); the stat book/MVP use his
+  name; MY TEAM shows the tag; short names rejected; remove restores a normal player; survives a reload;
+  no overflow at 375px; 0 errors — then re-verified live (test player cleaned up afterwards).
+
+## ✅ Sync status — v1.11–v1.62 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62 pick 5 pushed 2026-08-23)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
