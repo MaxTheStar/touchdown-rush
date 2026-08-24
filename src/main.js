@@ -901,7 +901,11 @@ function catchAndRun(wr, x, y, msg) {
   // 🔋 CATCH ENERGY (shop): a clean catch fires a burst of speed!
   const boostMs = window.TDShop ? TDShop.energyMs() : 0;
   if (boostMs) { G.boostUntil = G.scene.time.now + boostMs; sayComment(pick(['🔋 CATCH ENERGY!', '🔋 Boost ON!'])); }
-  else sayComment(msg);
+  else {
+    // 🌟 a nicknamed receiver gets called by name on the catch
+    const nick = window.TDNick && TDNick.shout(offense.indexOf(wr), 'catch');
+    sayComment(nick || msg);
+  }
 }
 
 // ============================================================
@@ -1464,6 +1468,8 @@ function endPlay(result, customMsg) {
     if (window.TDRecords) TDRecords.td(100 - G.losYards);   // 📖 longest-TD / most-TDs-in-a-game records
     if (window.TDFilm) TDFilm.capture({ yds: 100 - G.losYards, opp: G.oppTeam ? G.oppTeam.abbr : '', q: G.quarter, pickSix: wasPickSix, trick: G.trickActive, frames: G.replay });   // 🎬 save this TD's route to the Film Room
     if (window.TDCeleb) TDCeleb.play();   // 🕺 your player's touchdown celebration!
+    // 🌟 the announcer calls the scorer by his nickname, if he's earned one
+    if (window.TDNick) { const n = TDNick.shout(offense.indexOf(G.ballCarrier), 'td'); if (n) sayComment(n); }
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
     G.replayPending = G.replay.length >= REPLAY_MIN;   // enough film? show the replay first
     next = { los: 20, down: 1, fd: 30, fresh: true };
@@ -1482,7 +1488,11 @@ function endPlay(result, customMsg) {
     if (result === 'tackle') {
       const gain = spot - G.losYards;
       if (G.ballCarrier === offense[0] && gain < 0) sayComment(pick(['SACKED!', 'Got him!', 'Down he goes!']));
-      else if (gain >= 15) sayComment(pick(['WHAT A RUN!', "He's rolling!", 'Big gain!', 'Huge play!']));
+      else if (gain >= 15) {
+        // 🌟 If this guy has a nickname, the announcer uses it instead.
+        const nick = window.TDNick && TDNick.shout(offense.indexOf(G.ballCarrier), 'run');
+        sayComment(nick || pick(['WHAT A RUN!', "He's rolling!", 'Big gain!', 'Huge play!']));
+      }
       else if (Math.random() < 0.35) sayComment(pick(['Big hit!', 'Tackled!', 'Wrapped up!']));
     }
 

@@ -277,7 +277,7 @@
   }
 
   // Ages for the roster screen / dynasty screen (back-filled on first read).
-  function rosterAges() { return roster.map(p => ({ name: p.name, pos: p.pos, ovr: p.ovr, age: ageOf(p), custom: !!p.custom })); }
+  function rosterAges() { return roster.map((p, i) => ({ id: p.id, slot: i, name: p.name, pos: p.pos, ovr: p.ovr, age: ageOf(p), custom: !!p.custom })); }
 
   // The positions you can pick for him (same eight the roster uses).
   function slotList() { return SLOTS.slice(); }
