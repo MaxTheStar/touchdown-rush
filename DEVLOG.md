@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.68 — cache-buster is `?v=84` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.69 — cache-buster is `?v=85` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks + v1.66 🎃 Season Events + v1.67 📚 Dynasty Mode are live — 🎉 ROUND 7 SWEPT (8/8); v1.68 tidied the portrait menu; v1.64/65 put a 🙋 PLAYER button on the front screen.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks + v1.66 🎃 Season Events + v1.67 📚 Dynasty Mode are live — 🎉 ROUND 7 SWEPT (8/8); v1.68 tidied the portrait menu; **Round 8 has begun:** v1.69 🌟 Player Nicknames is live; v1.64/65 put a 🙋 PLAYER button on the front screen.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -477,7 +477,30 @@ all eight are genuinely new.)
   Create-A-Player, Season Events, Dynasty, Ranked, Arcade, Trophy, Season). Max's real save was snapshotted
   and restored afterwards.
 
-## ✅ Sync status — v1.11–v1.68 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.68 picks 5-8 + the PLAYER button + the portrait tidy-up pushed 2026-08-23 — Round 7 swept)
+### 🆕 Round 8 — "The Front Office Board" (a fresh chart, opened 2026-08-23)
+
+A new Add-On Draft Board (Artifact `068b76ea-0171-4dfd-966d-c180461faadf`, same night-stadium design).
+This round you run the whole club: ①📸 Sticker Book ②🎙️ Broadcast Booth ③🎯 Weekly Quests ④🚌 Road Trip
+⑤💰 Free Agency ⑥🍿 Concession Stands ⑦🎓 Game Plan ⑧📖 Custom Playbook.
+
+- **↔️ Pick ①📸 Sticker Book — SWAPPED OUT as already-in-game.** It was covered twice over: 🏅 Achievement
+  Badges (v1.39) already rewards the exact same big moments (💣 40+ yd TD, 🛡️ shutout, 😤 comeback, 🔥 hat
+  trick, 🦅 pick six…) on a badge wall, and 🃏 Card Packs (v1.43) already does the album/rarity/duplicate
+  half. Max chose **🌟 Player Nicknames** as the replacement rather than build a third collection.
+- **✅ v1.69 (🌟 PLAYER NICKNAMES) is PUSHED & LIVE** — shipped 2026-08-24 (`?v=85`), the 1st Round-8 pick.
+  New `src/nicknames.js` (`window.TDNick`, key `tdr-nicknames`): nickname the guys on your roster and the
+  ANNOUNCER uses it live — "THE ROCKET IS ROLLING!" on a big run, "TOUCHDOWN — THE ROCKET!" on a score,
+  "RIGHT TO THE ROCKET!" on a catch. Type your own (≤14 chars) or hit 🎲 for one of 22 ready-made ones.
+  **Saved against the PLAYER'S ID, not his roster spot**, so moving him around never hands his name to
+  someone else, and a Dynasty retirement takes his nickname with him (stale ids are swept on load so the
+  save can't grow). `draft.js`'s `rosterAges()` now returns `id` + `slot` for this. Three guarded main.js
+  hooks, each simply swapping in a better line when the ball carrier has a nickname and falling straight
+  back to the existing play-by-play otherwise (big-run call in `endPlay`, the touchdown call, and the catch
+  call in `catchAndRun`). Lives in the 🛍 Pro Shop — no new menu chip. Verified: 8 rows render, edit/🎲/
+  save/delete all work, a REAL touchdown by the nicknamed RB announced "TOUCHDOWN — THE ROCKET!" while a
+  non-nicknamed player fell back normally; phone-safe, 0 errors — then re-verified live.
+
+## ✅ Sync status — v1.11–v1.69 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.68 picks 5-8 + the PLAYER button + the portrait tidy-up pushed 2026-08-23 — Round 7 swept)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
