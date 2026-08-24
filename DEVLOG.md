@@ -8,10 +8,10 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.66 — cache-buster is `?v=82` in `index.html`. (Round 6 board swept: v1.48 Stadium
+- **Version:** v1.68 — cache-buster is `?v=84` in `index.html`. (Round 6 board swept: v1.48 Stadium
   Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
   v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks + v1.66 🎃 Season Events are live — 7/8 drafted; v1.64/65 put a 🙋 PLAYER button on the front screen.)
+  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks + v1.66 🎃 Season Events + v1.67 📚 Dynasty Mode are live — 🎉 ROUND 7 SWEPT (8/8); v1.68 tidied the portrait menu; v1.64/65 put a 🙋 PLAYER button on the front screen.)
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
@@ -446,7 +446,38 @@ all eight are genuinely new.)
   around during a normal game afterwards. `beginGame` now repaints EVERY game — verified event days theme
   up (47 field parts) and normal days come back completely clean (23, zero decorations), toggling both ways.
 
-## ✅ Sync status — v1.11–v1.66 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.66 picks 5-7 + the front-screen PLAYER button pushed 2026-08-23)
+- **✅ v1.67 (📚 DYNASTY MODE) is PUSHED & LIVE** — shipped 2026-08-23 (`?v=83`), the **8th & FINAL
+  Round-7 pick — 🎉 the board is SWEPT.** New `src/dynasty.js` (`window.TDDynasty`, key `tdr-dynasty` =
+  `{year, history, hof, titles, lastSeen}`): finish a season and the calendar turns — players get a
+  birthday, guys past 30 slide a little, and at **34 they retire** (a rookie takes the locker, so the
+  roster is always 8 deep) into your 🎓 **HALL OF FAME**. Every season is written into **TEAM HISTORY**
+  (year, record, Max Bowl or not). Your 🙋 created player never retires. It runs no games itself —
+  `season.js` gained a small `snapshot()`, `draft.js` gained `advanceYear()` + `rosterAges()` (ages
+  back-filled for old saves), and ONE guarded line in `endGame` after `TDSeason.reportResult` turns the
+  page. Opened from the 🏆 Season hub. 🐛 **Caught in testing:** the "already counted" guard keyed off the
+  CURRENT year — which advances the instant we turn the page — so it never matched and one finished season
+  counted three times. The mark now describes the finished SEASON (`team:phase:W:L:champion`) and clears
+  whenever a season is back in progress. Verified clean-slate: 2026 win 5-1 🏆 → 2027 → lose 2-4 → 2028,
+  exactly 1 title, repeats are no-ops, retiree in the HoF, roster stays 8.
+- **✅ v1.68 (📱 PORTRAIT TIDY-UP) is PUSHED & LIVE** — shipped 2026-08-23 (`?v=84`). Max's words: on a
+  phone the menu was *"really thin and all jumbled together."* Measured at 375×812 it was **five layers of
+  chrome in the top 185px** (the 8-chip row + four full-width bars stacked four deep); the bottom two
+  overlapped the canvas and the Phaser "CHOOSE YOUR TEAM" title had **10px** of clearance, while ~150px of
+  width sat unused to the right. On phones (≤500px) the bars now sit in a **2×2 grid** (XP | CHALLENGES /
+  TROPHY | REWARD ROAD): chrome 185px → **118px**, title clearance 10px → **77px**. The streak pill drops
+  below the grid, bar innards tighten, `#xp-nums` hides (the fill bar shows progress), and the label is
+  shortened to "CHALLENGES" so it reads in full. **Desktop/iPad untouched** — the change is entirely
+  inside the ≤500px query, so v1.45's wide-screen title fix still governs there. Verified: no clipping,
+  nothing off-screen, no page overflow, all three tappable bars still open their pop-ups.
+- **🔁 FULL-GAME REGRESSION PASS (2026-08-23, on the live site):** all **31** feature modules load with
+  **0 console errors**; one touchdown correctly fired five systems at once (🕺 celebration, 🎬 film capture,
+  ⭐ stat book, 🎃 event theming, score); the whole end-of-game chain works (MVP crowned, 📊 box score built,
+  event recorded, payday tallied) and returning to the menu clears the event theme (47 field parts → 23);
+  **all 12 pop-ups open cleanly** (Playoffs, Film Room, Celebrations, Box Score, Field Designer,
+  Create-A-Player, Season Events, Dynasty, Ranked, Arcade, Trophy, Season). Max's real save was snapshotted
+  and restored afterwards.
+
+## ✅ Sync status — v1.11–v1.68 are all LIVE (v1.25–v1.29 pushed 2026-08-14; v1.30–v1.38 pushed 2026-08-15; v1.39–v1.40 pushed 2026-08-17; v1.41–v1.47 pushed 2026-08-18; v1.48–v1.53 pushed 2026-08-19; v1.54–v1.55 pushed 2026-08-21 — 🎉 Round 6 swept; v1.56 Film Room whole-field replay + v1.57 tab icon/share image pushed 2026-08-21; v1.58-v1.61 — Round-7 picks 1-4 — pushed 2026-08-22; v1.62-v1.68 picks 5-8 + the PLAYER button + the portrait tidy-up pushed 2026-08-23 — Round 7 swept)
 
 Everything through **v1.19** was committed, pushed, and **live** at maxthestar.github.io/touchdown-rush.
 On **2026-08-06** v1.11–v1.14 went up (commit `6daef38`) and **v1.15** (`047623a`); on **2026-08-09**
