@@ -2770,7 +2770,12 @@ function endGame() {
   // 🏆 In a SEASON game, tell the season how it went — this records the result,
   // auto-plays the other teams' games, and moves the schedule/playoffs along.
   // We do it LAST, so the FINAL screen above still shows just THIS game's coins.
-  if (G.seasonGame && window.TDSeason) TDSeason.reportResult(G.score, G.oppScore);
+  if (G.seasonGame && window.TDSeason) {
+    TDSeason.reportResult(G.score, G.oppScore);
+    // 📚 DYNASTY: if that game ENDED the season, turn the page to the next year
+    // (writes the history book, ages the roster, retires the old-timers).
+    if (window.TDDynasty) TDDynasty.check();
+  }
 
   // 🏆 In a PLAYOFF TOURNAMENT game, report the score to the bracket — it advances
   // you (or knocks you out) and auto-plays everyone else's games. Like the season

@@ -243,6 +243,42 @@
     return true;
   }
 
+  // ============================================================
+  // 📚 DYNASTY MODE (src/dynasty.js calls this once a season ends)
+  // ------------------------------------------------------------
+  // A year passes: everybody gets a birthday. Young guys are still improving so
+  // they're fine, but once a player is past his prime he starts to slip, and at
+  // RETIRE_AGE he hangs up his cleats and a rookie takes his locker. Your own
+  // 🙋 created player never retires — he's you!
+  // ============================================================
+  const ROOKIE_AGE = 22, PRIME_AGE = 30, RETIRE_AGE = 34;
+
+  function ageOf(p) { if (p.age == null) p.age = ROOKIE_AGE + rint(0, 6); return p.age; }
+
+  function advanceYear() {
+    const retired = [];
+    roster.forEach((p, i) => {
+      ageOf(p);
+      p.age++;
+      if (p.custom) return;                      // your created star plays forever
+      if (p.age >= RETIRE_AGE) {                 // 🎓 time to retire
+        retired.push({ name: p.name, pos: p.pos, ovr: p.ovr, age: p.age });
+        const rook = makePlayer(SLOTS[i], 58, 70, { from: 'ROOKIE', scouted: true });
+        rook.age = ROOKIE_AGE + rint(0, 2);
+        roster[i] = rook;
+      } else if (p.age > PRIME_AGE) {            // past his prime — a small slide
+        p.ovr = Math.max(45, p.ovr - rint(1, 3));
+        p.pot = Math.max(p.ovr, p.pot || p.ovr);
+        p.salary = salaryOf(p.ovr, p.trait);
+      }
+    });
+    saveRoster();
+    return retired;
+  }
+
+  // Ages for the roster screen / dynasty screen (back-filled on first read).
+  function rosterAges() { return roster.map(p => ({ name: p.name, pos: p.pos, ovr: p.ovr, age: ageOf(p), custom: !!p.custom })); }
+
   // The positions you can pick for him (same eight the roster uses).
   function slotList() { return SLOTS.slice(); }
   function traitList() { return TRAITS.map(t => ({ e: t.e, n: t.n })); }
@@ -917,6 +953,8 @@
     onMenu,             // refresh the 🌱 TEAM-button badge when the menu shows
     // 🙋 Create-A-Player (createplayer.js) — your one custom superstar
     getCustom, setCustom, clearCustom, slotList, traitList,
+    // 📚 Dynasty Mode (dynasty.js) — a year passes on your roster
+    advanceYear, rosterAges,
     // Small dev helpers (handy for testing; harmless in play).
     _debug: {
       state: () => ({ nextDraftAt: nextDraftAt(), draftReady: draftReady(), payroll: teamPayroll(), requests: requests.length, draft }),

@@ -345,6 +345,18 @@
   window.TDSeason = {
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
-    hasSeason: () => !!load()   // is a season in progress?
+    hasSeason: () => !!load(),  // is a season in progress?
+    // 📚 DYNASTY MODE (dynasty.js) reads these to know when a season has finished
+    // and how it went, so it can turn the page to the next year.
+    snapshot: () => {
+      const s = load(); if (!s) return null;
+      const r = s.rec && s.rec[s.you];
+      return {
+        you: s.you, phase: s.phase, champion: s.champion,
+        w: r ? r.w : 0, l: r ? r.l : 0,
+        over: s.phase === 'champion' || s.phase === 'eliminated',
+        won: s.phase === 'champion'
+      };
+    }
   };
 })();
