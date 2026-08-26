@@ -134,7 +134,22 @@
     // short beat is enough for the buttons to lay out.
     setTimeout(show, n === 'menu' ? 800 : 150);
   }
-  function maybeStart(n) { start(n, false); }
+  // Auto-start a tour on its own — EXCEPT the menu one.
+  //
+  // The menu tour used to pop open the moment a new player arrived, on top of
+  // the team screen (and right behind the daily-gift pop-up). Two pop-ups
+  // before you've touched a football is a great way to lose someone in the
+  // first five seconds, and it hides the one thing they came for: PLAY.
+  //
+  // The best coaching happens WHILE you play, not before — so the 'offense'
+  // and 'defense' tours still fire on your first snap and your first defensive
+  // series, exactly where the buttons they talk about actually are. The menu
+  // walkthrough is still one tap away on the 📖 HOW TO button, which calls
+  // start('menu', true) and skips this gate.
+  function maybeStart(n) {
+    if (n === 'menu') return;          // never ambush a new player on the menu
+    start(n, false);
+  }
 
   // If the screen changes size or flips (rotate the iPad, resize the window), the
   // buttons move — so re-place the neon box + card to keep hugging the right one.

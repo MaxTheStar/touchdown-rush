@@ -507,7 +507,17 @@
   function onMenu() {
     paintChip();
     // A present is waiting? Show the calendar once per visit, like a doorbell.
-    if (!autoOpened && claimableDay()) {
+    //
+    // …but NOT to a brand-new player. Someone who has never played a down
+    // doesn't want a rewards calendar for a game they haven't tried yet — they
+    // want the football. A pop-up in their face before the first snap is the
+    // fastest way to lose them (and game portals check for exactly this).
+    // So: first visit = straight to the team screen, one tap to PLAY. The 🎁
+    // DAILY button is still right there, glowing, whenever they want it.
+    // Once they've finished a game they're a real player, and the doorbell
+    // rings again like it always did.
+    const played = load('games', 0) > 0;
+    if (played && !autoOpened && claimableDay()) {
       autoOpened = true;
       setTimeout(() => openOv('daily-modal'), 600);
     }
