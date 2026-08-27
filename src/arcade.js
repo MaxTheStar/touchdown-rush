@@ -61,9 +61,20 @@
             <div class="arc-card-bl">Stop the kick in the green — back up 5 yards each make!</div></div>
           <div class="arc-card-best">BEST<b>${best.fg}<small>yd</small></b></div>
         </div>
+        <div class="arc-card" data-drill="food">
+          <div class="arc-card-ic">🍿</div>
+          <div class="arc-card-tx"><div class="arc-card-nm">CONCESSION RUSH</div>
+            <div class="arc-card-bl">Head over to the snack bar — take the orders, serve the fans!</div></div>
+          <div class="arc-card-best">BEST<b>${(window.TDFood && TDFood._state().best) || 0}<small>🪙</small></b></div>
+        </div>
       </div>`;
     s.querySelectorAll('[data-drill]').forEach(c => c.addEventListener('pointerdown', e => {
-      e.preventDefault(); c.getAttribute('data-drill') === 'target' ? startTarget() : startFG();
+      e.preventDefault();
+      const d = c.getAttribute('data-drill');
+      if (d === 'target') startTarget();
+      else if (d === 'fg') startFG();
+      // 🍿 the snack bar is its own little game (src/concession.js) — hand off to it
+      else if (d === 'food' && window.TDFood) { close(); TDFood.open(); }
     }));
   }
 

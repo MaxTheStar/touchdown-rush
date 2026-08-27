@@ -2753,6 +2753,9 @@ function endGame() {
   // 🏟️ Stadium gate receipts: your fans pay a bonus based on how big you've
   // built your home stadium — done before the FINAL screen so it's in the payday.
   if (window.TDStadium) TDStadium.gameBonus();
+  // 🍿 Concession sales: every snack stand you own sold to the crowd all game
+  // long — also before the FINAL screen, so it lands in the payday too.
+  if (window.TDFood) TDFood.gameBonus();
   // 🏅 Ranked Ladder: a win earns a ⭐ (and maybe a promotion + coin bonus);
   // a loss can cost a division. A rank-change ribbon flies in. Before the FINAL
   // screen so any promotion coins count in this game's payday.

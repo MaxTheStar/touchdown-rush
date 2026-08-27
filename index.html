@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=85" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=85" />
+  <link rel="icon" type="image/png" href="favicon.png?v=86" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=86" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=85" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=86" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=85" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=86" />
   <style>
     html, body {
       margin: 0;
@@ -1292,6 +1292,107 @@
     .arc-res-coins { font: 800 15px "Arial Black", Arial; color: #46e3a0; }
     .arc-res-btns { display: flex; gap: 10px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
 
+    /* ---- 🍿 CONCESSION STANDS (src/concession.js) ----------------------- */
+    /* The snack-bar game: a hub (stands + crew), a how-to card, and the RUSH
+       itself — a line of fans, a tray, and the counter buttons. Same dark
+       pop-up palette as the Practice Arcade so it feels like the same game. */
+    .food-hud { display: none; align-items: center; justify-content: space-between; gap: 8px;
+      margin: 4px 2px 8px; font: 800 15px "Arial Black", Arial; }
+    .food-hud-c { color: #ffe066; }
+    .food-hud-f { color: #ff8a3d; flex: 1; text-align: center; font-size: 13px; }
+    .food-hud-t { color: #46e3a0; font-variant-numeric: tabular-nums; }
+    .food-stage { min-height: 268px; position: relative; }
+    /* 🏬 the hub */
+    .food-stats { display: flex; gap: 8px; margin: 6px 0 10px; }
+    .food-stat { flex: 1; text-align: center; padding: 8px 4px; border-radius: 12px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
+    .food-stat b { display: block; font: 800 20px "Arial Black", Arial; color: #ffd54a; }
+    .food-stat span { font: 700 9px Arial; letter-spacing: .08em; color: #8fb0d8; text-transform: uppercase; }
+    .food-go { margin: 2px 0 8px; padding: 14px; border-radius: 14px; text-align: center;
+      font: 800 19px "Arial Black", Arial; color: #2a0d00; letter-spacing: .5px;
+      background: linear-gradient(180deg, #ffd24d, #ff9a1c); border: 2px solid #ffe6a8;
+      box-shadow: 0 5px 16px rgba(255,150,30,.4); -webkit-tap-highlight-color: transparent;
+      touch-action: none; cursor: pointer; }
+    .food-go:active { transform: scale(0.98); }
+    .food-note { font: 600 12px Arial; color: #aeb9cc; text-align: center; margin: 0 4px 8px; }
+    .food-note b { color: #46e3a0; }
+    .food-help { text-align: center; font: 800 12px Arial; letter-spacing: .06em; color: #8fb0d8;
+      padding: 8px; margin-bottom: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; }
+    .food-sect { font: 800 11px Arial; letter-spacing: .08em; color: #ffd54a; text-transform: uppercase;
+      margin: 12px 2px 6px; text-align: left; }
+    .food-row { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px;
+      margin-bottom: 7px; border-radius: 12px; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10); }
+    .food-row.own { border-color: rgba(70,227,160,0.35); background: rgba(70,227,160,0.08); }
+    .food-row-ic { font-size: 27px; width: 38px; text-align: center; flex: none; }
+    .food-row-tx { flex: 1; min-width: 0; }
+    .food-row-nm { font: 800 13px "Arial Black", Arial; color: #fff; }
+    .food-row-bl { font: 600 11px Arial; color: #aeb9cc; margin-top: 2px; }
+    .food-row-pk { font: 700 10px Arial; color: #46e3a0; margin-top: 3px; }
+    .food-buy { flex: none; padding: 8px 11px; border-radius: 10px; font: 800 12px "Arial Black", Arial;
+      color: #2a0d00; background: linear-gradient(180deg, #ffd24d, #ff9a1c); border: 2px solid #ffe6a8;
+      -webkit-tap-highlight-color: transparent; touch-action: none; cursor: pointer; }
+    .food-buy:active { transform: scale(0.96); }
+    .food-buy.no { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.14); color: #8fb0d8; }
+    .food-tag { flex: none; font: 800 10px Arial; letter-spacing: .08em; padding: 7px 9px; border-radius: 9px; }
+    .food-tag.own { color: #46e3a0; background: rgba(70,227,160,0.14); }
+    /* 📖 how to play */
+    .food-how { text-align: left; padding: 2px; }
+    .food-how-t { font: 800 16px "Arial Black", Arial; color: #ffd54a; text-align: center; margin-bottom: 10px; }
+    .food-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 9px;
+      font: 600 12.5px Arial; color: #cdd6e6; }
+    .food-step span { font-size: 17px; flex: none; }
+    .food-step b { color: #fff; }
+    /* 🔥 the rush */
+    .food-line { display: flex; gap: 7px; align-items: flex-end; min-height: 112px; margin-bottom: 8px; }
+    .food-cust { flex: 1; min-width: 0; padding: 7px 4px; border-radius: 12px; text-align: center;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10); opacity: .72; }
+    .food-cust.front { opacity: 1; background: rgba(255,214,74,0.10); border-color: rgba(255,214,74,0.40); }
+    .food-face { font-size: 26px; line-height: 1.1; }
+    .food-bubble { display: flex; justify-content: center; gap: 2px; flex-wrap: wrap; margin: 3px 0 5px;
+      font-size: 17px; min-height: 22px; }
+    .food-want.done { opacity: .30; }
+    .food-pat { height: 7px; border-radius: 99px; overflow: hidden; background: rgba(0,0,0,0.35); }
+    .food-pat i { display: block; height: 100%; background: #46e3a0; }
+    .food-pat i.mid { background: #ffd54a; }
+    .food-pat i.low { background: #ff6b5e; }
+    .food-empty { flex: 1; text-align: center; font: 700 12px Arial; color: #8fb0d8; padding: 40px 0; }
+    .food-tray { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 12px;
+      margin-bottom: 9px; background: rgba(255,255,255,0.07); border: 2px dashed rgba(255,255,255,0.20); }
+    .food-tray-lab { font: 800 10px Arial; letter-spacing: .1em; color: #8fb0d8; flex: none; }
+    .food-tray-in { flex: 1; font-size: 22px; letter-spacing: 2px; text-align: left; min-height: 26px; }
+    .food-tray-in i { font: 600 12px Arial; color: #6f8199; }
+    .food-tray.pop { animation: foodPop .18s ease-out; }
+    .food-tray.shake { animation: foodShake .26s ease-out; border-color: rgba(255,107,94,0.7); }
+    @keyframes foodPop { 50% { transform: scale(1.03); } }
+    @keyframes foodShake { 25% { transform: translateX(-6px); } 60% { transform: translateX(6px); } }
+    .food-tools { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+    .food-tool { flex: 1 1 62px; max-width: 92px; padding: 9px 4px; border-radius: 12px; text-align: center;
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      border: 2px solid rgba(255,255,255,0.16); -webkit-tap-highlight-color: transparent;
+      touch-action: none; cursor: pointer; }
+    .food-tool:active { transform: scale(0.95); background: rgba(255,214,74,0.20); }
+    .food-tool span { display: block; font-size: 24px; line-height: 1.1; }
+    .food-tool b { display: block; font: 800 9px Arial; letter-spacing: .04em; color: #cdd6e6; margin-top: 2px; }
+    .food-flash { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); pointer-events: none;
+      font: 800 17px "Arial Black", Arial; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      animation: foodFlash .9s ease-out forwards; }
+    .food-flash.good { color: #46e3a0; }
+    .food-flash.bad { color: #ff9a9a; }
+    @keyframes foodFlash { to { transform: translate(-50%, -26px); opacity: 0; } }
+    /* 🔔 the bell */
+    .food-over { padding: 20px 6px 4px; text-align: center; }
+    .food-over-t { font: 800 17px "Arial Black", Arial; color: #cdd6e6; }
+    .food-over-n { font: 700 13px Arial; color: #aeb9cc; margin-top: 7px; }
+    .food-over-c { font: 800 30px "Arial Black", Arial; color: #46e3a0; margin: 9px 0 2px; }
+    .food-over-cap { font: 600 11px Arial; color: #8fb0d8; }
+    .food-over-best { font: 800 15px "Arial Black", Arial; color: #ffd60a; margin-top: 8px;
+      text-shadow: 0 0 16px rgba(255,214,10,.5); }
+    .food-over-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+    @media (prefers-reduced-motion: reduce) {
+      .food-tray.pop, .food-tray.shake, .food-flash { animation: none; }
+    }
+
     /* ---- 🎟️ REWARD ROAD (src/road.js) ---------------------------------- */
     /* The 3rd slim menu bar, stacked under the Trophy Case (teal accent). */
     #road-bar {
@@ -2325,6 +2426,7 @@
       <div class="ov-btn" id="open-field">🎨 FIELD DESIGNER</div>
       <div class="ov-btn" id="open-cap">🙋 CREATE-A-PLAYER</div>
       <div class="ov-btn" id="open-nick">🌟 PLAYER NICKNAMES</div>
+      <div class="ov-btn" id="open-food">🍿 CONCESSION STANDS</div>
       <div id="shop-items"></div>
       <div class="shop-section">🎽 STYLES — new looks for your squad</div>
       <div id="shop-uniforms"></div>
@@ -2397,6 +2499,21 @@
       <div id="arc-stage" class="arc-stage"></div>
       <div class="ov-btn" id="arc-back">← ARCADE</div>
       <div class="ov-btn" id="arcade-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 🍿 CONCESSION STANDS — a whole little snack-bar game inside the game.
+       concession.js fills #food-stage (the hub / how-to / the rush / the bell)
+       and #food-hud (coins, streak, clock). Opened from the Pro Shop and the
+       Practice Arcade. -->
+  <div class="ov" id="food-modal">
+    <div class="ov-card">
+      <div class="ov-title">🍿 CONCESSION STANDS</div>
+      <div class="ov-sub">Serve the fans, open more stands, hire a crew — and rake in the coins!</div>
+      <div id="food-hud" class="food-hud"></div>
+      <div id="food-stage" class="food-stage"></div>
+      <div class="ov-btn" id="food-back">← CONCESSIONS</div>
+      <div class="ov-btn" id="food-close">DONE</div>
     </div>
   </div>
 
@@ -2767,42 +2884,43 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=85"></script>
-  <script src="src/sound.js?v=85"></script>
-  <script src="src/shop.js?v=85"></script>
-  <script src="src/spin.js?v=85"></script>
-  <script src="src/challenges.js?v=85"></script>
-  <script src="src/progress.js?v=85"></script>
-  <script src="src/streak.js?v=85"></script>
-  <script src="src/achievements.js?v=85"></script>
-  <script src="src/trophy.js?v=85"></script>
-  <script src="src/records.js?v=85"></script>
-  <script src="src/road.js?v=85"></script>
-  <script src="src/cards.js?v=85"></script>
-  <script src="src/stadium.js?v=85"></script>
-  <script src="src/ranked.js?v=85"></script>
-  <script src="src/halftime.js?v=85"></script>
-  <script src="src/uniform.js?v=85"></script>
-  <script src="src/powerup.js?v=85"></script>
-  <script src="src/arcade.js?v=85"></script>
-  <script src="src/nemesis.js?v=85"></script>
-  <script src="src/weather.js?v=85"></script>
-  <script src="src/season.js?v=85"></script>
-  <script src="src/playoffs.js?v=85"></script>
-  <script src="src/film.js?v=85"></script>
-  <script src="src/celebration.js?v=85"></script>
-  <script src="src/gamestats.js?v=85"></script>
-  <script src="src/boxscore.js?v=85"></script>
-  <script src="src/field.js?v=85"></script>
-  <script src="src/draft.js?v=85"></script>
-  <script src="src/createplayer.js?v=85"></script>
-  <script src="src/nicknames.js?v=85"></script>
-  <script src="src/special.js?v=85"></script>
-  <script src="src/events.js?v=85"></script>
-  <script src="src/dynasty.js?v=85"></script>
-  <script src="src/ads.js?v=85"></script>
-  <script src="src/tour.js?v=85"></script>
-  <script src="src/kick.js?v=85"></script>
-  <script src="src/main.js?v=85"></script>
+  <script src="src/stats.js?v=86"></script>
+  <script src="src/sound.js?v=86"></script>
+  <script src="src/shop.js?v=86"></script>
+  <script src="src/spin.js?v=86"></script>
+  <script src="src/challenges.js?v=86"></script>
+  <script src="src/progress.js?v=86"></script>
+  <script src="src/streak.js?v=86"></script>
+  <script src="src/achievements.js?v=86"></script>
+  <script src="src/trophy.js?v=86"></script>
+  <script src="src/records.js?v=86"></script>
+  <script src="src/road.js?v=86"></script>
+  <script src="src/cards.js?v=86"></script>
+  <script src="src/stadium.js?v=86"></script>
+  <script src="src/ranked.js?v=86"></script>
+  <script src="src/halftime.js?v=86"></script>
+  <script src="src/uniform.js?v=86"></script>
+  <script src="src/powerup.js?v=86"></script>
+  <script src="src/arcade.js?v=86"></script>
+  <script src="src/nemesis.js?v=86"></script>
+  <script src="src/weather.js?v=86"></script>
+  <script src="src/season.js?v=86"></script>
+  <script src="src/playoffs.js?v=86"></script>
+  <script src="src/film.js?v=86"></script>
+  <script src="src/celebration.js?v=86"></script>
+  <script src="src/gamestats.js?v=86"></script>
+  <script src="src/boxscore.js?v=86"></script>
+  <script src="src/field.js?v=86"></script>
+  <script src="src/draft.js?v=86"></script>
+  <script src="src/createplayer.js?v=86"></script>
+  <script src="src/nicknames.js?v=86"></script>
+  <script src="src/special.js?v=86"></script>
+  <script src="src/events.js?v=86"></script>
+  <script src="src/dynasty.js?v=86"></script>
+  <script src="src/ads.js?v=86"></script>
+  <script src="src/tour.js?v=86"></script>
+  <script src="src/concession.js?v=86"></script>
+  <script src="src/kick.js?v=86"></script>
+  <script src="src/main.js?v=86"></script>
 </body>
 </html>
