@@ -418,7 +418,8 @@ function create() {
     makePlayer(this, 'red', 'DB', { cover: 3 }), // covers WR #3
   ];
 
-  ball = this.physics.add.sprite(0, 0, 'ball').setDepth(6);
+  // Drawn CHIBI_SS× bigger, shown at the same size — crisp, not blocky.
+  ball = this.physics.add.sprite(0, 0, 'ball').setDepth(6).setScale(1 / CHIBI_SS);
 
   // Soft ground shadows: a dark oval painted under every player + the ball,
   // one frame at a time (see drawShadows). It's what makes the little figures
@@ -445,7 +446,7 @@ function create() {
 
   // The referee — a plain sprite (no physics body), so he's on the field
   // for realism but never blocks, tackles, or gets in the way.
-  referee = this.add.sprite(0, 0, 'ref').setDepth(4);
+  referee = this.add.sprite(0, 0, 'ref').setDepth(4).setScale(1 / CHIBI_SS);
 
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
@@ -2956,7 +2957,9 @@ function buildTeamMenu(scene) {
   M.swatch = scene.add.graphics().setScrollFactor(0).setDepth(93);
 
   // The preview player, wearing the team you're looking at (texture 'blue').
-  M.preview = scene.add.sprite(mid, 300, 'blue').setScale(4.5)
+  // Same on-screen size as before (4.5× the old art), but now drawn from the
+  // big CHIBI_SS texture — so the hero of the front screen is finally crisp.
+  M.preview = scene.add.sprite(mid, 300, 'blue').setScale(4.5 / CHIBI_SS)
     .setScrollFactor(0).setDepth(94);
 
   // 🧾 A tidy info CARD that groups the team's name + ratings so they read as ONE
@@ -3899,6 +3902,14 @@ function place(o, x, y) {
 
 function makePlayer(scene, color, role, opts) {
   const s = scene.physics.add.sprite(0, 0, color);
+  // The art is painted CHIBI_SS times bigger (see makeChibiTexture), so shrink
+  // it back down: identical size on the field, four times the detail.
+  s.setScale(1 / CHIBI_SS);
+  // Leave the collision body alone — Phaser re-derives it from the texture
+  // times the sprite's scale on its first physics step, which lands right back
+  // on the 40×36 body the game has always used. (Don't "fix" it by calling
+  // body.setSize() here: the size you pass gets scaled too, so it comes out 4×
+  // too small and players slide off the sideline.)
   s.setCollideWorldBounds(true);
   s.setDepth(5);
   const o = { s, role, num: opts.num, route: opts.route, cover: opts.cover, startY: 0, startX: 0, label: null, trail: [] };
@@ -4241,55 +4252,92 @@ function drawShadows() {
 // rim below — so each little guy looks rounded and three-dimensional instead of
 // flat. We can call this again with the same `key` to REPAINT a team (handy when
 // you flip teams in the menu), so we clear the old picture first.
+// 🔍 HOW SHARP THE PLAYERS ARE DRAWN.
+// The art used to be painted into a tiny 40×36 picture. On the field that was
+// passable, but the team menu blows ONE player up to fill the screen — and
+// stretching a 40-pixel picture that big makes it soft and blocky. (Game
+// portals check for exactly this: "high resolution, free of graphical
+// defects".) So now we draw everything FOUR TIMES bigger and shrink the
+// sprite back down, which is the classic trick for crisp art: same size on
+// screen, four times the detail, and it stays sharp on a big monitor too.
+//
+// If you ever change this number, that's all you change — every player, the
+// menu preview and the physics all follow it automatically.
+const CHIBI_SS = 4;
+
 function makeChibiTexture(scene, key, jersey, helmet) {
   if (scene.textures.exists(key)) scene.textures.remove(key);
+  const k = CHIBI_SS;                     // everything below is drawn k× bigger
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-  // Shoulder pads (jersey), shaded: base → dark bottom rim → bright top highlight
-  g.fillStyle(jersey);          g.fillEllipse(20, 25, 32, 17);
-  g.fillStyle(0x000000, 0.20);  g.fillEllipse(20, 29, 30, 9);     // ambient-occlusion under the pads
-  g.fillStyle(0xffffff, 0.16);  g.fillEllipse(20, 20, 26, 8);     // sheen across the top of the pads
+  // A soft shadow on the grass, so players sit ON the field instead of
+  // floating above it.
+  g.fillStyle(0x000000, 0.22);  g.fillEllipse(20*k, 30*k, 31*k, 9*k);
 
-  // Arms (skin tone) poking out the sides
-  g.fillStyle(0xd9a066);        g.fillCircle(5, 25, 4); g.fillCircle(35, 25, 4);
+  // Shoulder pads (jersey): a dark rim first — a thin outline makes a player
+  // readable against bright grass — then the colour, shading, and a top sheen.
+  g.fillStyle(0x0a0f18, 0.45);  g.fillEllipse(20*k, 25*k, 34.5*k, 19*k);
+  g.fillStyle(jersey);          g.fillEllipse(20*k, 25*k, 32*k, 17*k);
+  g.fillStyle(0x000000, 0.22);  g.fillEllipse(20*k, 29*k, 30*k, 9*k);
+  g.fillStyle(0xffffff, 0.17);  g.fillEllipse(20*k, 20.4*k, 25*k, 7*k);
 
-  // Helmet — a rounded ball with a shine and a face mask
-  g.fillStyle(helmet);          g.fillCircle(20, 15, 13);         // the helmet
-  g.fillStyle(0x000000, 0.18);  g.fillEllipse(20, 19, 22, 12);    // shade at the base of the helmet
-  g.fillStyle(helmet);          g.fillCircle(20, 14, 12);         // re-cap the top so the shade sits low
-  g.fillStyle(0xffffff, 0.30);  g.fillEllipse(15, 10, 11, 7);     // top-left specular highlight (the shine)
-  g.fillStyle(0xe8e8e8);        g.fillEllipse(20, 20, 15, 5);     // face mask (light grey bar up front)
-  g.fillStyle(jersey);          g.fillRect(18, 3, 4, 12);         // helmet stripe (jersey colour, so it shows)
+  // Arms poking out the sides (rimmed to match the pads)
+  g.fillStyle(0x0a0f18, 0.45);  g.fillCircle(5*k, 25*k, 5*k);  g.fillCircle(35*k, 25*k, 5*k);
+  g.fillStyle(0xd9a066);        g.fillCircle(5*k, 25*k, 4*k);  g.fillCircle(35*k, 25*k, 4*k);
 
-  g.generateTexture(key, 40, 36);
+  // ---- The helmet ----------------------------------------------------------
+  g.fillStyle(0x0a0f18, 0.5);   g.fillCircle(20*k, 15*k, 14*k);   // dark rim
+  g.fillStyle(helmet);          g.fillCircle(20*k, 15*k, 13*k);   // the shell
+  g.fillStyle(0x000000, 0.20);  g.fillEllipse(20*k, 19*k, 22*k, 12*k);  // shade at the jaw
+  g.fillStyle(helmet);          g.fillCircle(20*k, 14*k, 12*k);   // re-cap so the shade sits low
+  g.fillStyle(0xffffff, 0.12);  g.fillEllipse(20*k, 11.5*k, 21*k, 11*k); // broad soft light
+  g.fillStyle(0xffffff, 0.34);  g.fillEllipse(15.5*k, 10*k, 10.5*k, 6.5*k); // the bright shine
+  g.fillStyle(jersey);          g.fillRect(18*k, 3*k, 4*k, 12*k); // stripe over the top
+
+  // Face mask: a shadow, the pale cage, then two real bars across it. At 4×
+  // there's finally room for bars, which is what reads as "football helmet"
+  // rather than "ball with a smile".
+  g.fillStyle(0x000000, 0.30);  g.fillEllipse(20*k, 21.2*k, 16*k, 5.6*k);
+  g.fillStyle(0xe8edf2);        g.fillEllipse(20*k, 20.4*k, 15*k, 5*k);
+  g.fillStyle(0x8f9aa6, 0.85);  g.fillRect(13*k, 20.1*k, 14*k, 0.7*k);
+  g.fillStyle(0x8f9aa6, 0.65);  g.fillRect(14.5*k, 22*k, 11*k, 0.6*k);
+
+  g.generateTexture(key, 40*k, 36*k);
   g.destroy();
 }
 
 function makeBallTexture(scene) {
+  const k = CHIBI_SS;                     // drawn big, shown small — same trick as the players
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(0x6f3410);       g.fillEllipse(9, 6, 16, 10);       // dark leather base
-  g.fillStyle(0x8B4513);       g.fillEllipse(9, 5, 15, 9);        // brown top
-  g.fillStyle(0xffffff, 0.35); g.fillEllipse(6, 3.5, 6, 3);       // little shine
-  g.fillStyle(0xffffff);       g.fillRect(6, 4.4, 6, 1.2);        // white laces stripe
-  g.lineStyle(1, 0xffffff, 0.9);
-  for (const lx of [7, 9, 11]) { g.beginPath(); g.moveTo(lx, 3.4); g.lineTo(lx, 6.6); g.strokePath(); }
-  g.generateTexture('ball', 18, 12);
+  g.fillStyle(0x0a0f18, 0.45);  g.fillEllipse(9*k, 6*k, 17.5*k, 11.5*k);  // dark rim
+  g.fillStyle(0x6f3410);        g.fillEllipse(9*k, 6*k, 16*k, 10*k);      // dark leather base
+  g.fillStyle(0x8B4513);        g.fillEllipse(9*k, 5.4*k, 15*k, 9*k);     // brown top
+  g.fillStyle(0xffffff, 0.33);  g.fillEllipse(6*k, 3.6*k, 6*k, 3*k);      // little shine
+  g.fillStyle(0xffffff);        g.fillRect(6*k, 4.5*k, 6*k, 1.1*k);       // white laces stripe
+  g.fillStyle(0xffffff, 0.95);
+  for (const lx of [7, 9, 11]) g.fillRect((lx - 0.22)*k, 3.5*k, 0.45*k, 3*k);
+  g.generateTexture('ball', 18*k, 12*k);
   g.destroy();
 }
 
 function makeRefTexture(scene) {
+  const k = CHIBI_SS;                     // matches the players, so the ref isn't the blurry one
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
+  g.fillStyle(0x000000, 0.20);  g.fillEllipse(20*k, 30*k, 31*k, 9*k);     // ground shadow
   // black-and-white striped shirt (chibi, seen from above), lightly shaded
-  g.fillStyle(0xffffff);        g.fillEllipse(20, 25, 32, 17);
+  g.fillStyle(0x0a0f18, 0.45);  g.fillEllipse(20*k, 25*k, 34.5*k, 19*k);  // dark rim
+  g.fillStyle(0xffffff);        g.fillEllipse(20*k, 25*k, 32*k, 17*k);
   g.fillStyle(0x000000);
-  for (let i = 0; i < 4; i++) g.fillRect(9 + i * 7, 17, 3, 16);
-  g.fillStyle(0x000000, 0.16);  g.fillEllipse(20, 29, 30, 8);     // shade under the shirt
+  for (let i = 0; i < 4; i++) g.fillRect((9 + i * 7)*k, 17*k, 3*k, 16*k);
+  g.fillStyle(0x000000, 0.16);  g.fillEllipse(20*k, 29*k, 30*k, 8*k);     // shade under the shirt
   // arms
-  g.fillStyle(0xd9a066);        g.fillCircle(5, 25, 4); g.fillCircle(35, 25, 4);
+  g.fillStyle(0x0a0f18, 0.45);  g.fillCircle(5*k, 25*k, 5*k);  g.fillCircle(35*k, 25*k, 5*k);
+  g.fillStyle(0xd9a066);        g.fillCircle(5*k, 25*k, 4*k);  g.fillCircle(35*k, 25*k, 4*k);
   // head with a black cap + a shine
-  g.fillStyle(0xd9a066);        g.fillCircle(20, 15, 12);
-  g.fillStyle(0x111111);        g.fillEllipse(20, 10, 26, 12);
-  g.fillStyle(0xffffff, 0.22);  g.fillEllipse(16, 8, 9, 4);
-  g.generateTexture('ref', 40, 36);
+  g.fillStyle(0x0a0f18, 0.45);  g.fillCircle(20*k, 15*k, 13*k);
+  g.fillStyle(0xd9a066);        g.fillCircle(20*k, 15*k, 12*k);
+  g.fillStyle(0x111111);        g.fillEllipse(20*k, 10*k, 26*k, 12*k);
+  g.fillStyle(0xffffff, 0.22);  g.fillEllipse(16*k, 8*k, 9*k, 4*k);
+  g.generateTexture('ref', 40*k, 36*k);
   g.destroy();
 }
