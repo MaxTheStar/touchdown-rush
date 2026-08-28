@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=91" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=91" />
+  <link rel="icon" type="image/png" href="favicon.png?v=92" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=92" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=91" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=92" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=91" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=92" />
   <style>
     html, body {
       margin: 0;
@@ -109,9 +109,17 @@
       font-size: 15px; font-weight: 800; color: #ffe066; }
     #hud-spot  { top: calc(max(10px, env(safe-area-inset-top)) + 68px); left: max(12px, env(safe-area-inset-left));
       font-size: 12px; font-weight: 700; color: #dfe6f2; }
+    /* 💡 The in-play hint ("TAP a receiver to throw…") used to sit 92px off the
+       bottom — right ON TOP of the controls. The D-pad is three 62px rows plus
+       gaps (198px tall) sitting 20px up, so its top edge is 218px from the
+       bottom; the hint's own box reached 720px down a 812px screen and landed
+       across the ▲, ▶, 1 and 3 buttons. It never blocked a tap (it's
+       pointer-events:none) but it made both the words and the buttons harder
+       to read, which is exactly the sort of thing a reviewer notices.
+       It now clears the tallest cluster with a little air to spare. */
     #hud-help  {
       left: 50%; transform: translateX(-50%);
-      bottom: max(92px, calc(env(safe-area-inset-bottom) + 74px));
+      bottom: max(228px, calc(env(safe-area-inset-bottom) + 210px));
       max-width: min(86vw, 520px); text-align: center;
       font-size: 13px; font-weight: 700; color: #fff;
       background: rgba(10,16,32,0.42); padding: 5px 12px; border-radius: 11px;
@@ -1487,6 +1495,25 @@
         top: calc(max(12px, env(safe-area-inset-top)) + 125px);
         right: max(12px, env(safe-area-inset-right));
       }
+    }
+
+    /* 📱 THE SMALLEST PHONES (iPhone SE and friends, 320px wide).
+       The v1.68 status grid and the menu's button rows were both sized for a
+       ~375px screen, and on a 320px one they ran clean off the edge:
+         • the right-hand bars (CHALLENGES, REWARD ROAD) sat at left:186 with
+           a width of 166 — ending at 352 on a 320px screen, so 32px of each
+           was simply cut off;
+         • the CHALLENGE & WEATHER row measured 355px wide, hanging 18px off
+           BOTH sides, which clipped the 👑 and 😈 buttons you tap.
+       Everything here just tightens the same layout to fit — no buttons are
+       removed and nothing moves anywhere new. */
+    @media (max-width: 360px) {
+      #xp-bar, #chal-bar, #trophy-bar, #road-bar { width: 140px; }
+      #chal-bar, #road-bar { left: 160px; }
+      /* the menu's two button rows shrink their padding instead of overflowing */
+      .tm-diff-row { gap: 6px; }
+      body.menu #tm-diff .diff-btn { padding: 7px 8px; font-size: 13.5px; }
+      .tm-diff-lab { font-size: 11px; letter-spacing: .5px; }
     }
     /* Reward Road pop-up bits (the tier rows reuse the .chal-row look). */
     .road-top-row { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 2px 5px; }
@@ -2922,44 +2949,44 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=91"></script>
-  <script src="src/sound.js?v=91"></script>
-  <script src="src/shop.js?v=91"></script>
-  <script src="src/spin.js?v=91"></script>
-  <script src="src/challenges.js?v=91"></script>
-  <script src="src/progress.js?v=91"></script>
-  <script src="src/streak.js?v=91"></script>
-  <script src="src/achievements.js?v=91"></script>
-  <script src="src/trophy.js?v=91"></script>
-  <script src="src/records.js?v=91"></script>
-  <script src="src/road.js?v=91"></script>
-  <script src="src/cards.js?v=91"></script>
-  <script src="src/stadium.js?v=91"></script>
-  <script src="src/ranked.js?v=91"></script>
-  <script src="src/halftime.js?v=91"></script>
-  <script src="src/uniform.js?v=91"></script>
-  <script src="src/powerup.js?v=91"></script>
-  <script src="src/arcade.js?v=91"></script>
-  <script src="src/nemesis.js?v=91"></script>
-  <script src="src/weather.js?v=91"></script>
-  <script src="src/season.js?v=91"></script>
-  <script src="src/playoffs.js?v=91"></script>
-  <script src="src/film.js?v=91"></script>
-  <script src="src/celebration.js?v=91"></script>
-  <script src="src/juice.js?v=91"></script>
-  <script src="src/gamestats.js?v=91"></script>
-  <script src="src/boxscore.js?v=91"></script>
-  <script src="src/field.js?v=91"></script>
-  <script src="src/draft.js?v=91"></script>
-  <script src="src/createplayer.js?v=91"></script>
-  <script src="src/nicknames.js?v=91"></script>
-  <script src="src/special.js?v=91"></script>
-  <script src="src/events.js?v=91"></script>
-  <script src="src/dynasty.js?v=91"></script>
-  <script src="src/ads.js?v=91"></script>
-  <script src="src/tour.js?v=91"></script>
-  <script src="src/concession.js?v=91"></script>
-  <script src="src/kick.js?v=91"></script>
-  <script src="src/main.js?v=91"></script>
+  <script src="src/stats.js?v=92"></script>
+  <script src="src/sound.js?v=92"></script>
+  <script src="src/shop.js?v=92"></script>
+  <script src="src/spin.js?v=92"></script>
+  <script src="src/challenges.js?v=92"></script>
+  <script src="src/progress.js?v=92"></script>
+  <script src="src/streak.js?v=92"></script>
+  <script src="src/achievements.js?v=92"></script>
+  <script src="src/trophy.js?v=92"></script>
+  <script src="src/records.js?v=92"></script>
+  <script src="src/road.js?v=92"></script>
+  <script src="src/cards.js?v=92"></script>
+  <script src="src/stadium.js?v=92"></script>
+  <script src="src/ranked.js?v=92"></script>
+  <script src="src/halftime.js?v=92"></script>
+  <script src="src/uniform.js?v=92"></script>
+  <script src="src/powerup.js?v=92"></script>
+  <script src="src/arcade.js?v=92"></script>
+  <script src="src/nemesis.js?v=92"></script>
+  <script src="src/weather.js?v=92"></script>
+  <script src="src/season.js?v=92"></script>
+  <script src="src/playoffs.js?v=92"></script>
+  <script src="src/film.js?v=92"></script>
+  <script src="src/celebration.js?v=92"></script>
+  <script src="src/juice.js?v=92"></script>
+  <script src="src/gamestats.js?v=92"></script>
+  <script src="src/boxscore.js?v=92"></script>
+  <script src="src/field.js?v=92"></script>
+  <script src="src/draft.js?v=92"></script>
+  <script src="src/createplayer.js?v=92"></script>
+  <script src="src/nicknames.js?v=92"></script>
+  <script src="src/special.js?v=92"></script>
+  <script src="src/events.js?v=92"></script>
+  <script src="src/dynasty.js?v=92"></script>
+  <script src="src/ads.js?v=92"></script>
+  <script src="src/tour.js?v=92"></script>
+  <script src="src/concession.js?v=92"></script>
+  <script src="src/kick.js?v=92"></script>
+  <script src="src/main.js?v=92"></script>
 </body>
 </html>
