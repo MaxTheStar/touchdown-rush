@@ -439,9 +439,14 @@ function create() {
   G.carrierRing.fillCircle(0, 0, 20);
 
   // A little "announcer" line that pops quick play-by-play call-outs.
+  // The announcer's call-outs sit ON the field, so they need their own dark
+  // plate behind them — white words straight over grass and yard numbers were
+  // genuinely hard to read (the "Here comes the kick…" tooltip has always had
+  // a plate, which is why that one reads cleanly).
   G.comment = this.add.text(270, 235, '', {
     fontFamily: 'Arial Black, Arial', fontSize: '26px',
-    color: '#ffffff', stroke: '#0a1a3a', strokeThickness: 6
+    color: '#ffffff', stroke: '#0a1a3a', strokeThickness: 6,
+    backgroundColor: 'rgba(10,16,32,0.82)', padding: { x: 14, y: 7 }
   }).setOrigin(0.5).setScrollFactor(0).setDepth(26).setVisible(false);
 
   // The referee — a plain sprite (no physics body), so he's on the field
@@ -4051,6 +4056,18 @@ function describeSpot(yds) {
   return yds < 50 ? `own ${yds}` : `opponent ${100 - yds}`;
 }
 
+// How wide a message may be before we shrink it. The field is 540 across, and
+// the pop-in animation overshoots its final size by about a tenth, so we aim
+// for 470 — that way even the overshoot stays inside the sidelines.
+const TEXT_MAX_W = 470;
+
+// Work out the scale that keeps a line of text inside the field. Anything
+// already narrow enough is left completely alone (scale 1).
+function fitScale(textObj) {
+  const w = textObj.width || 1;
+  return Math.min(1, TEXT_MAX_W / w);
+}
+
 function showBanner(text, big) {
   if (G.banner) G.banner.destroy();
   G.banner = G.scene.add.text(270, 300, text, {
@@ -4060,8 +4077,11 @@ function showBanner(text, big) {
     stroke: '#000', strokeThickness: 7
   }).setOrigin(0.5).setScrollFactor(0).setDepth(30).setScale(0);
 
+  // A long message ("TOUCHDOWN CINCINNATI BENGALS +7") used to run off both
+  // ends of the field. Shrink it just enough to fit instead of clipping it.
+  const fit = fitScale(G.banner);
   G.scene.tweens.add({
-    targets: G.banner, scale: 1, duration: 350, ease: 'Back.Out',
+    targets: G.banner, scale: fit, duration: 350, ease: 'Back.Out',
     yoyo: true, hold: 800,
     onComplete: () => { if (G.banner) { G.banner.destroy(); G.banner = null; } }
   });
@@ -4074,9 +4094,15 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function sayComment(text) {
   if (!G.comment) return;
   if (G.commentTween) G.commentTween.stop();
-  G.comment.setText(text).setVisible(true).setAlpha(0).setScale(0.7);
+  G.comment.setText(text).setVisible(true).setAlpha(0);
+  // The longest announcer lines — event names ("TRAINING CAMP HEAT — special
+  // game!") and player nicknames — used to stretch clean off both sidelines
+  // and land on top of the yard numbers. Shrink those to fit; short calls like
+  // "BLITZ!!" are already narrow and stay full size.
+  const fit = fitScale(G.comment);
+  G.comment.setScale(0.7 * fit);
   G.commentTween = G.scene.tweens.add({
-    targets: G.comment, alpha: 1, scale: 1, duration: 180, ease: 'Back.Out',
+    targets: G.comment, alpha: 1, scale: fit, duration: 180, ease: 'Back.Out',
     yoyo: true, hold: 850,
     onComplete: () => { if (G.comment) G.comment.setVisible(false); }
   });
