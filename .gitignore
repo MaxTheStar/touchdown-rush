@@ -1,2 +1,5 @@
 .DS_Store
 node_modules/
+
+# the CrazyGames portal package (rebuild with: bash build-portal.sh)
+build/
