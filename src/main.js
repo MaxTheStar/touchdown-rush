@@ -1469,6 +1469,8 @@ function endPlay(result, customMsg) {
     if (window.TDRecords) TDRecords.td(100 - G.losYards);   // 📖 longest-TD / most-TDs-in-a-game records
     if (window.TDFilm) TDFilm.capture({ yds: 100 - G.losYards, opp: G.oppTeam ? G.oppTeam.abbr : '', q: G.quarter, pickSix: wasPickSix, trick: G.trickActive, frames: G.replay });   // 🎬 save this TD's route to the Film Room
     if (window.TDCeleb) TDCeleb.play();   // 🕺 your player's touchdown celebration!
+    // 🎉 the screen kicks, flashes gold and throws confetti where you crossed
+    if (window.TDJuice && G.ballCarrier) TDJuice.touchdown(G.scene, G.ballCarrier.s.x, G.ballCarrier.s.y);
     // 🌟 the announcer calls the scorer by his nickname, if he's earned one
     if (window.TDNick) { const n = TDNick.shout(offense.indexOf(G.ballCarrier), 'td'); if (n) sayComment(n); }
     G.pendingXP = true;   // after the TD banner, kick the extra point (worth +1)
@@ -1488,6 +1490,12 @@ function endPlay(result, customMsg) {
     // Announcer call-outs for how the run/tackle ended.
     if (result === 'tackle') {
       const gain = spot - G.losYards;
+      // 💥 A puff of turf and a small screen-kick where the hit landed — but
+      // only on hits worth feeling (a sack, or a run that got stuffed), so
+      // ordinary tackles don't rattle the screen on every single play.
+      if (window.TDJuice && G.ballCarrier && gain <= 1) {
+        TDJuice.bigHit(G.scene, G.ballCarrier.s.x, G.ballCarrier.s.y);
+      }
       if (G.ballCarrier === offense[0] && gain < 0) sayComment(pick(['SACKED!', 'Got him!', 'Down he goes!']));
       else if (gain >= 15) {
         // 🌟 If this guy has a nickname, the announcer uses it instead.
