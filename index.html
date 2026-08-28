@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=87" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=87" />
+  <link rel="icon" type="image/png" href="favicon.png?v=88" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=88" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=87" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=88" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=87" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=88" />
   <style>
     html, body {
       margin: 0;
@@ -1422,6 +1422,31 @@
        narrow screens we tighten the three status bars (shorter + closer) back
        into the footprint the old two bars used, keeping them clear of the title.
        iPad (≥ its wider viewport) keeps the roomier default spacing. */
+    /* 🧹 DECLUTTER THE FRONT SCREEN (v1.72) — the phone got tidied in v1.68,
+       but DESKTOP still stacked all four status bars down the left edge: 160px
+       of chrome shouting beside a small team helmet. That's the first thing a
+       new player (or a portal reviewer) sees, and it read as "a wall of menus"
+       rather than "a football game".
+       The level bar keeps its full width — it's the headline. The three
+       tappable shelves below it shrink into a neat row of icon + number tiles:
+       same buttons, same JavaScript, a third of the noise. The words are what
+       made it a wall, and each shelf's own pop-up still carries the full title.
+       Phones are untouched — this is fenced to non-phone widths so the 2×2
+       grid in the media query below keeps working exactly as it does now. */
+    @media (min-width: 501px) {
+      #chal-bar, #trophy-bar, #road-bar {
+        width: 68px; padding: 0 6px; gap: 5px; justify-content: center;
+        top: calc(max(12px, env(safe-area-inset-top)) + 97px);
+      }
+      #chal-bar   { left: max(12px, env(safe-area-inset-left)); }
+      #trophy-bar { left: calc(max(12px, env(safe-area-inset-left)) + 73px); }
+      #road-bar   { left: calc(max(12px, env(safe-area-inset-left)) + 146px); }
+      #chal-bar .chal-bar-lab, #trophy-bar .chal-bar-lab, #road-bar .chal-bar-lab,
+      #chal-bar .chal-bar-go,  #trophy-bar .chal-bar-go,  #road-bar .chal-bar-go {
+        display: none;
+      }
+    }
+
     /* 📱 PORTRAIT TIDY-UP (v1.68) — the four status bars used to STACK, four
        deep, so the menu was five layers of chrome squeezed into the top 185px:
        the bottom two overlapped the Phaser canvas and the "CHOOSE YOUR TEAM"
@@ -2884,43 +2909,43 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=87"></script>
-  <script src="src/sound.js?v=87"></script>
-  <script src="src/shop.js?v=87"></script>
-  <script src="src/spin.js?v=87"></script>
-  <script src="src/challenges.js?v=87"></script>
-  <script src="src/progress.js?v=87"></script>
-  <script src="src/streak.js?v=87"></script>
-  <script src="src/achievements.js?v=87"></script>
-  <script src="src/trophy.js?v=87"></script>
-  <script src="src/records.js?v=87"></script>
-  <script src="src/road.js?v=87"></script>
-  <script src="src/cards.js?v=87"></script>
-  <script src="src/stadium.js?v=87"></script>
-  <script src="src/ranked.js?v=87"></script>
-  <script src="src/halftime.js?v=87"></script>
-  <script src="src/uniform.js?v=87"></script>
-  <script src="src/powerup.js?v=87"></script>
-  <script src="src/arcade.js?v=87"></script>
-  <script src="src/nemesis.js?v=87"></script>
-  <script src="src/weather.js?v=87"></script>
-  <script src="src/season.js?v=87"></script>
-  <script src="src/playoffs.js?v=87"></script>
-  <script src="src/film.js?v=87"></script>
-  <script src="src/celebration.js?v=87"></script>
-  <script src="src/gamestats.js?v=87"></script>
-  <script src="src/boxscore.js?v=87"></script>
-  <script src="src/field.js?v=87"></script>
-  <script src="src/draft.js?v=87"></script>
-  <script src="src/createplayer.js?v=87"></script>
-  <script src="src/nicknames.js?v=87"></script>
-  <script src="src/special.js?v=87"></script>
-  <script src="src/events.js?v=87"></script>
-  <script src="src/dynasty.js?v=87"></script>
-  <script src="src/ads.js?v=87"></script>
-  <script src="src/tour.js?v=87"></script>
-  <script src="src/concession.js?v=87"></script>
-  <script src="src/kick.js?v=87"></script>
-  <script src="src/main.js?v=87"></script>
+  <script src="src/stats.js?v=88"></script>
+  <script src="src/sound.js?v=88"></script>
+  <script src="src/shop.js?v=88"></script>
+  <script src="src/spin.js?v=88"></script>
+  <script src="src/challenges.js?v=88"></script>
+  <script src="src/progress.js?v=88"></script>
+  <script src="src/streak.js?v=88"></script>
+  <script src="src/achievements.js?v=88"></script>
+  <script src="src/trophy.js?v=88"></script>
+  <script src="src/records.js?v=88"></script>
+  <script src="src/road.js?v=88"></script>
+  <script src="src/cards.js?v=88"></script>
+  <script src="src/stadium.js?v=88"></script>
+  <script src="src/ranked.js?v=88"></script>
+  <script src="src/halftime.js?v=88"></script>
+  <script src="src/uniform.js?v=88"></script>
+  <script src="src/powerup.js?v=88"></script>
+  <script src="src/arcade.js?v=88"></script>
+  <script src="src/nemesis.js?v=88"></script>
+  <script src="src/weather.js?v=88"></script>
+  <script src="src/season.js?v=88"></script>
+  <script src="src/playoffs.js?v=88"></script>
+  <script src="src/film.js?v=88"></script>
+  <script src="src/celebration.js?v=88"></script>
+  <script src="src/gamestats.js?v=88"></script>
+  <script src="src/boxscore.js?v=88"></script>
+  <script src="src/field.js?v=88"></script>
+  <script src="src/draft.js?v=88"></script>
+  <script src="src/createplayer.js?v=88"></script>
+  <script src="src/nicknames.js?v=88"></script>
+  <script src="src/special.js?v=88"></script>
+  <script src="src/events.js?v=88"></script>
+  <script src="src/dynasty.js?v=88"></script>
+  <script src="src/ads.js?v=88"></script>
+  <script src="src/tour.js?v=88"></script>
+  <script src="src/concession.js?v=88"></script>
+  <script src="src/kick.js?v=88"></script>
+  <script src="src/main.js?v=88"></script>
 </body>
 </html>
