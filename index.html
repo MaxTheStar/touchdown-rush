@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=93" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=93" />
+  <link rel="icon" type="image/png" href="favicon.png?v=94" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=94" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=93" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=94" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=93" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=94" />
   <style>
     html, body {
       margin: 0;
@@ -826,11 +826,53 @@
     #buff-pill.tier-legendary { border-color: #f0b429; box-shadow: 0 0 14px rgba(240,180,41,.6); }
     @media (prefers-reduced-motion: reduce) { #buff-pill { transition: none; } }
 
+    /* ---- 🚌 ROAD TRIP (src/roadtrip.js) ---------------------------------
+       Five away games in five towns. Opened from inside the Reward Road
+       pop-up — they're both journeys — so no new front-screen chip.
+       Warm amber, so it never reads as the teal weekly board. */
+    /* This pop-up opens FROM another pop-up (the Reward Road), so it has to sit
+       ABOVE it. Every .ov is z-index 70; 62 would put the Road Trip *behind*
+       the card that opened it, which draws the Reward Road straight across the
+       middle of it. Nested pop-ups go above. */
+    #trip-modal { z-index: 76; }
+    .trip-bar {
+      height: 9px; background: rgba(0,0,0,0.38); border-radius: 5px;
+      overflow: hidden; margin: 4px 0 8px;
+    }
+    #trip-bar-fill {
+      height: 100%; width: 0%; border-radius: 5px;
+      background: linear-gradient(90deg, #c2751a, #ffb347);
+      transition: width .4s ease;
+    }
+    @media (prefers-reduced-motion: reduce) { #trip-bar-fill { transition: none; } }
+    #trip-sum { font: 800 12px "Arial Black", Arial; color: #ffb347; margin-bottom: 8px; }
+    .trip-stop {
+      display: flex; align-items: center; gap: 9px; text-align: left;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,179,71,0.28);
+      border-radius: 12px; padding: 8px 10px; margin: 6px 0;
+    }
+    .trip-stop.done { opacity: 0.55; }
+    .trip-stop.here { border-color: #ffb347; background: rgba(255,179,71,0.14); }
+    .trip-ic { font-size: 19px; }
+    .trip-body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .trip-body b { font: 800 13px "Arial Black", Arial; color: #fff; }
+    .trip-body small { font: 700 10px Arial; color: #c9b394; }
+    .trip-pay  { font: 800 12px "Arial Black", Arial; color: #ffb347; white-space: nowrap; }
+    .trip-tick { font: 800 15px "Arial Black", Arial; color: #6fd98f; }
+    .trip-next {
+      font: 800 9px "Arial Black", Arial; color: #2a1704; background: #ffb347;
+      border-radius: 7px; padding: 3px 7px; white-space: nowrap; letter-spacing: .3px;
+    }
+    #trip-done { font: 800 11px "Arial Black", Arial; color: #ffe066; margin-top: 9px; }
+    #open-trip { background: rgba(255,179,71,0.22); border-color: rgba(255,179,71,0.6); }
+
     /* ---- 🎯 WEEKLY QUESTS (src/quests.js) -------------------------------
        Three BIG goals that last a whole week. Opened from a button inside the
        daily-challenges pop-up, so the front screen doesn't gain another chip.
        Teal, so a glance tells you it isn't the orange daily board. */
-    #quest-modal { z-index: 62; }
+    /* Same story as the Road Trip: this opens from INSIDE the daily-challenges
+       pop-up, so it must sit above it (every .ov is 70). */
+    #quest-modal { z-index: 76; }
     .q-row {
       background: rgba(255,255,255,0.06); border: 1px solid rgba(64,224,208,0.35);
       border-radius: 12px; padding: 9px 11px; margin: 7px 0;
@@ -2941,7 +2983,23 @@
       <div class="ov-sub">Earn road points every game — climb for prizes. All free!</div>
       <div id="road-top"></div>
       <div id="road-list"></div>
+      <!-- 🚌 The Road Trip lives one level in from the Reward Road — both are
+           journeys, so they belong together, and the front screen stays tidy. -->
+      <div class="ov-btn" id="open-trip">🚌 ROAD TRIP</div>
       <div class="ov-btn" id="road-close">DONE</div>
+    </div>
+  </div>
+
+  <!-- 🚌 ROAD TRIP — five away games across the country (src/roadtrip.js). -->
+  <div class="ov" id="trip-modal">
+    <div class="ov-card">
+      <div class="ov-title">🚌 ROAD TRIP</div>
+      <div class="ov-sub">Five towns, five away games. Win and the bus rolls on — lose and you're stuck there.</div>
+      <div class="trip-bar"><div id="trip-bar-fill"></div></div>
+      <div id="trip-sum"></div>
+      <div id="trip-list"></div>
+      <div id="trip-done"></div>
+      <div class="ov-btn" id="trip-close">DONE</div>
     </div>
   </div>
 
@@ -2998,45 +3056,46 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=93"></script>
-  <script src="src/sound.js?v=93"></script>
-  <script src="src/shop.js?v=93"></script>
-  <script src="src/spin.js?v=93"></script>
-  <script src="src/challenges.js?v=93"></script>
-  <script src="src/quests.js?v=93"></script>
-  <script src="src/progress.js?v=93"></script>
-  <script src="src/streak.js?v=93"></script>
-  <script src="src/achievements.js?v=93"></script>
-  <script src="src/trophy.js?v=93"></script>
-  <script src="src/records.js?v=93"></script>
-  <script src="src/road.js?v=93"></script>
-  <script src="src/cards.js?v=93"></script>
-  <script src="src/stadium.js?v=93"></script>
-  <script src="src/ranked.js?v=93"></script>
-  <script src="src/halftime.js?v=93"></script>
-  <script src="src/uniform.js?v=93"></script>
-  <script src="src/powerup.js?v=93"></script>
-  <script src="src/arcade.js?v=93"></script>
-  <script src="src/nemesis.js?v=93"></script>
-  <script src="src/weather.js?v=93"></script>
-  <script src="src/season.js?v=93"></script>
-  <script src="src/playoffs.js?v=93"></script>
-  <script src="src/film.js?v=93"></script>
-  <script src="src/celebration.js?v=93"></script>
-  <script src="src/juice.js?v=93"></script>
-  <script src="src/gamestats.js?v=93"></script>
-  <script src="src/boxscore.js?v=93"></script>
-  <script src="src/field.js?v=93"></script>
-  <script src="src/draft.js?v=93"></script>
-  <script src="src/createplayer.js?v=93"></script>
-  <script src="src/nicknames.js?v=93"></script>
-  <script src="src/special.js?v=93"></script>
-  <script src="src/events.js?v=93"></script>
-  <script src="src/dynasty.js?v=93"></script>
-  <script src="src/ads.js?v=93"></script>
-  <script src="src/tour.js?v=93"></script>
-  <script src="src/concession.js?v=93"></script>
-  <script src="src/kick.js?v=93"></script>
-  <script src="src/main.js?v=93"></script>
+  <script src="src/stats.js?v=94"></script>
+  <script src="src/sound.js?v=94"></script>
+  <script src="src/shop.js?v=94"></script>
+  <script src="src/spin.js?v=94"></script>
+  <script src="src/challenges.js?v=94"></script>
+  <script src="src/quests.js?v=94"></script>
+  <script src="src/progress.js?v=94"></script>
+  <script src="src/streak.js?v=94"></script>
+  <script src="src/achievements.js?v=94"></script>
+  <script src="src/trophy.js?v=94"></script>
+  <script src="src/records.js?v=94"></script>
+  <script src="src/road.js?v=94"></script>
+  <script src="src/roadtrip.js?v=94"></script>
+  <script src="src/cards.js?v=94"></script>
+  <script src="src/stadium.js?v=94"></script>
+  <script src="src/ranked.js?v=94"></script>
+  <script src="src/halftime.js?v=94"></script>
+  <script src="src/uniform.js?v=94"></script>
+  <script src="src/powerup.js?v=94"></script>
+  <script src="src/arcade.js?v=94"></script>
+  <script src="src/nemesis.js?v=94"></script>
+  <script src="src/weather.js?v=94"></script>
+  <script src="src/season.js?v=94"></script>
+  <script src="src/playoffs.js?v=94"></script>
+  <script src="src/film.js?v=94"></script>
+  <script src="src/celebration.js?v=94"></script>
+  <script src="src/juice.js?v=94"></script>
+  <script src="src/gamestats.js?v=94"></script>
+  <script src="src/boxscore.js?v=94"></script>
+  <script src="src/field.js?v=94"></script>
+  <script src="src/draft.js?v=94"></script>
+  <script src="src/createplayer.js?v=94"></script>
+  <script src="src/nicknames.js?v=94"></script>
+  <script src="src/special.js?v=94"></script>
+  <script src="src/events.js?v=94"></script>
+  <script src="src/dynasty.js?v=94"></script>
+  <script src="src/ads.js?v=94"></script>
+  <script src="src/tour.js?v=94"></script>
+  <script src="src/concession.js?v=94"></script>
+  <script src="src/kick.js?v=94"></script>
+  <script src="src/main.js?v=94"></script>
 </body>
 </html>
