@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=95" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=95" />
+  <link rel="icon" type="image/png" href="favicon.png?v=96" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=96" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=95" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=96" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=95" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=96" />
   <style>
     html, body {
       margin: 0;
@@ -825,6 +825,34 @@
     #buff-pill.tier-rare      { border-color: #7b4de0; }
     #buff-pill.tier-legendary { border-color: #f0b429; box-shadow: 0 0 14px rgba(240,180,41,.6); }
     @media (prefers-reduced-motion: reduce) { #buff-pill { transition: none; } }
+
+    /* ---- 🎓 GAME PLAN (src/gameplan.js) ---------------------------------
+       Opened from inside the 🛍 Pro Shop, so it sits above it (.ov is 70).
+       Chalkboard blue — a coach's whiteboard, not another reward screen. */
+    #plan-modal { z-index: 76; }
+    .plan-row {
+      background: rgba(255,255,255,0.05); border: 2px solid rgba(126,178,255,0.28);
+      border-radius: 12px; padding: 9px 11px; margin: 7px 0; text-align: left;
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+    }
+    .plan-row:active { transform: scale(0.98); }
+    .plan-row.on { border-color: #7eb2ff; background: rgba(126,178,255,0.15); }
+    .plan-top { display: flex; align-items: center; gap: 8px; }
+    .plan-ic { font-size: 18px; }
+    .plan-name { flex: 1; font: 800 13px "Arial Black", Arial; color: #fff; }
+    .plan-on {
+      font: 800 9px "Arial Black", Arial; color: #06203f; background: #7eb2ff;
+      border-radius: 7px; padding: 3px 7px; letter-spacing: .3px;
+    }
+    .plan-pick {
+      font: 800 9px "Arial Black", Arial; color: #7eb2ff;
+      border: 1px solid #7eb2ff; border-radius: 7px; padding: 2px 7px;
+    }
+    .plan-blurb { font: 700 10px Arial; color: #a9bdd8; margin-top: 3px; }
+    .plan-tradeoff { display: flex; flex-direction: column; gap: 2px; margin-top: 5px; }
+    .plan-good { font: 700 10px Arial; color: #6fd98f; }
+    .plan-bad  { font: 700 10px Arial; color: #ffab7a; }
+    #plan-foot { font: 700 10px Arial; color: #9aa8bd; margin-top: 9px; }
 
     /* ---- 💰 FREE AGENCY (src/freeagency.js) -----------------------------
        Opened from inside 🏟 MY TEAM, so it sits above it (every .ov is 70).
@@ -2588,6 +2616,17 @@
     </div>
   </div>
 
+  <!-- 🎓 GAME PLAN — pick how the team plays today (src/gameplan.js). -->
+  <div class="ov" id="plan-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎓 GAME PLAN</div>
+      <div class="ov-sub">Pick how your team plays. Every plan gives you something — and costs you something.</div>
+      <div id="plan-list"></div>
+      <div id="plan-foot"></div>
+      <div class="ov-btn" id="plan-close">DONE</div>
+    </div>
+  </div>
+
   <!-- 💰 FREE AGENCY — buy ready-made veterans with coins (src/freeagency.js). -->
   <div class="ov" id="fa-modal">
     <div class="ov-card">
@@ -2611,6 +2650,8 @@
       <div class="ov-btn" id="open-stadium">🏟️ STADIUM<span id="stadium-btn-badge"></span></div>
       <div class="ov-btn" id="open-uniform">🎽 UNIFORM DESIGNER</div>
       <div class="ov-btn" id="open-power">⚡ POWER-UP PLAYS</div>
+      <!-- 🎓 How the whole team plays today — sits with the other pre-game prep. -->
+      <div class="ov-btn" id="open-plan">🎓 GAME PLAN</div>
       <div class="ov-btn" id="open-arcade">🎯 PRACTICE ARCADE</div>
       <div class="ov-btn" id="open-celeb">🕺 CELEBRATIONS</div>
       <div class="ov-btn" id="open-field">🎨 FIELD DESIGNER</div>
@@ -3105,47 +3146,48 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=95"></script>
-  <script src="src/sound.js?v=95"></script>
-  <script src="src/shop.js?v=95"></script>
-  <script src="src/spin.js?v=95"></script>
-  <script src="src/challenges.js?v=95"></script>
-  <script src="src/quests.js?v=95"></script>
-  <script src="src/progress.js?v=95"></script>
-  <script src="src/streak.js?v=95"></script>
-  <script src="src/achievements.js?v=95"></script>
-  <script src="src/trophy.js?v=95"></script>
-  <script src="src/records.js?v=95"></script>
-  <script src="src/road.js?v=95"></script>
-  <script src="src/roadtrip.js?v=95"></script>
-  <script src="src/cards.js?v=95"></script>
-  <script src="src/stadium.js?v=95"></script>
-  <script src="src/ranked.js?v=95"></script>
-  <script src="src/halftime.js?v=95"></script>
-  <script src="src/uniform.js?v=95"></script>
-  <script src="src/powerup.js?v=95"></script>
-  <script src="src/arcade.js?v=95"></script>
-  <script src="src/nemesis.js?v=95"></script>
-  <script src="src/weather.js?v=95"></script>
-  <script src="src/season.js?v=95"></script>
-  <script src="src/playoffs.js?v=95"></script>
-  <script src="src/film.js?v=95"></script>
-  <script src="src/celebration.js?v=95"></script>
-  <script src="src/juice.js?v=95"></script>
-  <script src="src/gamestats.js?v=95"></script>
-  <script src="src/boxscore.js?v=95"></script>
-  <script src="src/field.js?v=95"></script>
-  <script src="src/draft.js?v=95"></script>
-  <script src="src/freeagency.js?v=95"></script>
-  <script src="src/createplayer.js?v=95"></script>
-  <script src="src/nicknames.js?v=95"></script>
-  <script src="src/special.js?v=95"></script>
-  <script src="src/events.js?v=95"></script>
-  <script src="src/dynasty.js?v=95"></script>
-  <script src="src/ads.js?v=95"></script>
-  <script src="src/tour.js?v=95"></script>
-  <script src="src/concession.js?v=95"></script>
-  <script src="src/kick.js?v=95"></script>
-  <script src="src/main.js?v=95"></script>
+  <script src="src/stats.js?v=96"></script>
+  <script src="src/sound.js?v=96"></script>
+  <script src="src/shop.js?v=96"></script>
+  <script src="src/spin.js?v=96"></script>
+  <script src="src/challenges.js?v=96"></script>
+  <script src="src/quests.js?v=96"></script>
+  <script src="src/progress.js?v=96"></script>
+  <script src="src/streak.js?v=96"></script>
+  <script src="src/achievements.js?v=96"></script>
+  <script src="src/trophy.js?v=96"></script>
+  <script src="src/records.js?v=96"></script>
+  <script src="src/road.js?v=96"></script>
+  <script src="src/roadtrip.js?v=96"></script>
+  <script src="src/cards.js?v=96"></script>
+  <script src="src/stadium.js?v=96"></script>
+  <script src="src/ranked.js?v=96"></script>
+  <script src="src/halftime.js?v=96"></script>
+  <script src="src/uniform.js?v=96"></script>
+  <script src="src/powerup.js?v=96"></script>
+  <script src="src/arcade.js?v=96"></script>
+  <script src="src/nemesis.js?v=96"></script>
+  <script src="src/weather.js?v=96"></script>
+  <script src="src/season.js?v=96"></script>
+  <script src="src/playoffs.js?v=96"></script>
+  <script src="src/film.js?v=96"></script>
+  <script src="src/celebration.js?v=96"></script>
+  <script src="src/juice.js?v=96"></script>
+  <script src="src/gamestats.js?v=96"></script>
+  <script src="src/boxscore.js?v=96"></script>
+  <script src="src/field.js?v=96"></script>
+  <script src="src/draft.js?v=96"></script>
+  <script src="src/freeagency.js?v=96"></script>
+  <script src="src/gameplan.js?v=96"></script>
+  <script src="src/createplayer.js?v=96"></script>
+  <script src="src/nicknames.js?v=96"></script>
+  <script src="src/special.js?v=96"></script>
+  <script src="src/events.js?v=96"></script>
+  <script src="src/dynasty.js?v=96"></script>
+  <script src="src/ads.js?v=96"></script>
+  <script src="src/tour.js?v=96"></script>
+  <script src="src/concession.js?v=96"></script>
+  <script src="src/kick.js?v=96"></script>
+  <script src="src/main.js?v=96"></script>
 </body>
 </html>

@@ -241,10 +241,34 @@
   // ⚡ Power-Up Plays fold in the same harmless way (×1 / +0 when nothing's firing).
   const puSpeed = () => (window.TDPowerup ? window.TDPowerup.speedMult() : 1);
   const puCatch = () => (window.TDPowerup ? window.TDPowerup.catchAdd()  : 0);
+  // 🎓 The GAME PLAN folds in the same way — but it's the only one that can go
+  // DOWN as well as up (that's the point of it: every plan costs you something).
+  // With no plan chosen, or the file missing, these are ×1 / +0 exactly like the
+  // others, so the game is untouched.
+  const gpSpeed = () => (window.TDPlan ? window.TDPlan.speedMult() : 1);
+  const gpCatch = () => (window.TDPlan ? window.TDPlan.catchAdd()  : 0);
+  const gpArm   = () => (window.TDPlan ? window.TDPlan.armAdd()    : 0);
+  const gpStiff = () => (window.TDPlan ? window.TDPlan.stiffAdd()  : 0);
+  const gpGrip  = () => (window.TDPlan ? window.TDPlan.gripAdd()   : 0);
+  // Keep every final number inside the range main.js expects.
+  //
+  // ⚠️ These are allowed to go NEGATIVE on purpose — that's how a game plan's
+  // downside actually bites. main.js reads them as:
+  //     picks   = intChance   * (1 - armAccuracy())   → negative ⇒ MORE picks
+  //     fumbles = fumbleChance* (1 - gripFactor())    → negative ⇒ MORE fumbles
+  //     catches = CATCH_CHANCE + catchBonus           → negative ⇒ fewer catches
+  // Clamping those at 0 (as I first did) quietly deleted the cost of a plan for
+  // anyone without the matching gear, which made ⚖️ BALANCED strictly worse than
+  // 🏃 GROUND & POUND — a free upgrade. So we floor them well below zero and only
+  // cap the top end.
+  const clampPerk = (v, lo) => Math.max(lo, Math.min(0.95, v));
+  // stiffChance is a raw probability main.js rolls against, so it alone must
+  // stay inside 0..1.
+  const clamp01 = v => Math.max(0, Math.min(1, v));
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed(); }
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -255,8 +279,9 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch() + puCatch();
-    return { catchBonus: 0.02 * gear.gloves + extra, dropCut: 0.02 * gear.gloves + extra };
+    const extra = spinCatch() + puCatch() + gpCatch();
+    const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
+    return { catchBonus: v, dropCut: v };
   }
 
   // 🔋 Catch energy: how long the after-catch speed burst lasts (0 = not owned).
@@ -266,17 +291,17 @@
   // 💪 Stiff arm: the chance to break the FIRST tackle of a play (level 10 = 40%).
   // main.js checks this in checkTackle and, on a hit, shoves the tackler off.
   //    🎡 Truck Stick / God Mode set a big floor here (bust nearly every tackle).
-  function stiffChance() { return Math.max(0.04 * gear.stiff, spinTruck()); }
+  function stiffChance() { return clamp01(Math.max(0.04 * gear.stiff, spinTruck()) + gpStiff()); }
 
   // 🔒 Iron grip: how much we CUT the fumble chance (a fraction of it). Level 10
   // = 0.9, i.e. 90% fewer fumbles. main.js multiplies FUMBLE_CHANCE by (1 - this).
   //    🎡 A "safe ball" buff (Sure Hands / God Mode) pushes this to 1 = no fumbles.
-  function gripFactor() { const g = 0.09 * gear.grip; return 1 - (1 - g) * (1 - spinSafeBall()); }
+  function gripFactor() { const g = 0.09 * gear.grip; return clampPerk(1 - (1 - g) * (1 - spinSafeBall()) + gpGrip(), -0.50); }
 
   // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
   // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
   //    🎡 A "safe throw" buff (Sure Hands / God Mode) pushes this to 1 = no picks.
-  function armAccuracy() { const a = 0.05 * gear.arm; return 1 - (1 - a) * (1 - spinSafeThrow()); }
+  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm(), -0.50); }
 
   // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
   // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,
