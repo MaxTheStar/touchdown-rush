@@ -1041,10 +1041,14 @@ const PLAYBOOK = [
 // Call the next play: give each receiver a route, and let the defense pick its
 // coverage + whether to blitz. Runs once per down, in setupPlay.
 function callPlay() {
-  let i = Phaser.Math.Between(0, PLAYBOOK.length - 1);
-  if (i === G.lastConcept) i = (i + 1) % PLAYBOOK.length;   // never repeat back-to-back
+  // 📖 CUSTOM PLAYBOOK (playbook.js): any plays YOU designed and switched on get
+  // mixed in with the built-in ones, so your own concepts really do get called
+  // in real games. Without that file this is just PLAYBOOK, exactly as before.
+  const book = (window.TDBook && TDBook.book(PLAYBOOK)) || PLAYBOOK;
+  let i = Phaser.Math.Between(0, book.length - 1);
+  if (i === G.lastConcept) i = (i + 1) % book.length;       // never repeat back-to-back
   G.lastConcept = i;
-  const c = PLAYBOOK[i];
+  const c = book[i];
   G.concept = c;
   offense[2].route = c.wr1;   // WR #1 (lines up left)
   offense[3].route = c.wr2;   // WR #2 (lines up right)
