@@ -145,6 +145,44 @@
     };
   }
 
+  // 💰 FREE AGENCY (freeagency.js) puts a signed veteran straight into a slot.
+  // Everything about the roster lives in this file, so the signing happens here
+  // and the market module just hands us the player it sold.
+  //
+  // A free agent is the OPPOSITE trade-off to a draft pick: he's good NOW but
+  // he's finished growing (pot = ovr), where a rookie starts lower and climbs.
+  // Your 🙋 Create-A-Player star is never replaced — he's yours.
+  function signFreeAgent(pos, fa) {
+    const slot = SLOTS.indexOf(pos);
+    if (slot < 0 || !fa) return null;
+    if (roster[slot] && roster[slot].custom) return { blocked: 'custom' };
+    const replaced = roster[slot]
+      ? { name: roster[slot].name, ovr: roster[slot].ovr, pos: roster[slot].pos } : null;
+    const trait = TRAITS.find(t => t.n === (fa.trait && fa.trait.n ? fa.trait.n : fa.trait)) || null;
+    roster[slot] = {
+      id: 'fa' + (idSeq++),
+      name: fa.name, pos, ovr: fa.ovr, trait,
+      from: fa.from || 'FREE AGENT',
+      scouted: true,
+      salary: salaryOf(fa.ovr, trait),
+      lo: fa.ovr, hi: fa.ovr,
+      pot: fa.ovr,        // a veteran is who he is — no more growth
+      xp: 0,
+      fa: true,
+    };
+    saveRoster();
+    return { signed: Object.assign({ slot }, roster[slot]), replaced };
+  }
+
+  // What have you got at this position right now? (so the market can show
+  // "your WR: 64" next to the man it's selling)
+  function currentAt(pos) {
+    const slot = SLOTS.indexOf(pos);
+    if (slot < 0 || !roster[slot]) return null;
+    const p = roster[slot];
+    return { name: p.name, ovr: p.ovr, pos: p.pos, custom: !!p.custom };
+  }
+
   // ============================================================
   // YOUR ROSTER — load, save, TEAM OVERALL and TEAM PAYROLL
   // ============================================================
@@ -955,6 +993,8 @@
     getCustom, setCustom, clearCustom, slotList, traitList,
     // 📚 Dynasty Mode (dynasty.js) — a year passes on your roster
     advanceYear, rosterAges,
+    // 💰 Free Agency (freeagency.js) — sign a ready-made veteran into a slot
+    signFreeAgent, currentAt, slots: () => SLOTS.slice(),
     // Small dev helpers (handy for testing; harmless in play).
     _debug: {
       state: () => ({ nextDraftAt: nextDraftAt(), draftReady: draftReady(), payroll: teamPayroll(), requests: requests.length, draft }),
