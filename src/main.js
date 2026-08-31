@@ -1234,7 +1234,11 @@ function updateDefense(elapsed) {
   const carrier = G.ballCarrier.s;
   const qbHasBall = G.ballCarrier === offense[0] && !G.hasPassed;
   const boost = diff().defBoost * G.oppDef      // HARD mode + ⭐ the opponent's defense rating
-              * (window.TDPowerup ? TDPowerup.defSlow() : 1);   // ❄️ …× a Freeze Defense power-up (1 = none)
+              * (window.TDPowerup ? TDPowerup.defSlow() : 1)    // ❄️ …× a Freeze Defense power-up (1 = none)
+              // 📌 …× angry, if you gave them bulletin-board material at the last
+              // press conference. Only 4% — it should make a game feel spicier,
+              // never decide it. 1 = nothing said (see src/press.js).
+              * (window.TDPress && TDPress.bulletin() ? 1.04 : 1);
 
   for (const d of defense) {
     // In 2-player mode, one defender is driven by Player 2's fingers (or WASD),
