@@ -8,17 +8,24 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.69 — cache-buster is `?v=85` in `index.html`. (Round 6 board swept: v1.48 Stadium
-  Builder, v1.49 Ranked Ladder, v1.50 Halftime Show, v1.51 Uniform Designer, v1.52 Power-Up Plays,
-  v1.53 Practice Arcade, v1.54 Playoff Tournament, v1.55/56 Film Room, v1.57 real tab icon + link-preview
-  image — all live. **Round 7 has begun:** v1.58 🕺 Celebrations, v1.59 ⭐ Player of the Game, v1.60 📊 Box Score, v1.61 🎨 Field Designer, v1.62 🙋 Create-A-Player + v1.63 🏈 Special Teams Tricks + v1.66 🎃 Season Events + v1.67 📚 Dynasty Mode are live — 🎉 ROUND 7 SWEPT (8/8); v1.68 tidied the portrait menu; **Round 8 has begun:** v1.69 🌟 Player Nicknames is live; v1.64/65 put a 🙋 PLAYER button on the front screen.)
+- **Version:** v1.85 — cache-buster is `?v=101` in `index.html`.
+  - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
+  - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
+    Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
+    v1.78 · 💰 Free Agency v1.79 · 🎓 Game Plan v1.80 · 📖 Custom Playbook v1.81.
+  - **Round 9 — The Locker Room Board: 4/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
+    · 📻 Press Conference v1.83 (`src/press.js`) · 🎓 Coaching Staff v1.84 (`src/staff.js`)
+    · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`).
+    **Next on the clock: ⑤ 🏋️ Player Training.** Then ⑥ ⏱️ Two-Minute Drill, ⑦ 🏥 Injuries &
+    Depth Chart, ⑧ 🚩 Coach's Challenge — all three reach into the live game loop, which is
+    exactly why they were ranked last.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-08-22.
+- **Last updated:** 2026-09-01.
 - **📦 CrazyGames portal build:** refreshed to v1.57 on 2026-08-22 and staged in
   `~/Desktop/CrazyGames Submission/` (`touchdown-fun-READY.zip` — 568 KB, 33 files, index.html at root).
   Recipe = a COPY of the repo with 3 changes so it makes ZERO external requests: vendor Phaser (CDN→local
