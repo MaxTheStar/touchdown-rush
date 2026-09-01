@@ -267,6 +267,11 @@
   const stHawk  = () => (window.TDStaff ? window.TDStaff.hawkAdd()   : 0);
   const stToe   = () => (window.TDStaff ? window.TDStaff.toeAdd()    : 0);
   const stSpeed = () => (window.TDStaff ? window.TDStaff.speedMult() : 1);
+  // 🧑‍🤝‍🧑 TEAM CHEMISTRY folds in the same harmless way: a hot room is a touch
+  // quicker and surer-handed, a cold one a touch worse, and a brand-new save
+  // sitting at the ordinary middle reads exactly x1 and +0.
+  const chSpeed = () => (window.TDChem ? window.TDChem.speedMult() : 1);
+  const chCatch = () => (window.TDChem ? window.TDChem.catchAdd()  : 0);
   const clampPerk = (v, lo) => Math.max(lo, Math.min(0.95, v));
   // stiffChance is a raw probability main.js rolls against, so it alone must
   // stay inside 0..1.
@@ -274,7 +279,7 @@
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed(); }
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed() * chSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -285,7 +290,7 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch() + puCatch() + gpCatch() + stCatch();
+    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch();
     const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
     return { catchBonus: v, dropCut: v };
   }

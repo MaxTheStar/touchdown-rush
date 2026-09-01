@@ -190,5 +190,7 @@
     listForCase,                                        // the Trophy Case draws this
     // handy for debugging
     _got: () => state.got.slice(),
+    // 🧑‍🤝‍🧑 Team Chemistry asks how big a hole you climbed out of.
+    maxBehind: () => maxBehind,
   };
 })();
