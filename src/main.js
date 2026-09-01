@@ -3166,6 +3166,10 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
     G.oppOff *= pb; G.oppDef *= pb;
   }
 
+  // 🎓 DEFENSIVE COORDINATOR (staff.js) — a good DC makes the other team's
+  // offense look a step slower. ×1 with nobody hired, and at most −6% at level 5.
+  if (window.TDStaff && TDStaff.oppOffMult) G.oppOff *= TDStaff.oppOffMult();
+
   // 📈 Player progression: your leveled-up team plays a little stronger — a
   // gentle, CAPPED edge on YOUR offense & defense only (never the opponent's),
   // stacked on top of the ⭐ team ratings above. At level 1 it's exactly 1.0

@@ -261,6 +261,12 @@
   // anyone without the matching gear, which made ⚖️ BALANCED strictly worse than
   // 🏃 GROUND & POUND — a free upgrade. So we floor them well below zero and only
   // cap the top end.
+  // 🎓 The COACHING STAFF folds in the same harmless way (+0 / ×1 with nobody hired).
+  const stArm   = () => (window.TDStaff ? window.TDStaff.armAdd()    : 0);
+  const stCatch = () => (window.TDStaff ? window.TDStaff.catchAdd()  : 0);
+  const stHawk  = () => (window.TDStaff ? window.TDStaff.hawkAdd()   : 0);
+  const stToe   = () => (window.TDStaff ? window.TDStaff.toeAdd()    : 0);
+  const stSpeed = () => (window.TDStaff ? window.TDStaff.speedMult() : 1);
   const clampPerk = (v, lo) => Math.max(lo, Math.min(0.95, v));
   // stiffChance is a raw probability main.js rolls against, so it alone must
   // stay inside 0..1.
@@ -268,7 +274,7 @@
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed(); }
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -279,7 +285,7 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch() + puCatch() + gpCatch();
+    const extra = spinCatch() + puCatch() + gpCatch() + stCatch();
     const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
     return { catchBonus: v, dropCut: v };
   }
@@ -301,7 +307,7 @@
   // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
   // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
   //    🎡 A "safe throw" buff (Sure Hands / God Mode) pushes this to 1 = no picks.
-  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm(), -0.50); }
+  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm(), -0.50); }
 
   // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
   // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,
@@ -310,11 +316,11 @@
 
   // 🦵 Golden toe: how much EASIER kicks are (0..0.6). kick.js slows the aim swing,
   // gives more time before the rusher, and needs a little less power. Read on enter.
-  function toeFactor() { return 0.06 * gear.toe; }
+  function toeFactor() { return 0.06 * gear.toe + stToe(); }
 
   // 🖐 Ball hawk: extra takeaway chance on defense (0..0.20 at level 10). The
   // DefenseSim adds this to its interception & fumble odds. Read per play.
-  function hawkBoost() { return 0.02 * gear.hawk; }
+  function hawkBoost() { return 0.02 * gear.hawk + stHawk(); }
 
   // ============================================================
   // 🛍 THE PRO SHOP screen
