@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=101" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=101" />
+  <link rel="icon" type="image/png" href="favicon.png?v=102" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=102" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=101" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=102" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=101" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=102" />
   <style>
     html, body {
       margin: 0;
@@ -878,6 +878,77 @@
     /* 🧑‍🤝‍🧑 TEAM CHEMISTRY — opened from the 🛍 Pro Shop, so it sits above it.
        Turf green rather than broadcast red: this is the team, not the media. */
     #chem-modal { z-index: 76; }
+
+    /* 🏕️ TRAINING CAMP — opened from the 🛍 Pro Shop, so it sits above it.
+       Camp colours: practice-field green with a kit-bag orange for the build. */
+    #train-modal { z-index: 76; }
+    #train-msg {
+      display: none; font: 700 11px Arial; color: #ffe6a6;
+      background: rgba(255,180,60,0.14); border: 1px solid rgba(255,180,60,0.42);
+      border-radius: 9px; padding: 7px 9px; margin-bottom: 8px;
+    }
+    .tr-coins { font: 800 10px "Arial Black", Arial; color: #ffd60a; text-align: right; }
+    .tr-sec {
+      font: 800 9px "Arial Black", Arial; color: #9aa8bd; letter-spacing: .14em;
+      text-align: left; margin: 13px 0 7px; padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .tr-note { font: 400 12px Georgia, serif; color: #b9c6d6; text-align: left; margin-bottom: 8px; }
+    .tr-note b { color: #6fd98f; font-family: "Arial Black", Arial; font-size: 12px; }
+    .tr-empty { font: 400 12px Georgia, serif; color: #8fa0b4; font-style: italic; text-align: left; }
+    .tr-who { text-align: left; }
+    .tr-whoRow {
+      display: flex; align-items: baseline; gap: 8px; padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .tr-whoName { font: 800 12px "Arial Black", Arial; color: #fff; flex: 1; }
+    .tr-whoPos { font: 700 9px Arial; color: #8fa0b4; letter-spacing: .1em; }
+    .tr-up { font: 800 12px "Arial Black", Arial; color: #6fd98f; white-space: nowrap; }
+    .tr-xp { font: 800 10px "Arial Black", Arial; color: #8fa0b4; white-space: nowrap; }
+    .tr-film { font: 700 10px Arial; color: #9fd0ff; margin-top: 7px; }
+
+    .tr-prog {
+      display: flex; align-items: center; gap: 9px; text-align: left;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 11px; padding: 8px 10px; margin: 6px 0;
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+    }
+    .tr-prog:active { transform: scale(0.985); }
+    .tr-prog.on { border-color: #6fd98f; background: rgba(111,217,143,0.13); }
+    .tr-pIc { font-size: 17px; }
+    .tr-pMid { flex: 1; min-width: 0; }
+    .tr-pMid b { display: block; font: 800 11px "Arial Black", Arial; color: #fff; }
+    .tr-pMid i { display: block; font: 400 11px Georgia, serif; color: #9aa8bd; font-style: italic; }
+    .tr-pOn { font: 800 8px "Arial Black", Arial; color: #04200c; background: #6fd98f;
+              border-radius: 3px; padding: 3px 6px; letter-spacing: .1em; white-space: nowrap; }
+
+    .tr-fac {
+      text-align: left; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,170,80,0.24); border-radius: 12px;
+      padding: 9px 11px; margin: 7px 0;
+    }
+    .tr-fTop { display: flex; align-items: center; gap: 8px; }
+    .tr-fIc { font-size: 16px; }
+    .tr-fName { flex: 1; font: 800 11px "Arial Black", Arial; color: #fff; }
+    .tr-pips { display: flex; gap: 3px; }
+    .tr-pips i {
+      width: 9px; height: 9px; border-radius: 2px; display: block;
+      background: rgba(255,255,255,0.14);
+    }
+    .tr-pips i.on { background: #ffab5a; }
+    .tr-fBlurb { font: 400 11.5px Georgia, serif; color: #9aa8bd; margin-top: 4px; font-style: italic; }
+    .tr-fNow { font: 700 10px Arial; color: #cfe0f2; margin-top: 5px; }
+    .tr-fNow b { color: #ffab5a; }
+    .tr-fNext { color: #6fd98f; }
+    .tr-buy {
+      margin-top: 7px; text-align: center; border-radius: 9px; padding: 7px;
+      font: 800 10px "Arial Black", Arial; letter-spacing: .06em;
+      background: linear-gradient(180deg, #ffab5a, #e07b20);
+      color: #2a1500; -webkit-tap-highlight-color: transparent; touch-action: none;
+    }
+    .tr-buy:active { transform: scale(0.98); }
+    .tr-buy.cant { background: rgba(255,255,255,0.10); color: #7d8b9e; }
+    .tr-buy.done { background: rgba(111,217,143,0.16); color: #6fd98f; }
     .ch-topRow { display: flex; justify-content: space-between; align-items: baseline; }
     .ch-lab { font: 800 9px "Arial Black", Arial; color: #9aa8bd; letter-spacing: .16em; }
     .ch-word { font: 800 12px "Arial Black", Arial; }
@@ -2891,6 +2962,17 @@
     </div>
   </div>
 
+  <!-- 🏕️ TRAINING CAMP — the programme + the facilities (src/training.js). -->
+  <div class="ov" id="train-modal">
+    <div class="ov-card">
+      <div class="ov-title">🏕️ TRAINING CAMP</div>
+      <div class="ov-sub">The whole squad trains. One or two break through after every game — build the camp up and it becomes more.</div>
+      <div id="train-msg"></div>
+      <div id="train-body"></div>
+      <div class="ov-btn" id="train-close">DONE</div>
+    </div>
+  </div>
+
   <!-- 📖 CUSTOM PLAYBOOK — draw up your own plays (src/playbook.js). -->
   <div class="ov" id="book-modal">
     <div class="ov-card">
@@ -2944,6 +3026,8 @@
       <div class="ov-btn" id="open-staff">🎓 COACHING STAFF</div>
       <!-- 🧑‍🤝‍🧑 How the room feels right now — moved by results and by the press. -->
       <div class="ov-btn" id="open-chem">🧑‍🤝‍🧑 TEAM CHEMISTRY</div>
+      <!-- 🏕️ The whole squad trains; one or two break through each game. -->
+      <div class="ov-btn" id="open-train">🏕️ TRAINING CAMP</div>
       <div class="ov-btn" id="open-arcade">🎯 PRACTICE ARCADE</div>
       <div class="ov-btn" id="open-celeb">🕺 CELEBRATIONS</div>
       <div class="ov-btn" id="open-field">🎨 FIELD DESIGNER</div>
@@ -3442,53 +3526,54 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=101"></script>
-  <script src="src/sound.js?v=101"></script>
-  <script src="src/shop.js?v=101"></script>
-  <script src="src/spin.js?v=101"></script>
-  <script src="src/challenges.js?v=101"></script>
-  <script src="src/quests.js?v=101"></script>
-  <script src="src/progress.js?v=101"></script>
-  <script src="src/streak.js?v=101"></script>
-  <script src="src/achievements.js?v=101"></script>
-  <script src="src/trophy.js?v=101"></script>
-  <script src="src/records.js?v=101"></script>
-  <script src="src/road.js?v=101"></script>
-  <script src="src/roadtrip.js?v=101"></script>
-  <script src="src/cards.js?v=101"></script>
-  <script src="src/stadium.js?v=101"></script>
-  <script src="src/ranked.js?v=101"></script>
-  <script src="src/halftime.js?v=101"></script>
-  <script src="src/uniform.js?v=101"></script>
-  <script src="src/powerup.js?v=101"></script>
-  <script src="src/arcade.js?v=101"></script>
-  <script src="src/nemesis.js?v=101"></script>
-  <script src="src/weather.js?v=101"></script>
-  <script src="src/season.js?v=101"></script>
-  <script src="src/playoffs.js?v=101"></script>
-  <script src="src/film.js?v=101"></script>
-  <script src="src/celebration.js?v=101"></script>
-  <script src="src/juice.js?v=101"></script>
-  <script src="src/gamestats.js?v=101"></script>
-  <script src="src/sportspage.js?v=101"></script>
-  <script src="src/press.js?v=101"></script>
-  <script src="src/staff.js?v=101"></script>
-  <script src="src/chemistry.js?v=101"></script>
-  <script src="src/boxscore.js?v=101"></script>
-  <script src="src/field.js?v=101"></script>
-  <script src="src/draft.js?v=101"></script>
-  <script src="src/freeagency.js?v=101"></script>
-  <script src="src/gameplan.js?v=101"></script>
-  <script src="src/playbook.js?v=101"></script>
-  <script src="src/createplayer.js?v=101"></script>
-  <script src="src/nicknames.js?v=101"></script>
-  <script src="src/special.js?v=101"></script>
-  <script src="src/events.js?v=101"></script>
-  <script src="src/dynasty.js?v=101"></script>
-  <script src="src/ads.js?v=101"></script>
-  <script src="src/tour.js?v=101"></script>
-  <script src="src/concession.js?v=101"></script>
-  <script src="src/kick.js?v=101"></script>
-  <script src="src/main.js?v=101"></script>
+  <script src="src/stats.js?v=102"></script>
+  <script src="src/sound.js?v=102"></script>
+  <script src="src/shop.js?v=102"></script>
+  <script src="src/spin.js?v=102"></script>
+  <script src="src/challenges.js?v=102"></script>
+  <script src="src/quests.js?v=102"></script>
+  <script src="src/progress.js?v=102"></script>
+  <script src="src/streak.js?v=102"></script>
+  <script src="src/achievements.js?v=102"></script>
+  <script src="src/trophy.js?v=102"></script>
+  <script src="src/records.js?v=102"></script>
+  <script src="src/road.js?v=102"></script>
+  <script src="src/roadtrip.js?v=102"></script>
+  <script src="src/cards.js?v=102"></script>
+  <script src="src/stadium.js?v=102"></script>
+  <script src="src/ranked.js?v=102"></script>
+  <script src="src/halftime.js?v=102"></script>
+  <script src="src/uniform.js?v=102"></script>
+  <script src="src/powerup.js?v=102"></script>
+  <script src="src/arcade.js?v=102"></script>
+  <script src="src/nemesis.js?v=102"></script>
+  <script src="src/weather.js?v=102"></script>
+  <script src="src/season.js?v=102"></script>
+  <script src="src/playoffs.js?v=102"></script>
+  <script src="src/film.js?v=102"></script>
+  <script src="src/celebration.js?v=102"></script>
+  <script src="src/juice.js?v=102"></script>
+  <script src="src/gamestats.js?v=102"></script>
+  <script src="src/sportspage.js?v=102"></script>
+  <script src="src/press.js?v=102"></script>
+  <script src="src/staff.js?v=102"></script>
+  <script src="src/chemistry.js?v=102"></script>
+  <script src="src/boxscore.js?v=102"></script>
+  <script src="src/field.js?v=102"></script>
+  <script src="src/draft.js?v=102"></script>
+  <script src="src/training.js?v=102"></script>
+  <script src="src/freeagency.js?v=102"></script>
+  <script src="src/gameplan.js?v=102"></script>
+  <script src="src/playbook.js?v=102"></script>
+  <script src="src/createplayer.js?v=102"></script>
+  <script src="src/nicknames.js?v=102"></script>
+  <script src="src/special.js?v=102"></script>
+  <script src="src/events.js?v=102"></script>
+  <script src="src/dynasty.js?v=102"></script>
+  <script src="src/ads.js?v=102"></script>
+  <script src="src/tour.js?v=102"></script>
+  <script src="src/concession.js?v=102"></script>
+  <script src="src/kick.js?v=102"></script>
+  <script src="src/main.js?v=102"></script>
 </body>
 </html>

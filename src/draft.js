@@ -227,6 +227,37 @@
   // How many players have grown since you last looked at the roster?
   function growthPending() { return roster.filter(p => p.grew).length; }
 
+  // 🏕️ TRAINING CAMP (src/training.js) — hand ONE named player extra growth XP
+  // and report what it did. The camp decides WHO trains and HOW MUCH; the maths
+  // lives here, so a player's rating still only ever moves in one place.
+  function grantXp(idx, amount) {
+    const p = roster[idx];
+    if (!p) return null;
+    if (p.pot == null) p.pot = growthCap(p.ovr);
+    if (p.xp == null) p.xp = 0;
+    const was = p.ovr;
+    // Already at his ceiling — the session isn't wasted, it just can't show.
+    if (p.ovr >= p.pot) return { idx: idx, name: p.name, pos: p.pos, was: was, ovr: p.ovr, up: 0, maxed: true };
+    p.xp += amount;
+    let ups = 0;
+    while (p.ovr < p.pot && p.xp >= growNeed(p.ovr)) { p.xp -= growNeed(p.ovr); p.ovr++; ups++; }
+    if (ups) p.grew = (p.grew || 0) + ups;
+    saveRoster();
+    return { idx: idx, name: p.name, pos: p.pos, was: was, ovr: p.ovr, up: ups, maxed: p.ovr >= p.pot };
+  }
+
+  // A read-only look at the squad for screens that just want to list it —
+  // a copy, so nobody can edit a player by accident from the outside.
+  function squad() {
+    return roster.map((p, i) => ({
+      idx: i, name: p.name, pos: p.pos, ovr: p.ovr,
+      pot: (p.pot == null ? growthCap(p.ovr) : p.pot),
+      xp: p.xp || 0, need: growNeed(p.ovr),
+      emoji: POS_EMOJI[p.pos] || '🏈',
+      side: i < OFF_END ? 'off' : 'def',
+    }));
+  }
+
   // ============================================================
   // 🙋 CREATE-A-PLAYER (src/createplayer.js talks to these)
   // ------------------------------------------------------------
@@ -987,6 +1018,7 @@
     teamOverall,        // { off, def, ovr } — handy for other modules / debug
     payroll: teamPayroll,
     addGrowth,          // 🌱 main.js endGame: grow your players a little
+    grantXp, squad,     // 🏕️ Training Camp (training.js): train one man, and read the squad
     growthPending,      // how many players grew since last viewed (for the badge)
     onMenu,             // refresh the 🌱 TEAM-button badge when the menu shows
     // 🙋 Create-A-Player (createplayer.js) — your one custom superstar
