@@ -8,17 +8,22 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.85 — cache-buster is `?v=101` in `index.html`.
+- **Version:** v1.86 — cache-buster is `?v=102` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
     v1.78 · 💰 Free Agency v1.79 · 🎓 Game Plan v1.80 · 📖 Custom Playbook v1.81.
-  - **Round 9 — The Locker Room Board: 4/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
+  - **Round 9 — The Locker Room Board: 5/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
     · 📻 Press Conference v1.83 (`src/press.js`) · 🎓 Coaching Staff v1.84 (`src/staff.js`)
-    · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`).
-    **Next on the clock: ⑤ 🏋️ Player Training.** Then ⑥ ⏱️ Two-Minute Drill, ⑦ 🏥 Injuries &
-    Depth Chart, ⑧ 🚩 Coach's Challenge — all three reach into the live game loop, which is
-    exactly why they were ranked last.
+    · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`).
+    **Next on the clock: ⑥ ⏱️ Two-Minute Drill.** Then ⑦ 🏥 Injuries & Depth Chart and
+    ⑧ 🚩 Coach's Challenge — all three reach into the live game loop, which is exactly why
+    they were ranked last. Expect real `main.js` edits rather than the usual self-contained file.
+  - **🏕️ Training Camp grew past its board description on Max's instruction** (2026-09-01): the
+    board said "put ONE player on a programme"; he asked for the whole squad in camp with one or
+    two breaking through per game, plus an upgradeable facilities section. It hands XP to the
+    existing 🌱 Player Growth system in `draft.js` via two new additive helpers there,
+    `TDDraft.grantXp(idx, xp)` and `TDDraft.squad()` — deliberately NOT a second rating system.
 - **Name:** the game is now **Touchdown Fun** (renamed from "Touchdown Rush" in v1.13). Only the
   *player-facing name* changed. On purpose we did NOT rename the repo, the folder, the
   `maxthestar.github.io/touchdown-rush` web address, the `tdr-` save keys, or the Abacus world-counter
