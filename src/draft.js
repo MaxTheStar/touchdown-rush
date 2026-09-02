@@ -246,6 +246,40 @@
     return { idx: idx, name: p.name, pos: p.pos, was: was, ovr: p.ovr, up: ups, maxed: p.ovr >= p.pot };
   }
 
+  // 🏥 INJURIES & DEPTH CHART (src/injuries.js) — swap a stand-in into a
+  // starting spot, and swap the real man back when he is fit again.
+  //
+  // Doing it as a REAL swap (rather than a multiplier applied somewhere) is the
+  // whole trick: team strength, the box score, ⭐ Player of the Game, 🌱 growth
+  // and 🌟 nicknames all read this roster, so one swap makes every single one of
+  // them show the man who actually played. Nothing else needs to know.
+  function makeBenchPlayer(pos, lo, hi) {
+    return makePlayer(pos, Math.max(40, lo), Math.max(41, hi), { from: 'BENCH', scouted: true });
+  }
+  // Hand back a COPY of whoever is in a spot right now.
+  function playerAt(idx) {
+    const p = roster[idx];
+    return p ? JSON.parse(JSON.stringify(p)) : null;
+  }
+  // Put `player` into slot `idx` and return the man he replaced. `drop` knocks a
+  // few points off someone playing out of position — that's what makes choosing
+  // the right cover on the depth chart worth doing.
+  function swapIn(idx, player, drop) {
+    if (!roster[idx] || !player) return null;
+    const out = JSON.parse(JSON.stringify(roster[idx]));
+    const copy = JSON.parse(JSON.stringify(player));
+    copy.pos = out.pos;                       // he is covering THIS spot now
+    copy.ovr = Math.max(40, copy.ovr - (drop || 0));
+    copy.scouted = true;
+    if (copy.salary == null) copy.salary = salaryOf(copy.ovr, copy.trait);
+    if (copy.pot == null || copy.pot < copy.ovr) copy.pot = growthCap(copy.ovr);
+    if (copy.xp == null) copy.xp = 0;
+    delete copy.grew;                         // his ▲ badge is not the starter's
+    roster[idx] = copy;
+    saveRoster();
+    return out;
+  }
+
   // A read-only look at the squad for screens that just want to list it —
   // a copy, so nobody can edit a player by accident from the outside.
   function squad() {
@@ -1019,6 +1053,8 @@
     payroll: teamPayroll,
     addGrowth,          // 🌱 main.js endGame: grow your players a little
     grantXp, squad,     // 🏕️ Training Camp (training.js): train one man, and read the squad
+    // 🏥 Injuries & Depth Chart (injuries.js): swap a stand-in in and out
+    makeBenchPlayer, playerAt, swapIn,
     growthPending,      // how many players grew since last viewed (for the badge)
     onMenu,             // refresh the 🌱 TEAM-button badge when the menu shows
     // 🙋 Create-A-Player (createplayer.js) — your one custom superstar
