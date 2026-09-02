@@ -116,6 +116,11 @@ function diff() { return DIFFICULTY[G.difficulty] || DIFFICULTY.medium; }
 // ============================================================
 const QUARTER_SECONDS = 150;   // game-clock seconds in a quarter (2:30 arcade quarters)
 const NUM_QUARTERS    = 4;
+// ⏱️ TWO-MINUTE DRILL (see src/drill.js): the clock it starts on, and how far
+// behind you begin. Four points is chosen on purpose — a field goal cannot
+// save you, so the drill can only ever be won with a touchdown.
+const DRILL_SECONDS = 120;
+const DRILL_DEFICIT = 4;
 const OT_SECONDS      = 120;   // a sudden-death overtime period (2:00)
 
 // How much game-clock each kind of play burns (in game-seconds).
@@ -1803,6 +1808,9 @@ function updateTimeoutBtn() {
 //   'gameover' — time's up and someone is ahead → final whistle
 function tickPeriodAtBoundary() {
   if (G.clock > 0) return 'continue';
+  // ⏱️ TWO-MINUTE DRILL: there is no next quarter and no overtime. When this
+  // clock hits zero the drill is over, however the score happens to look.
+  if (G.drillGame) return 'gameover';
   // Time expired in this period.
   if (!G.overtime && G.quarter < NUM_QUARTERS) {         // Q1→Q2→Q3→Q4
     G.quarter++;
@@ -2753,7 +2761,9 @@ function endGame() {
   // 🔥 Streak Heater: extend (or snap) your win streak. On a win it pays an
   // escalating bonus into "coins this game" — do it BEFORE the FINAL screen is
   // built so the payday total already includes it — and flies in a fiery banner.
-  if (window.TDStreak) TDStreak.recordResult(G.score > G.oppScore);
+  // ⏱️ A Two-Minute Drill is practice — it never touches your win streak,
+  // because failing one is the ordinary result and should cost you nothing.
+  if (window.TDStreak && !G.drillGame) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2781,7 +2791,11 @@ function endGame() {
   // 🏅 Ranked Ladder: a win earns a ⭐ (and maybe a promotion + coin bonus);
   // a loss can cost a division. A rank-change ribbon flies in. Before the FINAL
   // screen so any promotion coins count in this game's payday.
-  if (window.TDRanked) TDRanked.recordResult(G.score > G.oppScore);
+  // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
+  if (window.TDRanked && !G.drillGame) TDRanked.recordResult(G.score > G.oppScore);
+  // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
+  // screen so the coins land in the payday like everything else.
+  if (G.drillGame && window.TDDrill) TDDrill.finish(G.score, G.oppScore, G.clock);
   // 🎃 Season Event payday — before the FINAL screen so it lands in the payday.
   if (G.eventGame && window.TDEvents) TDEvents.finish(G.score > G.oppScore);
   // ⭐ PLAYER OF THE GAME: crown this game's star and pay their bonus — before
@@ -2904,8 +2918,10 @@ function returnToMenuFromGameOver() {
   document.body.classList.remove('kicking', 'returning', 'two-player');
   const wasSeason = G.seasonGame;
   const wasPlayoff = G.playoffGame;
+  const wasDrill = G.drillGame;
   G.seasonGame = false;
   G.playoffGame = false;
+  G.drillGame = false;
   // 🎃 the event is over — drop its theme and repaint YOUR field back.
   if (G.eventGame) {
     G.eventGame = false;
@@ -2919,6 +2935,9 @@ function returnToMenuFromGameOver() {
   // 🏆 A playoff game drops you back on the BRACKET screen (advanced / knocked out /
   // champion), the same way — see playoffs.js.
   else if (wasPlayoff && window.TDPlayoffs) TDPlayoffs.open();
+  // ⏱️ …and a Two-Minute Drill drops you back on the drill screen, where your
+  // record is waiting and you can go straight into another attempt.
+  else if (wasDrill && window.TDDrill) TDDrill.open();
 }
 
 // ---- small color helpers (for the opponent's on-screen colors) ----
@@ -3127,7 +3146,7 @@ function startGameWithTeam() {
 // The shared "start a brand-new game" routine, used by BOTH Quick Game and
 // 🏆 Season mode. `team`/`opp` are team objects; `isSeason` is true for a
 // season game (so endGame knows to report the final score back to the season).
-function beginGame(team, opp, isSeason, isRival, isPlayoff) {
+function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill) {
   G.team = team;
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
@@ -3137,6 +3156,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
   G.eventGame = !!(window.TDEvents && TDEvents.begin());
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
   G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
+  G.drillGame = !!isDrill;            // ⏱️ is this a Two-Minute Drill? (see drill.js)
 
   // ⭐ Turn each team's OFFENSE/DEFENSE ratings into a gentle speed tilt: a 5 is
   // neutral, a 10 is +7.5%, a 1 is −6%. So a great team really does play tougher,
@@ -3240,6 +3260,22 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff) {
   repaintField();
   if (G.eventGame && window.TDEvents) sayComment(TDEvents.label() + ' — special game!');
   if (G.bossGame) sayComment('👑 BOSS BATTLE — it\'s MAXWELL! Can you beat the best?');
+
+  // ⏱️ TWO-MINUTE DRILL — there is no kickoff to return and no quarters left to
+  // play. The clock says 2:00, you are four points down, and the ball is on your
+  // own 20 on first down. One possession: score a touchdown or the drill is over.
+  if (G.drillGame) {
+    G.quarter = NUM_QUARTERS;     // the last period, so time running out is final
+    G.clock = DRILL_SECONDS;
+    G.oppScore = DRILL_DEFICIT;   // four behind — only a touchdown wins this
+    G.timeouts = 0;               // and nothing left to stop the clock with
+    updateTimeoutBtn();
+    document.body.classList.remove('kicking');
+    setupPlay({ los: 20, down: 1, fd: 30 });
+    showBanner('⏱ TWO-MINUTE DRILL', true);
+    sayComment('2:00 to go, four points down. Score or go home!');
+    return;
+  }
   startKickoff();   // the game opens with a kickoff for you to return
 }
 
@@ -3270,6 +3306,21 @@ window.TDGame = {
       do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp.abbr === team.abbr);
     }
     if (team && opp && G.scene) beginGame(team, opp, false, true);
+  },
+  // ⏱️ start a TWO-MINUTE DRILL: your currently-picked team against a random
+  // opponent. Returns false if we couldn't start, so drill.js can say so.
+  startDrillGame() {
+    if (G.state !== 'menu') return false;
+    const team = allTeams()[G.menuIndex];
+    if (!team || !G.scene) return false;
+    let opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)];
+    let guard = 0;
+    while (opp.abbr === team.abbr && guard++ < 20) {
+      opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)];
+    }
+    if (opp.abbr === team.abbr) return false;
+    beginGame(team, opp, false, false, false, true);
+    return true;
   },
   // 🏆 start a PLAYOFF TOURNAMENT game: your team vs the bracket's next opponent
   // (playoffs.js calls this from the PLAY button). Like a season game, but flagged
@@ -3536,7 +3587,7 @@ function startNextPlay() {
     // Between Q1/Q2 and Q3/Q4 the game takes a breather, then picks up EXACTLY
     // where it left off — a drive DOES carry over inside a half (real rules).
     startBreak('q', () => {
-      if (G.next && G.next.fresh) startCpuDrive();
+      if (G.next && G.next.fresh) { if (G.drillGame) endGame(); else startCpuDrive(); }
       else { document.body.classList.remove('kicking'); setupPlay(G.next); }
     });
     return;
@@ -3545,7 +3596,12 @@ function startNextPlay() {
   // A possession change (fresh) hands the ball to the COMPUTER now — its drive
   // plays out (and can score) before you get the ball back. Otherwise this same
   // drive of yours simply continues to the next down.
-  if (G.next && G.next.fresh) startCpuDrive();
+  // ⏱️ …except in a TWO-MINUTE DRILL, where you only ever get the ONE possession.
+  // This single line covers BOTH endings: if you just scored, the extra point has
+  // already been kicked and you are ahead, so endGame() reads a win; if you threw
+  // it away, punted or turned it over on downs, you are still four behind and it
+  // reads a loss. Either way the drill is finished.
+  if (G.next && G.next.fresh) { if (G.drillGame) endGame(); else startCpuDrive(); }
   else setupPlay(G.next);
 }
 
