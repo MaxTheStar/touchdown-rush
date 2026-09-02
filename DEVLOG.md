@@ -8,17 +8,28 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.86 — cache-buster is `?v=102` in `index.html`.
+- **Version:** v1.87 — cache-buster is `?v=103` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
     v1.78 · 💰 Free Agency v1.79 · 🎓 Game Plan v1.80 · 📖 Custom Playbook v1.81.
-  - **Round 9 — The Locker Room Board: 5/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
+  - **Round 9 — The Locker Room Board: 6/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
     · 📻 Press Conference v1.83 (`src/press.js`) · 🎓 Coaching Staff v1.84 (`src/staff.js`)
-    · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`).
-    **Next on the clock: ⑥ ⏱️ Two-Minute Drill.** Then ⑦ 🏥 Injuries & Depth Chart and
-    ⑧ 🚩 Coach's Challenge — all three reach into the live game loop, which is exactly why
-    they were ranked last. Expect real `main.js` edits rather than the usual self-contained file.
+    · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`)
+    · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`).
+    **Next on the clock: ⑦ 🏥 Injuries & Depth Chart.** Then ⑧ 🚩 Coach's Challenge.
+  - **⏱️ THE TWO-MINUTE DRILL IS THE FIRST PICK THAT REALLY TOUCHES `main.js`.** Everything up to
+    v1.86 was a self-contained `src/X.js` with a hook or two. The drill had to change how a game
+    STARTS (no kickoff, a rigged 0–4 scoreboard, ball on your own 20, no timeouts) and how it ENDS
+    (one possession only), so `main.js` now carries a small set of `G.drillGame` guards:
+    `beginGame` takes a 6th `isDrill` arg; `tickPeriodAtBoundary` returns `'gameover'` for a drill
+    (no 5th quarter, no overtime); the two `G.next.fresh` possession-change sites call `endGame()`
+    instead of `startCpuDrive()` — ONE line each, and it covers both winning and losing;
+    `returnToMenuFromGameOver` reopens the drill screen; and `TDStreak`/`TDRanked` are skipped for
+    drills so failing one costs you nothing. **Every guard is written so the flag being off leaves
+    the original behaviour byte-identical — when editing near these, keep it that way.**
+    Four points down is load-bearing: three leaves a field goal as a safe fallback, seven lets you
+    play for a tie. `DRILL_SECONDS` / `DRILL_DEFICIT` sit beside `NUM_QUARTERS`.
   - **🏕️ Training Camp grew past its board description on Max's instruction** (2026-09-01): the
     board said "put ONE player on a programme"; he asked for the whole squad in camp with one or
     two breaking through per game, plus an upgradeable facilities section. It hands XP to the
