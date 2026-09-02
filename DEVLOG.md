@@ -8,16 +8,30 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.87 — cache-buster is `?v=103` in `index.html`.
+- **Version:** v1.88 — cache-buster is `?v=108` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
     v1.78 · 💰 Free Agency v1.79 · 🎓 Game Plan v1.80 · 📖 Custom Playbook v1.81.
-  - **Round 9 — The Locker Room Board: 6/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
+  - **Round 9 — The Locker Room Board: 7/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
     · 📻 Press Conference v1.83 (`src/press.js`) · 🎓 Coaching Staff v1.84 (`src/staff.js`)
     · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`)
-    · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`).
-    **Next on the clock: ⑦ 🏥 Injuries & Depth Chart.** Then ⑧ 🚩 Coach's Challenge.
+    · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`) · 🏥 Injuries & Depth Chart v1.88 (`src/injuries.js`).
+    **Next on the clock: ⑧ 🚩 Coach's Challenge — the last pick on the board.**
+  - **🏥 INJURIES OWN A NEW THING: THE BENCH.** Before v1.88 the squad was exactly the 8 starters
+    in `tdr-roster` and nothing else. `injuries.js` signs 4 backups (`tdr-injury`) and works by
+    REALLY SWAPPING a stand-in into the roster — `TDDraft.playerAt` / `TDDraft.swapIn` /
+    `TDDraft.makeBenchPlayer` are new additive helpers in `draft.js`. That swap is the whole trick:
+    team strength, the box score, ⭐ Player of the Game, 🌱 growth and 🌟 nicknames all read the
+    roster, so one swap makes every one of them show the man who actually played. ZERO main.js edits
+    (it wraps `TDGameStats.finish`, after the original, so the man who played gets the credit).
+    ⚠️ **`heal()` must check the stand-in is STILL in that slot before swapping the starter back** —
+    Free Agency and the draft can both replace a starter mid-injury, and swapping back blindly threw
+    away a signing the player had paid for. If the slot changed, your signing wins and the returning
+    man goes to the bench. ⚠️ **The bench is kept within 14 of the squad average (`BENCH_GAP`)** —
+    a bench frozen at signing strength drifts further behind every week until one injury guts the
+    team. Fairness rules that must survive any edit: one hurt at a time, 1–3 games, a guaranteed
+    clear game after each, nothing before 4 games played, always somebody available, never lost for good.
   - **⏱️ THE TWO-MINUTE DRILL IS THE FIRST PICK THAT REALLY TOUCHES `main.js`.** Everything up to
     v1.86 was a self-contained `src/X.js` with a hook or two. The drill had to change how a game
     STARTS (no kickoff, a rigged 0–4 scoreboard, ball on your own 20, no timeouts) and how it ENDS
