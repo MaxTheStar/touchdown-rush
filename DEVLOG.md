@@ -8,16 +8,27 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.88 — cache-buster is `?v=108` in `index.html`.
+- **Version:** v1.89 — cache-buster is `?v=109` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
     v1.78 · 💰 Free Agency v1.79 · 🎓 Game Plan v1.80 · 📖 Custom Playbook v1.81.
-  - **Round 9 — The Locker Room Board: 7/8 so far.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
+  - **🎉 Round 9 — The Locker Room Board: SWEPT 8/8.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
     · 📻 Press Conference v1.83 (`src/press.js`) · 🎓 Coaching Staff v1.84 (`src/staff.js`)
     · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`)
     · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`) · 🏥 Injuries & Depth Chart v1.88 (`src/injuries.js`).
-    **Next on the clock: ⑧ 🚩 Coach's Challenge — the last pick on the board.**
+    · 🚩 Coach's Challenge v1.89 (`src/flag.js`).
+    **The board is clear. Next: Max picks a Round 10 chart.** Full regression after the sweep:
+    46 modules, 41 overlays, 28 menu buttons, normal games + the drill both play start to finish,
+    portrait audited at 375×812 (no overhang, no x-scroll, no new front-screen chips), 0 errors.
+  - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
+    "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
+    `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
+    `TDFlag.ask(done)`. ⚠️ **Saying yes PARKS A LIVE GAME, so every path back must call `done`** —
+    throwing, declining, the 6s panel auto-timeout, and `ask()` with nothing pending all do. If you
+    ever add a fourth path, it must call back too or the game freezes. ⚠️ **It is `window.TDFlag`,
+    NOT `TDChallenge`** — that name belongs to 📋 Daily Challenges (v1.35). Needing a timeout to throw
+    is also why the ⏱️ drill can never offer one; that is not special-cased anywhere.
   - **🏥 INJURIES OWN A NEW THING: THE BENCH.** Before v1.88 the squad was exactly the 8 starters
     in `tdr-roster` and nothing else. `injuries.js` signs 4 backups (`tdr-injury`) and works by
     REALLY SWAPPING a stand-in into the roster — `TDDraft.playerAt` / `TDDraft.swapIn` /
