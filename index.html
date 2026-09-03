@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=108" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=108" />
+  <link rel="icon" type="image/png" href="favicon.png?v=109" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=109" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=108" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=109" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=108" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=109" />
   <style>
     html, body {
       margin: 0;
@@ -300,6 +300,75 @@
     #btn-kick { background: rgba(255,214,10,0.28); border-color: rgba(255,214,10,0.75); }
     #fourth-down .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
     #btn-kick:active { background: rgba(255,214,10,0.55); }
+
+    /* ---- 🚩 COACH'S CHALLENGE (src/flag.js) ----------------------------- */
+    /* Mirrors #fourth-down: a full-screen ask that parks the game behind it. */
+    #flag-panel {
+      position: fixed; z-index: 31; inset: 0;
+      display: none;                          /* flag.js flips this to flex */
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 13px; background: rgba(10,16,32,0.78);
+    }
+    #flag-panel .fl-title {
+      font: 800 clamp(17px, 5.4vw, 25px) "Arial Black", Arial; color: #ff6b6b;
+      text-shadow: 0 2px 6px #000; letter-spacing: .5px; text-align: center;
+      max-width: 88vw;
+    }
+    #flag-panel .fl-blurb {
+      font: 400 clamp(12px, 3.6vw, 15px) Georgia, serif; color: #dbe6f2;
+      text-align: center; max-width: min(84vw, 380px); font-style: italic;
+    }
+    #flag-panel .fl-choice {
+      -webkit-tap-highlight-color: transparent; touch-action: none;
+      width: min(78vw, 300px); text-align: center;
+      padding: 16px 14px; border-radius: 16px;
+      font: 800 clamp(14px, 4.6vw, 20px) "Arial Black", Arial; color: #fff;
+      background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5);
+      box-shadow: 0 3px 10px rgba(0,0,0,.4);
+    }
+    #flag-panel .fl-choice.throw {
+      background: rgba(255,77,90,0.34); border-color: rgba(255,120,130,0.85);
+    }
+    #flag-panel .fl-choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
+    #flag-panel .fl-choice.throw:active { background: rgba(255,77,90,0.6); }
+    #flag-panel .fl-left {
+      font: 700 clamp(9px, 2.8vw, 11px) Arial; color: #9aa8bd; text-align: center;
+      max-width: 84vw;
+    }
+    /* the review verdict, laid over the dead ball */
+    .fl-verdict {
+      position: fixed; z-index: 32; left: 50%; top: 26%; transform: translateX(-50%);
+      display: none; width: min(86vw, 380px); text-align: center;
+      border-radius: 16px; padding: 15px 16px;
+      background: rgba(10,16,32,0.95); border: 2px solid #4a5a72;
+      box-shadow: 0 8px 26px rgba(0,0,0,.55);
+    }
+    .fl-verdict.good { border-color: #6fd98f; }
+    .fl-verdict.bad  { border-color: #ff6b6b; }
+    .fl-vTop { font: 800 10px "Arial Black", Arial; color: #9aa8bd; letter-spacing: .2em; }
+    .fl-vRule { font: 800 clamp(15px, 4.8vw, 21px) "Arial Black", Arial; margin: 7px 0 5px; }
+    .fl-verdict.good .fl-vRule { color: #6fd98f; }
+    .fl-verdict.bad  .fl-vRule { color: #ff6b6b; }
+    .fl-vWhy { font: 400 12.5px Georgia, serif; color: #dbe6f2; font-style: italic; }
+    /* the record screen inside the 🏆 Trophy Case */
+    #flag-modal { z-index: 76; }
+    .fl-statRow { display: flex; gap: 8px; }
+    .fl-stat {
+      flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,107,107,0.3);
+      border-radius: 11px; padding: 9px 4px;
+    }
+    .fl-stat b { display: block; font: 800 17px "Arial Black", Arial; color: #ff8f8f; }
+    .fl-stat span { font: 700 8px Arial; color: #8fa0b4; letter-spacing: .12em; }
+    .fl-how { font: 400 12px Georgia, serif; color: #9aa8bd; text-align: left;
+              font-style: italic; margin-top: 10px; }
+    .fl-sec {
+      font: 800 9px "Arial Black", Arial; color: #9aa8bd; letter-spacing: .14em;
+      text-align: left; margin: 12px 0 6px; padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .fl-log { text-align: left; font: 700 10.5px Arial; color: #ff9b9b; padding: 3px 0; }
+    .fl-log.won { color: #6fd98f; }
+    .fl-none { text-align: left; font: 400 12px Georgia, serif; color: #8fa0b4; font-style: italic; }
 
     /* ---- 🏈 SPECIAL TEAMS TRICKS (src/special.js) ----------------------- */
     /* 🎭 the fake, sitting under the two normal 4th-down choices */
@@ -2930,6 +2999,17 @@
 
   <!-- 4th-down choice: play the down, or kick. main.js shows/hides this
        and fills in whether button ② is a FIELD GOAL or a PUNT. -->
+  <!-- 🚩 COACH'S CHALLENGE — offered mid-game by src/flag.js, which parks the
+       dead-ball timer while it is up (the same way the ⚡ onside kick does). -->
+  <div id="flag-panel">
+    <div class="fl-title" id="flag-title">🚩</div>
+    <div class="fl-blurb" id="flag-blurb"></div>
+    <div class="fl-choice throw" id="flag-throw">🚩 THROW THE FLAG</div>
+    <div class="fl-choice let" id="flag-let">LET IT GO</div>
+    <div class="fl-left" id="flag-left"></div>
+  </div>
+  <div class="fl-verdict" id="flag-verdict"></div>
+
   <div id="fourth-down">
     <div class="title">4TH DOWN!</div>
     <div class="choice" id="btn-go">① PLAY 4TH DOWN</div>
@@ -3043,6 +3123,16 @@
       <!-- 🏥 Who is hurt, and who covers for him (injuries.js). -->
       <div class="ov-btn" id="open-inj">🏥 INJURIES &amp; DEPTH CHART<span id="inj-badge"></span></div>
       <div class="ov-btn" id="team-close">CLOSE</div>
+    </div>
+  </div>
+
+  <!-- 🚩 COACH'S CHALLENGE — your flag-throwing record (src/flag.js). -->
+  <div class="ov" id="flag-modal">
+    <div class="ov-card">
+      <div class="ov-title">🚩 COACH&#39;S CHALLENGE</div>
+      <div class="ov-sub">When the referee gets one wrong, throw the red flag and make them look again.</div>
+      <div id="flag-body"></div>
+      <div class="ov-btn" id="flag-close">DONE</div>
     </div>
   </div>
 
@@ -3349,6 +3439,8 @@
       <div class="ov-btn" id="open-news">🗞️ THE SPORTS PAGE</div>
       <!-- 📻 A reporter waits after every game — the red dot means one is there. -->
       <div class="ov-btn" id="open-press">📻 PRESS CONFERENCE<span id="press-badge"></span></div>
+      <!-- 🚩 Your challenge record (flag.js). -->
+      <div class="ov-btn" id="open-flag">🚩 COACH&#39;S CHALLENGE</div>
       <div class="trophy-sec">🎽 Uniform Cabinet <span id="trophy-uni-count" class="trophy-sec-n">0/9</span></div>
       <div id="trophy-uniforms"></div>
       <div class="trophy-sec">🏅 Badges <span id="trophy-badge-count" class="trophy-sec-n">0/20</span></div>
@@ -3661,56 +3753,57 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=108"></script>
-  <script src="src/sound.js?v=108"></script>
-  <script src="src/shop.js?v=108"></script>
-  <script src="src/spin.js?v=108"></script>
-  <script src="src/challenges.js?v=108"></script>
-  <script src="src/quests.js?v=108"></script>
-  <script src="src/progress.js?v=108"></script>
-  <script src="src/streak.js?v=108"></script>
-  <script src="src/achievements.js?v=108"></script>
-  <script src="src/trophy.js?v=108"></script>
-  <script src="src/records.js?v=108"></script>
-  <script src="src/road.js?v=108"></script>
-  <script src="src/roadtrip.js?v=108"></script>
-  <script src="src/cards.js?v=108"></script>
-  <script src="src/stadium.js?v=108"></script>
-  <script src="src/ranked.js?v=108"></script>
-  <script src="src/halftime.js?v=108"></script>
-  <script src="src/uniform.js?v=108"></script>
-  <script src="src/powerup.js?v=108"></script>
-  <script src="src/arcade.js?v=108"></script>
-  <script src="src/nemesis.js?v=108"></script>
-  <script src="src/weather.js?v=108"></script>
-  <script src="src/season.js?v=108"></script>
-  <script src="src/playoffs.js?v=108"></script>
-  <script src="src/film.js?v=108"></script>
-  <script src="src/celebration.js?v=108"></script>
-  <script src="src/juice.js?v=108"></script>
-  <script src="src/gamestats.js?v=108"></script>
-  <script src="src/sportspage.js?v=108"></script>
-  <script src="src/press.js?v=108"></script>
-  <script src="src/staff.js?v=108"></script>
-  <script src="src/chemistry.js?v=108"></script>
-  <script src="src/boxscore.js?v=108"></script>
-  <script src="src/field.js?v=108"></script>
-  <script src="src/draft.js?v=108"></script>
-  <script src="src/training.js?v=108"></script>
-  <script src="src/injuries.js?v=108"></script>
-  <script src="src/freeagency.js?v=108"></script>
-  <script src="src/gameplan.js?v=108"></script>
-  <script src="src/playbook.js?v=108"></script>
-  <script src="src/createplayer.js?v=108"></script>
-  <script src="src/nicknames.js?v=108"></script>
-  <script src="src/special.js?v=108"></script>
-  <script src="src/events.js?v=108"></script>
-  <script src="src/dynasty.js?v=108"></script>
-  <script src="src/ads.js?v=108"></script>
-  <script src="src/tour.js?v=108"></script>
-  <script src="src/concession.js?v=108"></script>
-  <script src="src/kick.js?v=108"></script>
-  <script src="src/drill.js?v=108"></script>
-  <script src="src/main.js?v=108"></script>
+  <script src="src/stats.js?v=109"></script>
+  <script src="src/sound.js?v=109"></script>
+  <script src="src/shop.js?v=109"></script>
+  <script src="src/spin.js?v=109"></script>
+  <script src="src/challenges.js?v=109"></script>
+  <script src="src/quests.js?v=109"></script>
+  <script src="src/progress.js?v=109"></script>
+  <script src="src/streak.js?v=109"></script>
+  <script src="src/achievements.js?v=109"></script>
+  <script src="src/trophy.js?v=109"></script>
+  <script src="src/records.js?v=109"></script>
+  <script src="src/road.js?v=109"></script>
+  <script src="src/roadtrip.js?v=109"></script>
+  <script src="src/cards.js?v=109"></script>
+  <script src="src/stadium.js?v=109"></script>
+  <script src="src/ranked.js?v=109"></script>
+  <script src="src/halftime.js?v=109"></script>
+  <script src="src/uniform.js?v=109"></script>
+  <script src="src/powerup.js?v=109"></script>
+  <script src="src/arcade.js?v=109"></script>
+  <script src="src/nemesis.js?v=109"></script>
+  <script src="src/weather.js?v=109"></script>
+  <script src="src/season.js?v=109"></script>
+  <script src="src/playoffs.js?v=109"></script>
+  <script src="src/film.js?v=109"></script>
+  <script src="src/celebration.js?v=109"></script>
+  <script src="src/juice.js?v=109"></script>
+  <script src="src/gamestats.js?v=109"></script>
+  <script src="src/sportspage.js?v=109"></script>
+  <script src="src/press.js?v=109"></script>
+  <script src="src/staff.js?v=109"></script>
+  <script src="src/chemistry.js?v=109"></script>
+  <script src="src/boxscore.js?v=109"></script>
+  <script src="src/field.js?v=109"></script>
+  <script src="src/draft.js?v=109"></script>
+  <script src="src/training.js?v=109"></script>
+  <script src="src/injuries.js?v=109"></script>
+  <script src="src/flag.js?v=109"></script>
+  <script src="src/freeagency.js?v=109"></script>
+  <script src="src/gameplan.js?v=109"></script>
+  <script src="src/playbook.js?v=109"></script>
+  <script src="src/createplayer.js?v=109"></script>
+  <script src="src/nicknames.js?v=109"></script>
+  <script src="src/special.js?v=109"></script>
+  <script src="src/events.js?v=109"></script>
+  <script src="src/dynasty.js?v=109"></script>
+  <script src="src/ads.js?v=109"></script>
+  <script src="src/tour.js?v=109"></script>
+  <script src="src/concession.js?v=109"></script>
+  <script src="src/kick.js?v=109"></script>
+  <script src="src/drill.js?v=109"></script>
+  <script src="src/main.js?v=109"></script>
 </body>
 </html>

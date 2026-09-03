@@ -1458,6 +1458,7 @@ function endPlay(result, customMsg) {
       : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99) - G.losYards);
 
   let msg, next, big = false;
+  let spot = null;      // 🚩 where the ball was spotted (the Coach's Challenge reads this)
 
   // 🛑 SAFETY — you got tackled with the ball in your OWN end zone. That's 2
   // points for the other team, and you free-kick the ball back to them (so
@@ -1501,7 +1502,7 @@ function endPlay(result, customMsg) {
     big = true;
     next = { los: 20, down: 1, fd: 30, fresh: true };
   } else {
-    const spot = (result === 'incomplete')
+    spot = (result === 'incomplete')
       ? G.losYards
       : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99);
 
@@ -1548,6 +1549,25 @@ function endPlay(result, customMsg) {
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1600;
   showBanner(msg, big);
+
+  // 🚩 COACH'S CHALLENGE — was the referee right about that one? flag.js decides
+  // whether this call is close enough to be worth a flag, and if it is we park
+  // the dead-ball timer while you choose. This is exactly the shape the ⚡ onside
+  // kick already uses a few hundred lines up: hold the clock, ask, then let the
+  // game roll on with whatever came back.
+  //
+  // Note it needs a timeout to throw, which is also why the ⏱️ Two-Minute Drill
+  // (no timeouts at all) can never offer one — that falls out on its own.
+  if (window.TDFlag && TDFlag.offered({
+        result: result, spot: spot, next: next, down: G.down,
+        los: G.losYards, fd: G.firstDownYards, timeouts: G.timeouts })) {
+    G.deadUntil = Number.MAX_SAFE_INTEGER;     // hold here until you answer
+    TDFlag.ask(verdict => {
+      if (verdict && verdict.next) G.next = verdict.next;
+      if (verdict && verdict.costTimeout && G.timeouts > 0) { G.timeouts--; updateTimeoutBtn(); }
+      G.deadUntil = G.scene.time.now + 1000;   // let the game breathe, then play on
+    });
+  }
 }
 
 // ============================================================
@@ -3218,6 +3238,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill) {
   G.trickAvailable = true; G.trickArmed = false; G.trickActive = false;   // 🎩 a fresh trick play each game
   G.fakeKick = false;
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
+  if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
