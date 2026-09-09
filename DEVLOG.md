@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.93 — cache-buster is `?v=118` in `index.html`.
+- **Version:** v1.94 — cache-buster is `?v=121` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -27,7 +27,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
     gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
     ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot **v1.92 ✅** · ④📸 Team Poster **v1.93 ✅** ·
-    ⑤🎲 House Rules · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
+    ⑤🎲 House Rules **v1.94 ✅** · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
   - **🌈 IF YOU EVER DRAW THE BALL SOMEWHERE NEW, IT NEEDS THE SKIN.** The football is drawn in
     code, and as of v1.91 the colours come from `TDBall.look()` with the original hardcoded values as
     fallbacks on main.js's side — so a missing `ball.js` paints the identical classic ball. There are
@@ -54,6 +54,16 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     The title shrinks to 34px and then ellipsises (`fitTitle`) — the first cut stopped shrinking at 52px
     and a long name ran off both edges. ⚠️ **Pick ⑧ Relocation & Rebrand lets Max type his own team
     name, so every place a team name is drawn has to assume "whatever he typed".**
+  - **🎲 `TDHouse.endGame()` MUST BE THE LAST LINE OF `endGame`.** Everything above it asks "was this a
+    silly game?" before it counts anything — records, streak, ladder, events. The first cut cleared the
+    flag early (beside `freezeEveryone()`), which is BEFORE `TDRecords.gameOver()`, so a 42-point romp
+    with a giant ball quietly set a real personal best. **Anything you add to `endGame` that COUNTS goes
+    ABOVE that line.** House rules are off entirely for season/playoff/rival/Maxwell/drill games; a
+    🎃 event game may be silly but is never collected (blocking events outright was tried first and was
+    worse — they run ~12 weeks a year, so a quarter of the year the switches would do nothing).
+  - **The house-rule multipliers reuse the ⚡ Power-Up chain pattern:** `hsSpeed()`/`hsCatch()` fold into
+    shop.js's `speedMult`/`gloveBoost`, `defSlow()` into `updateDefense`. Every getter is neutral unless
+    a house game is LIVE, so a switch flipped on the menu changes nothing by itself.
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
@@ -1430,6 +1440,7 @@ Script load order matters: `stats → sound → shop → progress → weather �
 `tdr-trivia` (🧠 the Football IQ Quiz — `{best, played, right, wrong}`),
 `tdr-ball` (🌈 Ball Skins — `{owned, equipped}`),
 `tdr-mascot` (🐯 Team Mascot — `{owned, equipped, name}`),
+`tdr-house` (🎲 House Rules — `{on:[ids]}`),
 `tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
 team of honest 60s is regenerated automatically if it's ever missing).
 
