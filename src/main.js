@@ -209,6 +209,7 @@ const TEAM_RATINGS = {
   NO:  { off: 7,  def: 6 },  TB:  { off: 7,  def: 8 },  ARI: { off: 6,  def: 5 },
   LAR: { off: 7,  def: 8 },  SF:  { off: 8,  def: 9 },
   MXW: { off: 10, def: 10 },   // 👑 MAXWELL — the boss team, maxed out on purpose
+  ALL: { off: 9,  def: 9  },   // 🌟 THE ALL-STARS — the league's best, a notch below Maxwell
 };
 
 // 👑 MAXWELL — the BOSS TEAM. Not a normal NFL team and not pickable as YOUR
@@ -216,6 +217,12 @@ const TEAM_RATINGS = {
 // 👑 button on the menu to challenge him). Gold-and-black villain colors, maxed
 // ratings, a superstar free safety, and a whole-team strength buff in beginGame.
 const MAXWELL_TEAM = { abbr: 'MXW', name: 'MAXWELL', jersey: 0xFFC637, helmet: 0x0A0A0A, boss: true };
+
+// 🌟 THE ALL-STARS — the opponent for the All-Star Game (src/allstar.js): a
+// squad made of the best players in the league. Like Maxwell, it is never one
+// of YOUR pickable teams, only ever an opponent. Strong (9/9) but a notch below
+// Maxwell, because an All-Star Game is a showcase, not a boss fight.
+const ALLSTAR_TEAM = { abbr: 'ALL', name: 'ALL-STARS', jersey: 0xE8B923, helmet: 0x14203a };
 
 // Look up a team's ratings (defaults to a balanced 5/5 for the unlockable
 // uniforms, which aren't real NFL teams). overall = the average, out of 10.
@@ -2786,7 +2793,7 @@ function endGame() {
   // ⏱️ A Two-Minute Drill is practice — it never touches your win streak,
   // because failing one is the ordinary result and should cost you nothing.
   // 🎲 …and neither a drill nor a 🎲 house-rules game touches your win streak.
-  if (window.TDStreak && !G.drillGame && !G.houseGame) TDStreak.recordResult(G.score > G.oppScore);
+  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2819,7 +2826,7 @@ function endGame() {
   // screen so any promotion coins count in this game's payday.
   // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
   // 🎲 …and for exactly the same reason a house-rules game never moves it either.
-  if (window.TDRanked && !G.drillGame && !G.houseGame) TDRanked.recordResult(G.score > G.oppScore);
+  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame) TDRanked.recordResult(G.score > G.oppScore);
   // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
   // screen so the coins land in the payday like everything else.
   if (G.drillGame && window.TDDrill) TDDrill.finish(G.score, G.oppScore, G.clock);
@@ -3182,7 +3189,7 @@ function startGameWithTeam() {
 // The shared "start a brand-new game" routine, used by BOTH Quick Game and
 // 🏆 Season mode. `team`/`opp` are team objects; `isSeason` is true for a
 // season game (so endGame knows to report the final score back to the season).
-function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill) {
+function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) {
   G.team = team;
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
@@ -3193,6 +3200,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill) {
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
   G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
   G.drillGame = !!isDrill;            // ⏱️ is this a Two-Minute Drill? (see drill.js)
+  G.allStarGame = !!isAllStar;        // 🌟 is this the All-Star Game? (see allstar.js)
 
   // 🎲 HOUSE RULES — silly football, EXHIBITION GAMES ONLY. A season, playoff,
   // rival, Maxwell or drill game is a real contest, so the toys are switched
@@ -3203,7 +3211,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill) {
   // first attempt and it was worse: events run about twelve weeks a year, so
   // for a quarter of the year Max would flip a switch and nothing would happen.
   // Let the toy always work; just never let it EARN anything.
-  const houseAllowed = !isSeason && !isPlayoff && !isRival && !isDrill && !G.bossGame;
+  const houseAllowed = !isSeason && !isPlayoff && !isRival && !isDrill
+                    && !G.bossGame && !G.allStarGame;
   G.houseGame = !!(window.TDHouse && TDHouse.begin(houseAllowed));
   // the two rules you can SEE: an enormous ball, and half-sized defenders
   if (ball) ball.setScale((1 / CHIBI_SS) * (window.TDHouse ? TDHouse.ballScale() : 1));
@@ -3382,6 +3391,14 @@ window.TDGame = {
   startPlayoffGame(youAbbr, oppAbbr) {
     const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
     if (team && opp && G.scene) beginGame(team, opp, false, false, true);
+  },
+  // 🌟 start the ALL-STAR GAME: your stars against a squad of the league's best
+  // (allstar.js calls this). An exhibition showcase — it deliberately does NOT
+  // move the ladder or the streak, and 🎲 house rules are off for it, so the
+  // trophy always means you really beat them.
+  startAllStarGame(youAbbr) {
+    const team = this.teamByAbbr(youAbbr);
+    if (team && G.scene) beginGame(team, ALLSTAR_TEAM, false, false, false, false, true);
   },
   // 🎨 redraw the field with your latest Field Designer colours (field.js calls
   // this the moment you pick a new turf, end zone or midfield logo).
