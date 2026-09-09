@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.94 — cache-buster is `?v=121` in `index.html`.
+- **Version:** v1.95 — cache-buster is `?v=122` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -27,7 +27,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
     gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
     ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot **v1.92 ✅** · ④📸 Team Poster **v1.93 ✅** ·
-    ⑤🎲 House Rules **v1.94 ✅** · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
+    ⑤🎲 House Rules **v1.94 ✅** · ⑥🌟 All-Star Game **v1.95 ✅** · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
   - **🌈 IF YOU EVER DRAW THE BALL SOMEWHERE NEW, IT NEEDS THE SKIN.** The football is drawn in
     code, and as of v1.91 the colours come from `TDBall.look()` with the original hardcoded values as
     fallbacks on main.js's side — so a missing `ball.js` paints the identical classic ball. There are
@@ -64,6 +64,15 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   - **The house-rule multipliers reuse the ⚡ Power-Up chain pattern:** `hsSpeed()`/`hsCatch()` fold into
     shop.js's `speedMult`/`gloveBoost`, `defSlow()` into `updateDefense`. Every getter is neutral unless
     a house game is LIVE, so a switch flipped on the menu changes nothing by itself.
+  - **🌟 `beginGame` NOW TAKES A 7th FLAG, `isAllStar`,** and there is a new `ALLSTAR_TEAM` constant +
+    `ALL: {off:9,def:9}` rating beside Maxwell's. The All-Star Game is a SHOWCASE, so `G.allStarGame`
+    switches off the ranked ladder, the win streak AND house rules — a trophy you could farm or win with
+    a giant ball would be worthless. The bar to make the team is `66 + 2×level` capped at 82: a fixed
+    bar would be an achievement once and then automatic forever. allstar.js learns the game ended by
+    **wrapping `TDGameStats.finish`** (the injuries.js trick) rather than adding another `endGame` line.
+  - ⚠️ **THE GUARD LIST IN `endGame` IS NOW THREE DEEP** (`!G.drillGame && !G.houseGame && !G.allStarGame`)
+    on both the streak and the ladder. Any future "this game is special" mode needs to ask whether it
+    belongs on that list too.
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
@@ -1441,6 +1450,7 @@ Script load order matters: `stats → sound → shop → progress → weather �
 `tdr-ball` (🌈 Ball Skins — `{owned, equipped}`),
 `tdr-mascot` (🐯 Team Mascot — `{owned, equipped, name}`),
 `tdr-house` (🎲 House Rules — `{on:[ids]}`),
+`tdr-allstar` (🌟 All-Star Game — `{played, won, best, selections}`),
 `tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
 team of honest 60s is regenerated automatically if it's ever missing).
 
