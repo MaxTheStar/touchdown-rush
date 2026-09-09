@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.91 — cache-buster is `?v=112` in `index.html`.
+- **Version:** v1.92 — cache-buster is `?v=115` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -26,7 +26,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     STOP — there is no Round 11.** Eight picks, easiest→hardest, every one checked against the code
     first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
     gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
-    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot · ④📸 Team Poster ·
+    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot **v1.92 ✅** · ④📸 Team Poster ·
     ⑤🎲 House Rules · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
   - **🌈 IF YOU EVER DRAW THE BALL SOMEWHERE NEW, IT NEEDS THE SKIN.** The football is drawn in
     code, and as of v1.91 the colours come from `TDBall.look()` with the original hardcoded values as
@@ -35,6 +35,18 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     field-goal screen), and kick.js **caches** its texture — which is why `repaintBall()` also removes
     `k_ball`, so the kicker rebuilds it in the new colours. The first cut of v1.91 missed that and let
     you buy a golden ball and then kick a brown one. A third ball drawing would need the same two lines.
+  - **🐯 THE MASCOT PROVES THERE IS NO FREE CORNER LEFT ON A PHONE.** During a game the D-pad owns
+    the bottom-left, `#actions` the bottom-right, `#celeb-fx` the middle and `#streak-fire` the top. The
+    mascot pop-in therefore lives at the LEFT EDGE, ABOVE the D-pad
+    (`bottom: calc(safe-area + 212px)`, measured at 14px clearance on 375×812) and is `pointer-events:
+    none`. Anything new that wants screen space during play has to solve this same problem.
+  - **⚠️ A CSS TRANSITION MUST NEVER BE WHAT PUTS AN ELEMENT ON SCREEN.** `mascot.js` starts the pop-in
+    off-edge and then writes the final `transform`/`opacity` INLINE, so it lands whether or not a frame
+    of animation runs. A throttled or skipped transition would otherwise leave it parked off-screen at
+    opacity 0 — invisible, with no error. Same family as the old spin-landing rule (don't set a landing
+    state in rAF). **This also matters for TESTING: the preview pane only paints on demand, so a
+    transition does NOT advance between tool calls and `getComputedStyle` keeps returning the START
+    value. Measuring a mid-transition element there will lie to you — take a screenshot instead.**
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
@@ -1410,6 +1422,7 @@ Script load order matters: `stats → sound → shop → progress → weather �
 `tdr-weather` (🌦 your weather pick: auto / clear / night / rain / snow),
 `tdr-trivia` (🧠 the Football IQ Quiz — `{best, played, right, wrong}`),
 `tdr-ball` (🌈 Ball Skins — `{owned, equipped}`),
+`tdr-mascot` (🐯 Team Mascot — `{owned, equipped, name}`),
 `tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
 team of honest 60s is regenerated automatically if it's ever missing).
 
