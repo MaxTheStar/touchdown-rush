@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.92 — cache-buster is `?v=115` in `index.html`.
+- **Version:** v1.93 — cache-buster is `?v=118` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -26,7 +26,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     STOP — there is no Round 11.** Eight picks, easiest→hardest, every one checked against the code
     first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
     gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
-    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot **v1.92 ✅** · ④📸 Team Poster ·
+    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot **v1.92 ✅** · ④📸 Team Poster **v1.93 ✅** ·
     ⑤🎲 House Rules · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
   - **🌈 IF YOU EVER DRAW THE BALL SOMEWHERE NEW, IT NEEDS THE SKIN.** The football is drawn in
     code, and as of v1.91 the colours come from `TDBall.look()` with the original hardcoded values as
@@ -47,6 +47,13 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     state in rAF). **This also matters for TESTING: the preview pane only paints on demand, so a
     transition does NOT advance between tool calls and `getComputedStyle` keeps returning the START
     value. Measuring a mid-transition element there will lie to you — take a screenshot instead.**
+  - **📸 THE POSTER MUST STAY AN `<img>`, AND ITS TITLE MUST SURVIVE ANY NAME.** `poster.js` draws a
+    900×1200 canvas, but it renders the result as a real `<img>` on purpose: **press-and-hold → Add to
+    Photos is the only save route Safari reliably gives an iPad**, and a bare `<canvas>` can't be
+    press-and-held. There's a download button too, for computers. Don't "simplify" it back to a canvas.
+    The title shrinks to 34px and then ellipsises (`fitTitle`) — the first cut stopped shrinking at 52px
+    and a long name ran off both edges. ⚠️ **Pick ⑧ Relocation & Rebrand lets Max type his own team
+    name, so every place a team name is drawn has to assume "whatever he typed".**
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
