@@ -152,6 +152,7 @@
   window.TDRecords = {
     startGame, td, fg, gameOver,   // live shouts from main.js
     open, close,                   // the Trophy Case opens us
+    bests: () => Object.assign({}, r),   // 📸 read-only: the Team Poster prints these
     _bests: () => Object.assign({}, r),
   };
 })();
