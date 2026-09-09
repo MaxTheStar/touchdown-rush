@@ -67,6 +67,12 @@
             <div class="arc-card-bl">Head over to the snack bar — take the orders, serve the fans!</div></div>
           <div class="arc-card-best">BEST<b>${(window.TDFood && TDFood._state().best) || 0}<small>🪙</small></b></div>
         </div>
+        <div class="arc-card" data-drill="iq">
+          <div class="arc-card-ic">🧠</div>
+          <div class="arc-card-tx"><div class="arc-card-nm">FOOTBALL IQ QUIZ</div>
+            <div class="arc-card-bl">Ten questions about real football — no clock, just brains!</div></div>
+          <div class="arc-card-best">BEST<b>${(window.TDTrivia && TDTrivia.best()) || 0}</b></div>
+        </div>
       </div>`;
     s.querySelectorAll('[data-drill]').forEach(c => c.addEventListener('pointerdown', e => {
       e.preventDefault();
@@ -75,6 +81,8 @@
       else if (d === 'fg') startFG();
       // 🍿 the snack bar is its own little game (src/concession.js) — hand off to it
       else if (d === 'food' && window.TDFood) { close(); TDFood.open(); }
+      // 🧠 the quiz is its own little world too (src/trivia.js) — hand off to it
+      else if (d === 'iq' && window.TDTrivia) { close(); TDTrivia.open(); }
     }));
   }
 
