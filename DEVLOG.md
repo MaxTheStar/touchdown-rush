@@ -16,7 +16,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   - **🎉 Round 9 — The Locker Room Board: SWEPT 8/8.** 🗞️ The Sports Page v1.82 (`src/sportspage.js`)
     · 📻 Press Conference v1.83 (`src/press.js`) · 🎓 Coaching Staff v1.84 (`src/staff.js`)
     · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`)
-    · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`) · 🏥 Injuries & Depth Chart v1.88 (`src/injuries.js`).
+    · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`) · 🏥 Injuries & Depth Chart v1.88 (`src/injuries.js`)
     · 🚩 Coach's Challenge v1.89 (`src/flag.js`).
     **The board is clear. Next: Max picks a Round 10 chart.** Full regression after the sweep:
     46 modules, 41 overlays, 28 menu buttons, normal games + the drill both play start to finish,
