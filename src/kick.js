@@ -499,10 +499,23 @@ window.KickGame = (function () {
       g.generateTexture('k_cross', 40, 40); g.destroy();
     }
     if (!scene.textures.exists('k_ball')) {
+      // 🌈 The kicking ball wears your BALL SKIN too (src/ball.js) — otherwise
+      // you'd buy a golden ball and then watch a brown one sail through the
+      // uprights. Same fallbacks as main.js's makeBallTexture, so with ball.js
+      // missing this is the classic brown ball it always was.
+      const s = (window.TDBall && TDBall.look()) || {};
+      const top   = s.top   != null ? s.top   : 0x8B4513;
+      const laces = s.laces != null ? s.laces : 0xffffff;
+      const ticks = s.ticks || [laces, laces, laces];
       const g = scene.make.graphics({ x: 0, y: 0, add: false });
-      g.fillStyle(0x8B4513); g.fillEllipse(11, 8, 20, 13);
-      g.lineStyle(2, 0xffffff); g.beginPath(); g.moveTo(5, 8); g.lineTo(17, 8); g.strokePath();
-      for (let i = 7; i <= 15; i += 2) { g.beginPath(); g.moveTo(i, 6); g.lineTo(i, 10); g.strokePath(); }
+      g.fillStyle(top); g.fillEllipse(11, 8, 20, 13);
+      g.lineStyle(2, laces); g.beginPath(); g.moveTo(5, 8); g.lineTo(17, 8); g.strokePath();
+      let t = 0;
+      for (let i = 7; i <= 15; i += 2) {
+        g.lineStyle(2, ticks[t % ticks.length] != null ? ticks[t % ticks.length] : laces);
+        g.beginPath(); g.moveTo(i, 6); g.lineTo(i, 10); g.strokePath();
+        t++;
+      }
       g.generateTexture('k_ball', 22, 16); g.destroy();
     }
     if (!scene.textures.exists('k_kicker')) {

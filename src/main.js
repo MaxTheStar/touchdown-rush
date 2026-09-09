@@ -3352,7 +3352,10 @@ window.TDGame = {
   },
   // 🎨 redraw the field with your latest Field Designer colours (field.js calls
   // this the moment you pick a new turf, end zone or midfield logo).
-  repaintField
+  repaintField,
+  // 🌈 redraw the football with your latest Ball Skins pick (ball.js calls this
+  // the moment you equip one).
+  repaintBall
 };
 
 // ============================================================
@@ -4432,15 +4435,44 @@ function makeChibiTexture(scene, key, jersey, helmet) {
 function makeBallTexture(scene) {
   const k = CHIBI_SS;                     // drawn big, shown small — same trick as the players
   const g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(0x0a0f18, 0.45);  g.fillEllipse(9*k, 6*k, 17.5*k, 11.5*k);  // dark rim
-  g.fillStyle(0x6f3410);        g.fillEllipse(9*k, 6*k, 16*k, 10*k);      // dark leather base
-  g.fillStyle(0x8B4513);        g.fillEllipse(9*k, 5.4*k, 15*k, 9*k);     // brown top
+  // 🌈 BALL SKINS (src/ball.js) chooses the colours. Exactly like the Field
+  // Designer: we ASK for a look, and if that file is missing every fallback
+  // below is the classic brown leather ball the game has always drawn — so
+  // without ball.js this function paints the identical picture it used to.
+  const s = (window.TDBall && TDBall.look()) || {};
+  const rim   = s.rim   != null ? s.rim   : 0x0a0f18;
+  const base  = s.base  != null ? s.base  : 0x6f3410;
+  const top   = s.top   != null ? s.top   : 0x8B4513;
+  const laces = s.laces != null ? s.laces : 0xffffff;
+  const ticks = s.ticks || [laces, laces, laces];   // 🌈 lets one skin stripe them
+  g.fillStyle(rim, 0.45);       g.fillEllipse(9*k, 6*k, 17.5*k, 11.5*k);  // dark rim
+  g.fillStyle(base);            g.fillEllipse(9*k, 6*k, 16*k, 10*k);      // leather base
+  g.fillStyle(top);             g.fillEllipse(9*k, 5.4*k, 15*k, 9*k);     // the top face
   g.fillStyle(0xffffff, 0.33);  g.fillEllipse(6*k, 3.6*k, 6*k, 3*k);      // little shine
-  g.fillStyle(0xffffff);        g.fillRect(6*k, 4.5*k, 6*k, 1.1*k);       // white laces stripe
-  g.fillStyle(0xffffff, 0.95);
-  for (const lx of [7, 9, 11]) g.fillRect((lx - 0.22)*k, 3.5*k, 0.45*k, 3*k);
+  g.fillStyle(laces);           g.fillRect(6*k, 4.5*k, 6*k, 1.1*k);       // the laces stripe
+  const lxs = [7, 9, 11];
+  for (let i = 0; i < lxs.length; i++) {
+    g.fillStyle(ticks[i] != null ? ticks[i] : laces, 0.95);
+    g.fillRect((lxs[i] - 0.22)*k, 3.5*k, 0.45*k, 3*k);
+  }
   g.generateTexture('ball', 18*k, 12*k);
   g.destroy();
+}
+
+// 🌈 Redraw the football with your latest Ball Skins pick. Safe to call any
+// time (ball.js calls it the moment you equip a skin): the old texture is
+// thrown away, a fresh one is drawn under the same name, and the ball sprite
+// already on the field is pointed at it so the change shows immediately.
+function repaintBall() {
+  if (!G.scene) return;
+  if (G.scene.textures.exists('ball')) G.scene.textures.remove('ball');
+  makeBallTexture(G.scene);
+  if (ball && ball.setTexture) ball.setTexture('ball');
+  // 🦵 The field-goal screen draws its OWN little ball ('k_ball' in kick.js) and
+  // caches it. Drop it here so the kicker rebuilds it in the new colours next
+  // time you line one up — otherwise you'd buy a golden ball and still kick a
+  // brown one.
+  if (G.scene.textures.exists('k_ball')) G.scene.textures.remove('k_ball');
 }
 
 function makeRefTexture(scene) {
