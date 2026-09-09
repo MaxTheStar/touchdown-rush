@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=112" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=112" />
+  <link rel="icon" type="image/png" href="favicon.png?v=115" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=115" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=112" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=115" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=112" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=115" />
   <style>
     html, body {
       margin: 0;
@@ -2818,6 +2818,67 @@
       background: #7fe0a0; padding: 2px 6px; border-radius: 999px; margin-left: 6px;
       display: inline-block; vertical-align: middle; }
 
+    /* ---- 🐯 TEAM MASCOT (src/mascot.js) ---------------------------- */
+    /* The pop-in lives at the LEFT EDGE, ABOVE the D-pad: the bottom corners
+       are buttons, the middle is the celebration, the top is the streak
+       banner. It never takes taps. */
+    #mascot-fx {
+      position: fixed; z-index: 65; display: none; pointer-events: none;
+      left: max(6px, env(safe-area-inset-left));
+      bottom: calc(max(20px, env(safe-area-inset-bottom)) + 212px);
+      width: 132px; text-align: center;
+      transform: translateX(-120%); opacity: 0;
+      transition: transform .38s cubic-bezier(.2,.9,.25,1.2), opacity .3s ease;
+    }
+    #mascot-fx.in { transform: translateX(0); opacity: 1; }
+    .masc-guy { font-size: 54px; line-height: 1; filter: drop-shadow(0 3px 6px rgba(0,0,0,.55)); }
+    #mascot-fx.in .masc-guy { animation: mascHop .5s ease-in-out 2; }
+    #mascot-fx.masc-lose .masc-guy { animation: none; opacity: .8; }
+    #mascot-fx.masc-still .masc-guy { animation: none; }
+    @keyframes mascHop { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-13px) rotate(-7deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #mascot-fx { transition: opacity .2s ease; transform: none; }
+      #mascot-fx .masc-guy { animation: none; }
+    }
+    .masc-bubble {
+      display: inline-block; max-width: 128px; margin-bottom: 5px; padding: 6px 9px;
+      border-radius: 11px; background: #fff; color: #14203a;
+      font: 800 11px "Arial Black", Arial; line-height: 1.25;
+      box-shadow: 0 4px 14px rgba(0,0,0,.45);
+    }
+    .masc-name {
+      margin-top: 2px; font: 800 10px "Arial Black", Arial; color: #ffd54a;
+      letter-spacing: .04em; text-shadow: 0 2px 5px rgba(0,0,0,.7);
+    }
+    /* the picker */
+    .masc-preview { padding: 8px 0 2px; text-align: center; }
+    .masc-big { font-size: 62px; line-height: 1; }
+    .masc-title { font: 800 20px "Arial Black", Arial; color: #fff; margin-top: 4px; }
+    .masc-sub { font: 600 12px Arial; color: #aeb9cc; margin-top: 2px; }
+    .masc-input {
+      display: block; width: 100%; margin: 10px 0 2px; padding: 11px 12px;
+      border-radius: 12px; border: 2px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06); color: #fff;
+      font: 800 15px "Arial Black", Arial; text-align: center; box-sizing: border-box;
+    }
+    .masc-input:focus { outline: none; border-color: #ffd54a; }
+    .masc-input::placeholder { color: #6f7f96; font-weight: 700; }
+    .masc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 12px 0 4px; }
+    .masc-card { padding: 9px 3px 7px; border-radius: 12px; text-align: center; cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      border: 2px solid rgba(255,255,255,0.14);
+      -webkit-tap-highlight-color: transparent; touch-action: none; }
+    .masc-card:active { transform: scale(0.97); }
+    .masc-card.on { border-color: #46e3a0; background: rgba(70,227,160,0.12); }
+    .masc-card-ic { font-size: 25px; line-height: 1; }
+    .masc-card-nm { font: 800 10px "Arial Black", Arial; color: #fff; margin-top: 3px; }
+    .masc-tag { display: block; margin-top: 3px; font: 700 7.5px Arial; letter-spacing: .04em;
+      color: #8fb0d8; text-transform: uppercase; line-height: 1.2; }
+    .masc-tag.on { color: #46e3a0; }
+    .masc-tag.buy { color: #ffd54a; font-size: 9.5px; letter-spacing: 0; }
+    .masc-note { min-height: 16px; font: 700 12px Arial; color: #46e3a0; margin: 6px 2px 2px; opacity: 0; }
+    .masc-note.show { opacity: 1; }
+
     /* ---- 🌈 BALL SKINS (src/ball.js) ------------------------------- */
     /* A little CSS football for the preview, then a grid of skins. Same dark
        pop-up palette as the other designers it sits next to in the Pro Shop. */
@@ -2843,7 +2904,8 @@
       color: #8fb0d8; text-transform: uppercase; }
     .ball-tag.on { color: #46e3a0; }
     .ball-tag.buy { color: #ffd54a; letter-spacing: 0; font-size: 10px; }
-    #ball-coins { color: #ffd54a; font-weight: 800; white-space: nowrap; }
+    #ball-coins, #masc-coins { display: block; margin-top: 3px; color: #ffd54a;
+      font-weight: 800; white-space: nowrap; }
     .ball-note { min-height: 16px; font: 700 12px Arial; color: #46e3a0; margin: 6px 2px 2px; opacity: 0; }
     .ball-note.show { opacity: 1; }
 
@@ -3356,6 +3418,7 @@
       <div class="ov-btn" id="open-celeb">🕺 CELEBRATIONS</div>
       <div class="ov-btn" id="open-field">🎨 FIELD DESIGNER</div>
       <div class="ov-btn" id="open-ball">🌈 BALL SKINS</div>
+      <div class="ov-btn" id="open-mascot">🐯 TEAM MASCOT</div>
       <div class="ov-btn" id="open-cap">🙋 CREATE-A-PLAYER</div>
       <div class="ov-btn" id="open-nick">🌟 PLAYER NICKNAMES</div>
       <div class="ov-btn" id="open-food">🍿 CONCESSION STANDS</div>
@@ -3645,10 +3708,27 @@
   <!-- 🌈 BALL SKINS — ball.js. The football itself is DRAWN in code by
        main.js's makeBallTexture, so this picker only chooses colours and then
        asks the game to redraw (TDGame.repaintBall). Opened from the Pro Shop. -->
+  <!-- 🐯 THE MASCOT'S SIDELINE POP-IN (mascot.js fills it). Left edge, ABOVE
+       the D-pad, never takes taps — the screen corners all belong to buttons. -->
+  <div id="mascot-fx"></div>
+
+  <!-- 🐯 TEAM MASCOT — pick one, name it, and it works your sideline. -->
+  <div class="ov" id="mascot-modal">
+    <div class="ov-card">
+      <div class="ov-title">🐯 TEAM MASCOT</div>
+      <div class="ov-sub">Every team has one. Pick yours and give it a name.<span id="masc-coins"></span></div>
+      <div id="masc-preview" class="masc-preview"></div>
+      <input id="masc-name-input" class="masc-input" maxlength="14" placeholder="name your mascot" />
+      <div id="masc-grid" class="masc-grid"></div>
+      <div id="masc-note" class="masc-note"></div>
+      <div class="ov-btn" id="mascot-close">DONE</div>
+    </div>
+  </div>
+
   <div class="ov" id="ball-modal">
     <div class="ov-card">
       <div class="ov-title">🌈 BALL SKINS</div>
-      <div class="ov-sub">The last thing on the field you hadn't coloured in. &middot; <span id="ball-coins"></span></div>
+      <div class="ov-sub">The last thing on the field you hadn't coloured in.<span id="ball-coins"></span></div>
       <div id="ball-preview" class="ball-preview"></div>
       <div id="ball-grid" class="ball-grid"></div>
       <div id="ball-note" class="ball-note"></div>
@@ -3882,59 +3962,60 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=112"></script>
-  <script src="src/sound.js?v=112"></script>
-  <script src="src/shop.js?v=112"></script>
-  <script src="src/spin.js?v=112"></script>
-  <script src="src/challenges.js?v=112"></script>
-  <script src="src/quests.js?v=112"></script>
-  <script src="src/progress.js?v=112"></script>
-  <script src="src/streak.js?v=112"></script>
-  <script src="src/achievements.js?v=112"></script>
-  <script src="src/trophy.js?v=112"></script>
-  <script src="src/records.js?v=112"></script>
-  <script src="src/road.js?v=112"></script>
-  <script src="src/roadtrip.js?v=112"></script>
-  <script src="src/cards.js?v=112"></script>
-  <script src="src/stadium.js?v=112"></script>
-  <script src="src/ranked.js?v=112"></script>
-  <script src="src/halftime.js?v=112"></script>
-  <script src="src/uniform.js?v=112"></script>
-  <script src="src/powerup.js?v=112"></script>
-  <script src="src/arcade.js?v=112"></script>
-  <script src="src/trivia.js?v=112"></script>
-  <script src="src/nemesis.js?v=112"></script>
-  <script src="src/weather.js?v=112"></script>
-  <script src="src/season.js?v=112"></script>
-  <script src="src/playoffs.js?v=112"></script>
-  <script src="src/film.js?v=112"></script>
-  <script src="src/celebration.js?v=112"></script>
-  <script src="src/juice.js?v=112"></script>
-  <script src="src/gamestats.js?v=112"></script>
-  <script src="src/sportspage.js?v=112"></script>
-  <script src="src/press.js?v=112"></script>
-  <script src="src/staff.js?v=112"></script>
-  <script src="src/chemistry.js?v=112"></script>
-  <script src="src/boxscore.js?v=112"></script>
-  <script src="src/field.js?v=112"></script>
-  <script src="src/ball.js?v=112"></script>
-  <script src="src/draft.js?v=112"></script>
-  <script src="src/training.js?v=112"></script>
-  <script src="src/injuries.js?v=112"></script>
-  <script src="src/flag.js?v=112"></script>
-  <script src="src/freeagency.js?v=112"></script>
-  <script src="src/gameplan.js?v=112"></script>
-  <script src="src/playbook.js?v=112"></script>
-  <script src="src/createplayer.js?v=112"></script>
-  <script src="src/nicknames.js?v=112"></script>
-  <script src="src/special.js?v=112"></script>
-  <script src="src/events.js?v=112"></script>
-  <script src="src/dynasty.js?v=112"></script>
-  <script src="src/ads.js?v=112"></script>
-  <script src="src/tour.js?v=112"></script>
-  <script src="src/concession.js?v=112"></script>
-  <script src="src/kick.js?v=112"></script>
-  <script src="src/drill.js?v=112"></script>
-  <script src="src/main.js?v=112"></script>
+  <script src="src/stats.js?v=115"></script>
+  <script src="src/sound.js?v=115"></script>
+  <script src="src/shop.js?v=115"></script>
+  <script src="src/spin.js?v=115"></script>
+  <script src="src/challenges.js?v=115"></script>
+  <script src="src/quests.js?v=115"></script>
+  <script src="src/progress.js?v=115"></script>
+  <script src="src/streak.js?v=115"></script>
+  <script src="src/achievements.js?v=115"></script>
+  <script src="src/trophy.js?v=115"></script>
+  <script src="src/records.js?v=115"></script>
+  <script src="src/road.js?v=115"></script>
+  <script src="src/roadtrip.js?v=115"></script>
+  <script src="src/cards.js?v=115"></script>
+  <script src="src/stadium.js?v=115"></script>
+  <script src="src/ranked.js?v=115"></script>
+  <script src="src/halftime.js?v=115"></script>
+  <script src="src/uniform.js?v=115"></script>
+  <script src="src/powerup.js?v=115"></script>
+  <script src="src/arcade.js?v=115"></script>
+  <script src="src/trivia.js?v=115"></script>
+  <script src="src/nemesis.js?v=115"></script>
+  <script src="src/weather.js?v=115"></script>
+  <script src="src/season.js?v=115"></script>
+  <script src="src/playoffs.js?v=115"></script>
+  <script src="src/film.js?v=115"></script>
+  <script src="src/celebration.js?v=115"></script>
+  <script src="src/juice.js?v=115"></script>
+  <script src="src/gamestats.js?v=115"></script>
+  <script src="src/sportspage.js?v=115"></script>
+  <script src="src/press.js?v=115"></script>
+  <script src="src/staff.js?v=115"></script>
+  <script src="src/chemistry.js?v=115"></script>
+  <script src="src/boxscore.js?v=115"></script>
+  <script src="src/field.js?v=115"></script>
+  <script src="src/ball.js?v=115"></script>
+  <script src="src/mascot.js?v=115"></script>
+  <script src="src/draft.js?v=115"></script>
+  <script src="src/training.js?v=115"></script>
+  <script src="src/injuries.js?v=115"></script>
+  <script src="src/flag.js?v=115"></script>
+  <script src="src/freeagency.js?v=115"></script>
+  <script src="src/gameplan.js?v=115"></script>
+  <script src="src/playbook.js?v=115"></script>
+  <script src="src/createplayer.js?v=115"></script>
+  <script src="src/nicknames.js?v=115"></script>
+  <script src="src/special.js?v=115"></script>
+  <script src="src/events.js?v=115"></script>
+  <script src="src/dynasty.js?v=115"></script>
+  <script src="src/ads.js?v=115"></script>
+  <script src="src/tour.js?v=115"></script>
+  <script src="src/concession.js?v=115"></script>
+  <script src="src/kick.js?v=115"></script>
+  <script src="src/drill.js?v=115"></script>
+  <script src="src/main.js?v=115"></script>
 </body>
 </html>

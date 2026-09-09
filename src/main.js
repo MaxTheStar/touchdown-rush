@@ -1488,6 +1488,7 @@ function endPlay(result, customMsg) {
     if (window.TDRecords) TDRecords.td(100 - G.losYards);   // 📖 longest-TD / most-TDs-in-a-game records
     if (window.TDFilm) TDFilm.capture({ yds: 100 - G.losYards, opp: G.oppTeam ? G.oppTeam.abbr : '', q: G.quarter, pickSix: wasPickSix, trick: G.trickActive, frames: G.replay });   // 🎬 save this TD's route to the Film Room
     if (window.TDCeleb) TDCeleb.play();   // 🕺 your player's touchdown celebration!
+    if (window.TDMascot) TDMascot.cheer('td');   // 🐯 your mascot goes wild on the sideline
     // 🎉 the screen kicks, flashes gold and throws confetti where you crossed
     if (window.TDJuice && G.ballCarrier) TDJuice.touchdown(G.scene, G.ballCarrier.s.x, G.ballCarrier.s.y);
     // 🌟 the announcer calls the scorer by his nickname, if he's earned one
@@ -2808,6 +2809,9 @@ function endGame() {
   // 🍿 Concession sales: every snack stand you own sold to the crowd all game
   // long — also before the FINAL screen, so it lands in the payday too.
   if (window.TDFood) TDFood.gameBonus();
+  // 🐯 Your mascot worked the crowd all game and they tipped for it — before
+  // the FINAL screen so the tip lands in the payday, and it reacts to the result.
+  if (window.TDMascot) TDMascot.finish(G.score > G.oppScore, G.score);
   // 🏅 Ranked Ladder: a win earns a ⭐ (and maybe a promotion + coin bonus);
   // a loss can cost a division. A rank-change ribbon flies in. Before the FINAL
   // screen so any promotion coins count in this game's payday.
