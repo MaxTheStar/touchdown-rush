@@ -227,7 +227,12 @@ const ALLSTAR_TEAM = { abbr: 'ALL', name: 'ALL-STARS', jersey: 0xE8B923, helmet:
 // Look up a team's ratings (defaults to a balanced 5/5 for the unlockable
 // uniforms, which aren't real NFL teams). overall = the average, out of 10.
 function teamRating(team) {
-  const r = (team && TEAM_RATINGS[team.abbr]) || { off: 5, def: 5 };
+  // 🚚 A renamed team keeps the ratings it always had: rebrand.js leaves a
+  // `ratingKey` on the copy holding the ORIGINAL code, because TEAM_RATINGS is
+  // keyed by code and a rename would otherwise silently drop your team to a
+  // default 5/5 — a real change in how the game plays, from a cosmetic edit.
+  const key = team && (team.ratingKey || team.abbr);
+  const r = (key && TEAM_RATINGS[key]) || { off: 5, def: 5 };
   const overall = Math.round((r.off + r.def) / 2);
   const specialty = r.off > r.def ? 'OFFENSE' : r.def > r.off ? 'DEFENSE' : 'BALANCED';
   return { off: r.off, def: r.def, overall, specialty };
@@ -246,6 +251,11 @@ function allTeams() {
   let list = (window.TDShop) ? NFL_TEAMS.concat(TDShop.unlockedUniforms()) : NFL_TEAMS;
   // 🎽 …plus any custom kits you designed in the Uniform Designer (uniform.js).
   if (window.TDUniform) list = list.concat(TDUniform.customTeams());
+  // 🚚 …and if you've RENAMED your team (rebrand.js), swap in your name, code
+  // and colours HERE — one place, so the menu, the scoreboard, the schedule,
+  // the newspaper, the poster and everything else all see it without knowing
+  // this feature exists. It returns a COPY, never a mutated NFL_TEAMS entry.
+  if (window.TDRebrand) list = TDRebrand.apply(list);
   return list;
 }
 
