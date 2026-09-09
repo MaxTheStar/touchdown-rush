@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.96 — cache-buster is `?v=125` in `index.html`.
+- **Version:** v1.97 — cache-buster is `?v=127` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -21,13 +21,21 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     **Round 9 is done.** Full regression after the sweep:
     46 modules, 41 overlays, 28 menu buttons, normal games + the drill both play start to finish,
     portrait audited at 375×812 (no overhang, no x-scroll, no new front-screen chips), 0 errors.
-  - **🏁 Round 10 — The Victory Lap Board: THE LAST BOARD (opened 2026-09-09).** Artifact
+  - **🏁 Round 10 — The Victory Lap Board: SWEPT 8/8, AND IT WAS THE LAST BOARD (2026-09-09).** Artifact
     `b6849a3c-7936-402f-8150-36c0e2788bde`. Max's instruction this session: **finish Round 10 and
     STOP — there is no Round 11.** Eight picks, easiest→hardest, every one checked against the code
     first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
     gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
-    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot **v1.92 ✅** · ④📸 Team Poster **v1.93 ✅** ·
-    ⑤🎲 House Rules **v1.94 ✅** · ⑥🌟 All-Star Game **v1.95 ✅** · ⑦🏅 Awards Night **v1.96 ✅** · ⑧🚚 Relocation & Rebrand.
+    ①🧠 Football IQ Quiz **v1.90** (`src/trivia.js`) · ②🌈 Ball Skins **v1.91** (`src/ball.js`)
+    · ③🐯 Team Mascot **v1.92** (`src/mascot.js`) · ④📸 Team Poster **v1.93** (`src/poster.js`)
+    · ⑤🎲 House Rules **v1.94** (`src/house.js`) · ⑥🌟 All-Star Game **v1.95** (`src/allstar.js`)
+    · ⑦🏅 Awards Night **v1.96** (`src/awards.js`) · ⑧🚚 Relocation & Rebrand **v1.97** (`src/rebrand.js`).
+    **🛑 THE DRAFT IS OVER. Max's instruction this session was to finish Round 10 and STOP — there is
+    no Round 11, and one should not be invented.** Full regression after the sweep: 60 modules,
+    49 overlays, 111 buttons, all 15 pop-ups open/close cleanly and fit portrait at 375×812 (no
+    overhang, no x-scroll, the tall ones scroll inside the shared 86vh cap), normal games and the
+    ⏱️ drill both play start to finish, 0 console errors. **Six of the eight picks shipped with a
+    real bug found and fixed during verification** — see each feature's commit message.
   - **🌈 IF YOU EVER DRAW THE BALL SOMEWHERE NEW, IT NEEDS THE SKIN.** The football is drawn in
     code, and as of v1.91 the colours come from `TDBall.look()` with the original hardcoded values as
     fallbacks on main.js's side — so a missing `ball.js` paints the identical classic ball. There are
@@ -80,6 +88,18 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     never opens the ceremony itself — dynasty.js also reacts to a season ending, so awards just sets a
     🔴 dot on the Trophy Case button. ⚠️ Don't gate the ceremony on the PLAYER tally being non-empty:
     🧑‍🏫 Coach of the Year isn't a player, and the first cut gave a 6–0 championship season nothing at all.
+  - **🚚 REBRAND IS ONE LINE IN `allTeams()`, AND THAT IS THE WHOLE DESIGN.** Every screen gets its
+    teams from `allTeams()`, so `TDRebrand.apply(list)` hands it a REPLACED COPY of your team and the
+    rename reaches the menu, scoreboard, standings, newspaper, trophies and poster at once. ⚠️ **It
+    must return a COPY** (never mutate an NFL_TEAMS entry) or "back to normal" has nothing to go back
+    to. ⚠️ **The copy carries `ratingKey` = the ORIGINAL code**, because `TEAM_RATINGS` is keyed by
+    code — without it a rename silently drops your team to a default 5/5, a real gameplay change from
+    a cosmetic edit (`teamRating` prefers `ratingKey`). ⚠️ **The 3-letter code is LOCKED during a
+    season or playoff run** — season.js saves you as `you:'SEA'`, so changing it underneath orphans
+    the save. Names and colours stay editable; only the code waits.
+  - **📝 Round 10's picks all hang off EXISTING hubs** — 🛍 Pro Shop (ball, mascot, house rules,
+    rebrand), 🏆 Trophy Case (poster, all-star, awards) and the 🎯 Practice Arcade (the quiz). Still
+    **no new front-screen chips**, per the v1.44/45 lesson.
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
@@ -1459,6 +1479,7 @@ Script load order matters: `stats → sound → shop → progress → weather �
 `tdr-house` (🎲 House Rules — `{on:[ids]}`),
 `tdr-allstar` (🌟 All-Star Game — `{played, won, best, selections}`),
 `tdr-awards` (🏅 Awards Night — `{tally, games, shelf, pending}`),
+`tdr-rebrand` (🚚 Relocation & Rebrand — `{base, abbr, city, name, jersey, helmet}`),
 `tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
 team of honest 60s is regenerated automatically if it's ever missing).
 
