@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.90 — cache-buster is `?v=110` in `index.html`.
+- **Version:** v1.91 — cache-buster is `?v=112` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -26,8 +26,15 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     STOP — there is no Round 11.** Eight picks, easiest→hardest, every one checked against the code
     first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
     gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
-    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins · ③🐯 Team Mascot · ④📸 Team Poster ·
+    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins **v1.91 ✅** · ③🐯 Team Mascot · ④📸 Team Poster ·
     ⑤🎲 House Rules · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
+  - **🌈 IF YOU EVER DRAW THE BALL SOMEWHERE NEW, IT NEEDS THE SKIN.** The football is drawn in
+    code, and as of v1.91 the colours come from `TDBall.look()` with the original hardcoded values as
+    fallbacks on main.js's side — so a missing `ball.js` paints the identical classic ball. There are
+    **TWO** ball drawings in this repo: `makeBallTexture` in main.js and `k_ball` in kick.js (the
+    field-goal screen), and kick.js **caches** its texture — which is why `repaintBall()` also removes
+    `k_ball`, so the kicker rebuilds it in the new colours. The first cut of v1.91 missed that and let
+    you buy a golden ball and then kick a brown one. A third ball drawing would need the same two lines.
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
@@ -1402,6 +1409,7 @@ Script load order matters: `stats → sound → shop → progress → weather �
 `tdr-xp` (📈 lifetime XP — your team level is derived from it),
 `tdr-weather` (🌦 your weather pick: auto / clear / night / rain / snow),
 `tdr-trivia` (🧠 the Football IQ Quiz — `{best, played, right, wrong}`),
+`tdr-ball` (🌈 Ball Skins — `{owned, equipped}`),
 `tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
 team of honest 60s is regenerated automatically if it's ever missing).
 
