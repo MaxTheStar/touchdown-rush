@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.89 — cache-buster is `?v=109` in `index.html`.
+- **Version:** v1.90 — cache-buster is `?v=110` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -18,9 +18,16 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     · 🧑‍🤝‍🧑 Team Chemistry v1.85 (`src/chemistry.js`) · 🏕️ Training Camp v1.86 (`src/training.js`)
     · ⏱️ Two-Minute Drill v1.87 (`src/drill.js`) · 🏥 Injuries & Depth Chart v1.88 (`src/injuries.js`)
     · 🚩 Coach's Challenge v1.89 (`src/flag.js`).
-    **The board is clear. Next: Max picks a Round 10 chart.** Full regression after the sweep:
+    **Round 9 is done.** Full regression after the sweep:
     46 modules, 41 overlays, 28 menu buttons, normal games + the drill both play start to finish,
     portrait audited at 375×812 (no overhang, no x-scroll, no new front-screen chips), 0 errors.
+  - **🏁 Round 10 — The Victory Lap Board: THE LAST BOARD (opened 2026-09-09).** Artifact
+    `b6849a3c-7936-402f-8150-36c0e2788bde`. Max's instruction this session: **finish Round 10 and
+    STOP — there is no Round 11.** Eight picks, easiest→hardest, every one checked against the code
+    first (that check killed a ticket-price idea — 🏟️ Stadium Builder already sells seats and pays
+    gate receipts — and a fan-mail idea, already covered by 📻 Press Conference + 🗞️ The Sports Page):
+    ①🧠 Football IQ Quiz **v1.90 ✅** · ②🌈 Ball Skins · ③🐯 Team Mascot · ④📸 Team Poster ·
+    ⑤🎲 House Rules · ⑥🌟 All-Star Game · ⑦🏅 Awards Night · ⑧🚚 Relocation & Rebrand.
   - **🚩 THE COACH'S CHALLENGE IS THE ONLY FEATURE THAT CHANGES A CALL MID-GAME.** It uses the
     "hold the clock, ask, roll on with the answer" shape the ⚡ onside kick has used since v1.63:
     `endPlay` asks `TDFlag.offered(call)`, and a yes parks `G.deadUntil = MAX_SAFE_INTEGER` and calls
@@ -1394,6 +1401,7 @@ Script load order matters: `stats → sound → shop → progress → weather �
 `tdr-seen-howto` when v1.10 swapped the HOW TO modal for the step-by-step tour),
 `tdr-xp` (📈 lifetime XP — your team level is derived from it),
 `tdr-weather` (🌦 your weather pick: auto / clear / night / rain / snow),
+`tdr-trivia` (🧠 the Football IQ Quiz — `{best, played, right, wrong}`),
 `tdr-roster` (🏟 your eight drafted/traded starters — the array `draft.js` saves; a fresh default
 team of honest 60s is regenerated automatically if it's ever missing).
 
