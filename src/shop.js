@@ -241,8 +241,12 @@
   // ⚡ Power-Up Plays fold in the same harmless way (×1 / +0 when nothing's firing).
   const puSpeed = () => (window.TDPowerup ? window.TDPowerup.speedMult() : 1);
   const hsSpeed = () => (window.TDHouse ? window.TDHouse.speedMult() : 1);   // 💨 Turbo Mode house rule
+  const blSpeed = () => (window.TDBall ? window.TDBall.speedMult() : 1);    // 🔥 the Flame ball runs hot
   const puCatch = () => (window.TDPowerup ? window.TDPowerup.catchAdd()  : 0);
   const hsCatch = () => (window.TDHouse ? window.TDHouse.catchAdd()  : 0);   // 🧲 Sticky Hands house rule
+  const blCatch = () => (window.TDBall ? window.TDBall.catchAdd()   : 0);   // 🌙 the Night Glow ball is easy to spot
+  const blGrip  = () => (window.TDBall ? window.TDBall.gripAdd()    : 0);   // 🥇 the Golden ball never slips
+  const blArm   = () => (window.TDBall ? window.TDBall.armAdd()     : 0);   // ❄️ the Ice ball is slippery for them
   // 🎓 The GAME PLAN folds in the same way — but it's the only one that can go
   // DOWN as well as up (that's the point of it: every plan costs you something).
   // With no plan chosen, or the file missing, these are ×1 / +0 exactly like the
@@ -281,7 +285,7 @@
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed() * chSpeed() * hsSpeed(); }
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed() * chSpeed() * hsSpeed() * blSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -292,7 +296,7 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch() + hsCatch();
+    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch() + hsCatch() + blCatch();
     const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
     return { catchBonus: v, dropCut: v };
   }
@@ -309,12 +313,12 @@
   // 🔒 Iron grip: how much we CUT the fumble chance (a fraction of it). Level 10
   // = 0.9, i.e. 90% fewer fumbles. main.js multiplies FUMBLE_CHANCE by (1 - this).
   //    🎡 A "safe ball" buff (Sure Hands / God Mode) pushes this to 1 = no fumbles.
-  function gripFactor() { const g = 0.09 * gear.grip; return clampPerk(1 - (1 - g) * (1 - spinSafeBall()) + gpGrip(), -0.50); }
+  function gripFactor() { const g = 0.09 * gear.grip; return clampPerk(1 - (1 - g) * (1 - spinSafeBall()) + gpGrip() + blGrip(), -0.50); }
 
   // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
   // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
   //    🎡 A "safe throw" buff (Sure Hands / God Mode) pushes this to 1 = no picks.
-  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm(), -0.50); }
+  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm() + blArm(), -0.50); }
 
   // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
   // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,
