@@ -240,7 +240,9 @@
   const spinTruck     = () => { const s = spin(); return s ? s.truck()     : 0; };
   // ⚡ Power-Up Plays fold in the same harmless way (×1 / +0 when nothing's firing).
   const puSpeed = () => (window.TDPowerup ? window.TDPowerup.speedMult() : 1);
+  const hsSpeed = () => (window.TDHouse ? window.TDHouse.speedMult() : 1);   // 💨 Turbo Mode house rule
   const puCatch = () => (window.TDPowerup ? window.TDPowerup.catchAdd()  : 0);
+  const hsCatch = () => (window.TDHouse ? window.TDHouse.catchAdd()  : 0);   // 🧲 Sticky Hands house rule
   // 🎓 The GAME PLAN folds in the same way — but it's the only one that can go
   // DOWN as well as up (that's the point of it: every plan costs you something).
   // With no plan chosen, or the file missing, these are ×1 / +0 exactly like the
@@ -279,7 +281,7 @@
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed() * chSpeed(); }
+  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed() * chSpeed() * hsSpeed(); }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -290,7 +292,7 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch();
+    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch() + hsCatch();
     const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
     return { catchBonus: v, dropCut: v };
   }

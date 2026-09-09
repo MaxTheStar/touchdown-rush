@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=118" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=118" />
+  <link rel="icon" type="image/png" href="favicon.png?v=121" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=121" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=118" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=121" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=118" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=121" />
   <style>
     html, body {
       margin: 0;
@@ -2818,6 +2818,28 @@
       background: #7fe0a0; padding: 2px 6px; border-radius: 999px; margin-left: 6px;
       display: inline-block; vertical-align: middle; }
 
+    /* ---- 🎲 HOUSE RULES (src/house.js) ----------------------------- */
+    .house-count { font: 800 12px Arial; letter-spacing: .06em; color: #8fb0d8;
+      text-transform: uppercase; margin: 2px 0 8px; }
+    .house-count.live { color: #ffd54a; }
+    .house-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .house-row { display: flex; align-items: center; gap: 11px; text-align: left;
+      padding: 11px 12px; border-radius: 13px; cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      border: 2px solid rgba(255,255,255,0.14);
+      -webkit-tap-highlight-color: transparent; touch-action: none; }
+    .house-row:active { transform: scale(0.985); }
+    .house-row.on { border-color: #ffd54a; background: rgba(255,213,74,0.12); }
+    .house-ic { font-size: 27px; width: 36px; text-align: center; flex: none; }
+    .house-tx { flex: 1; min-width: 0; }
+    .house-nm { font: 800 14px "Arial Black", Arial; color: #fff; }
+    .house-bl { font: 600 11.5px Arial; color: #aeb9cc; margin-top: 2px; }
+    .house-sw { flex: none; font: 800 11px "Arial Black", Arial; color: #6f7f96;
+      border: 2px solid rgba(255,255,255,0.16); border-radius: 999px; padding: 4px 10px; }
+    .house-row.on .house-sw { color: #2a1d00; background: #ffd54a; border-color: #ffd54a; }
+    .house-warn { font: 600 11.5px Arial; color: #8fb0d8; line-height: 1.45;
+      margin: 2px 4px 10px; }
+
     /* ---- 📸 TEAM POSTER (src/poster.js) ---------------------------- */
     /* The poster is a real <img> so it can be pressed-and-held and saved to
        Photos on an iPad — that's the only save route Safari reliably gives us,
@@ -3431,6 +3453,8 @@
       <div class="ov-btn" id="open-field">🎨 FIELD DESIGNER</div>
       <div class="ov-btn" id="open-ball">🌈 BALL SKINS</div>
       <div class="ov-btn" id="open-mascot">🐯 TEAM MASCOT</div>
+      <!-- 🎲 Silly football, exhibition games only — it never counts. -->
+      <div class="ov-btn" id="open-house">🎲 HOUSE RULES</div>
       <div class="ov-btn" id="open-cap">🙋 CREATE-A-PLAYER</div>
       <div class="ov-btn" id="open-nick">🌟 PLAYER NICKNAMES</div>
       <div class="ov-btn" id="open-food">🍿 CONCESSION STANDS</div>
@@ -3722,6 +3746,23 @@
   <!-- 🌈 BALL SKINS — ball.js. The football itself is DRAWN in code by
        main.js's makeBallTexture, so this picker only chooses colours and then
        asks the game to redraw (TDGame.repaintBall). Opened from the Pro Shop. -->
+  <!-- 🎲 HOUSE RULES — silly modifiers for exhibition games. house.js keeps
+       the switches; main.js/shop.js just multiply one more number into chains
+       that already existed. A house-rules game never counts for anything. -->
+  <div class="ov" id="house-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎲 HOUSE RULES</div>
+      <div class="ov-sub">Silly football, on purpose. Flip on as many as you like!</div>
+      <div id="house-count" class="house-count"></div>
+      <div id="house-grid" class="house-grid"></div>
+      <div class="house-warn">⚠️ Practice games only &mdash; season, playoff, rival and 👑 Maxwell
+        games always play it straight. A house-rules game never moves your 🏅 ladder or
+        🔥 streak, can't set a 📖 record, and won't tick off a 🎃 season event.</div>
+      <div class="ov-btn" id="house-clear">ALL OFF</div>
+      <div class="ov-btn" id="house-close">DONE</div>
+    </div>
+  </div>
+
   <!-- 📸 TEAM POSTER — poster.js draws a 900x1200 canvas from your team,
        squad, record and trophies, then shows it as a REAL <img> so it can be
        pressed-and-held to save on an iPad. Opened from the Trophy Case. -->
@@ -3991,61 +4032,62 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=118"></script>
-  <script src="src/sound.js?v=118"></script>
-  <script src="src/shop.js?v=118"></script>
-  <script src="src/spin.js?v=118"></script>
-  <script src="src/challenges.js?v=118"></script>
-  <script src="src/quests.js?v=118"></script>
-  <script src="src/progress.js?v=118"></script>
-  <script src="src/streak.js?v=118"></script>
-  <script src="src/achievements.js?v=118"></script>
-  <script src="src/trophy.js?v=118"></script>
-  <script src="src/records.js?v=118"></script>
-  <script src="src/road.js?v=118"></script>
-  <script src="src/roadtrip.js?v=118"></script>
-  <script src="src/cards.js?v=118"></script>
-  <script src="src/stadium.js?v=118"></script>
-  <script src="src/ranked.js?v=118"></script>
-  <script src="src/halftime.js?v=118"></script>
-  <script src="src/uniform.js?v=118"></script>
-  <script src="src/powerup.js?v=118"></script>
-  <script src="src/arcade.js?v=118"></script>
-  <script src="src/trivia.js?v=118"></script>
-  <script src="src/nemesis.js?v=118"></script>
-  <script src="src/weather.js?v=118"></script>
-  <script src="src/season.js?v=118"></script>
-  <script src="src/playoffs.js?v=118"></script>
-  <script src="src/film.js?v=118"></script>
-  <script src="src/celebration.js?v=118"></script>
-  <script src="src/juice.js?v=118"></script>
-  <script src="src/gamestats.js?v=118"></script>
-  <script src="src/sportspage.js?v=118"></script>
-  <script src="src/press.js?v=118"></script>
-  <script src="src/staff.js?v=118"></script>
-  <script src="src/chemistry.js?v=118"></script>
-  <script src="src/boxscore.js?v=118"></script>
-  <script src="src/field.js?v=118"></script>
-  <script src="src/ball.js?v=118"></script>
-  <script src="src/mascot.js?v=118"></script>
-  <script src="src/poster.js?v=118"></script>
-  <script src="src/draft.js?v=118"></script>
-  <script src="src/training.js?v=118"></script>
-  <script src="src/injuries.js?v=118"></script>
-  <script src="src/flag.js?v=118"></script>
-  <script src="src/freeagency.js?v=118"></script>
-  <script src="src/gameplan.js?v=118"></script>
-  <script src="src/playbook.js?v=118"></script>
-  <script src="src/createplayer.js?v=118"></script>
-  <script src="src/nicknames.js?v=118"></script>
-  <script src="src/special.js?v=118"></script>
-  <script src="src/events.js?v=118"></script>
-  <script src="src/dynasty.js?v=118"></script>
-  <script src="src/ads.js?v=118"></script>
-  <script src="src/tour.js?v=118"></script>
-  <script src="src/concession.js?v=118"></script>
-  <script src="src/kick.js?v=118"></script>
-  <script src="src/drill.js?v=118"></script>
-  <script src="src/main.js?v=118"></script>
+  <script src="src/stats.js?v=121"></script>
+  <script src="src/sound.js?v=121"></script>
+  <script src="src/shop.js?v=121"></script>
+  <script src="src/spin.js?v=121"></script>
+  <script src="src/challenges.js?v=121"></script>
+  <script src="src/quests.js?v=121"></script>
+  <script src="src/progress.js?v=121"></script>
+  <script src="src/streak.js?v=121"></script>
+  <script src="src/achievements.js?v=121"></script>
+  <script src="src/trophy.js?v=121"></script>
+  <script src="src/records.js?v=121"></script>
+  <script src="src/road.js?v=121"></script>
+  <script src="src/roadtrip.js?v=121"></script>
+  <script src="src/cards.js?v=121"></script>
+  <script src="src/stadium.js?v=121"></script>
+  <script src="src/ranked.js?v=121"></script>
+  <script src="src/halftime.js?v=121"></script>
+  <script src="src/uniform.js?v=121"></script>
+  <script src="src/powerup.js?v=121"></script>
+  <script src="src/arcade.js?v=121"></script>
+  <script src="src/trivia.js?v=121"></script>
+  <script src="src/nemesis.js?v=121"></script>
+  <script src="src/weather.js?v=121"></script>
+  <script src="src/season.js?v=121"></script>
+  <script src="src/playoffs.js?v=121"></script>
+  <script src="src/film.js?v=121"></script>
+  <script src="src/celebration.js?v=121"></script>
+  <script src="src/juice.js?v=121"></script>
+  <script src="src/gamestats.js?v=121"></script>
+  <script src="src/sportspage.js?v=121"></script>
+  <script src="src/press.js?v=121"></script>
+  <script src="src/staff.js?v=121"></script>
+  <script src="src/chemistry.js?v=121"></script>
+  <script src="src/boxscore.js?v=121"></script>
+  <script src="src/field.js?v=121"></script>
+  <script src="src/ball.js?v=121"></script>
+  <script src="src/mascot.js?v=121"></script>
+  <script src="src/poster.js?v=121"></script>
+  <script src="src/house.js?v=121"></script>
+  <script src="src/draft.js?v=121"></script>
+  <script src="src/training.js?v=121"></script>
+  <script src="src/injuries.js?v=121"></script>
+  <script src="src/flag.js?v=121"></script>
+  <script src="src/freeagency.js?v=121"></script>
+  <script src="src/gameplan.js?v=121"></script>
+  <script src="src/playbook.js?v=121"></script>
+  <script src="src/createplayer.js?v=121"></script>
+  <script src="src/nicknames.js?v=121"></script>
+  <script src="src/special.js?v=121"></script>
+  <script src="src/events.js?v=121"></script>
+  <script src="src/dynasty.js?v=121"></script>
+  <script src="src/ads.js?v=121"></script>
+  <script src="src/tour.js?v=121"></script>
+  <script src="src/concession.js?v=121"></script>
+  <script src="src/kick.js?v=121"></script>
+  <script src="src/drill.js?v=121"></script>
+  <script src="src/main.js?v=121"></script>
 </body>
 </html>

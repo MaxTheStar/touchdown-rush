@@ -51,6 +51,12 @@
 
   // Beat a record if `value` tops the old one. Returns true if it was new.
   function beat(key, value) {
+    // 🎲 A HOUSE-RULES GAME CAN NEVER SET A RECORD. One guard here covers every
+    // best at once (longest TD, most points, biggest win…), which is why it
+    // lives in this one place instead of being repeated at each call site in
+    // main.js. A 90-point romp against half-sized defenders must not become
+    // your "Most Points" forever — see src/house.js.
+    if (window.TDHouse && TDHouse.live()) return;
     if (value > (r[key] || 0)) {
       r[key] = value; save();
       const m = BESTS.find(b => b.key === key);

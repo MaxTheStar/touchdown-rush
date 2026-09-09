@@ -1240,6 +1240,7 @@ function updateDefense(elapsed) {
   const qbHasBall = G.ballCarrier === offense[0] && !G.hasPassed;
   const boost = diff().defBoost * G.oppDef      // HARD mode + ⭐ the opponent's defense rating
               * (window.TDPowerup ? TDPowerup.defSlow() : 1)    // ❄️ …× a Freeze Defense power-up (1 = none)
+              * (window.TDHouse ? TDHouse.defSlow() : 1)        // 🐌 …× the Slow Defense house rule (1 = off)
               // 📌 …× angry, if you gave them bulletin-board material at the last
               // press conference. Only 4% — it should make a game feel spicier,
               // never decide it. 1 = nothing said (see src/press.js).
@@ -2784,7 +2785,8 @@ function endGame() {
   // built so the payday total already includes it — and flies in a fiery banner.
   // ⏱️ A Two-Minute Drill is practice — it never touches your win streak,
   // because failing one is the ordinary result and should cost you nothing.
-  if (window.TDStreak && !G.drillGame) TDStreak.recordResult(G.score > G.oppScore);
+  // 🎲 …and neither a drill nor a 🎲 house-rules game touches your win streak.
+  if (window.TDStreak && !G.drillGame && !G.houseGame) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2816,12 +2818,14 @@ function endGame() {
   // a loss can cost a division. A rank-change ribbon flies in. Before the FINAL
   // screen so any promotion coins count in this game's payday.
   // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
-  if (window.TDRanked && !G.drillGame) TDRanked.recordResult(G.score > G.oppScore);
+  // 🎲 …and for exactly the same reason a house-rules game never moves it either.
+  if (window.TDRanked && !G.drillGame && !G.houseGame) TDRanked.recordResult(G.score > G.oppScore);
   // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
   // screen so the coins land in the payday like everything else.
   if (G.drillGame && window.TDDrill) TDDrill.finish(G.score, G.oppScore, G.clock);
   // 🎃 Season Event payday — before the FINAL screen so it lands in the payday.
-  if (G.eventGame && window.TDEvents) TDEvents.finish(G.score > G.oppScore);
+  // 🎲 …but a silly game never ticks an event off your collection.
+  if (G.eventGame && window.TDEvents && !G.houseGame) TDEvents.finish(G.score > G.oppScore);
   // ⭐ PLAYER OF THE GAME: crown this game's star and pay their bonus — before
   // the FINAL screen, so the coins land in the payday. The spotlight card rolls
   // out a beat later, on top of the final score.
@@ -2872,6 +2876,14 @@ function endGame() {
   if (window.TDCards && TDCards.gameDone()) {
     if (window.TDShop && TDShop.celebrate) TDShop.celebrate(null, '🃏', 'CARD PACK EARNED!');
   }
+
+  // 🎲 HOUSE RULES: put the toys away — and note WHERE this line is. It must be
+  // the LAST thing endGame does, because everything above asks "was this a silly
+  // game?" before it counts anything. The first version cleared the flag up next
+  // to freezeEveryone(), which is BEFORE TDRecords.gameOver() runs — so a
+  // 42-point romp with a giant ball quietly set a real personal best anyway.
+  // If you add anything to endGame that counts, put it ABOVE this line.
+  if (window.TDHouse) TDHouse.endGame();
 }
 
 function buildGameOverOverlay() {
@@ -3181,6 +3193,23 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill) {
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
   G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
   G.drillGame = !!isDrill;            // ⏱️ is this a Two-Minute Drill? (see drill.js)
+
+  // 🎲 HOUSE RULES — silly football, EXHIBITION GAMES ONLY. A season, playoff,
+  // rival, Maxwell or drill game is a real contest, so the toys are switched
+  // off for it. G.houseGame is what endGame checks to make sure a silly game
+  // never counts towards the ladder, the streak, a personal best or a 🎃 event.
+  // ⚠️ A 🎃 EVENT GAME *IS* ALLOWED TO BE SILLY, but it doesn't get collected —
+  // see the TDEvents.finish guard in endGame. Blocking events outright was the
+  // first attempt and it was worse: events run about twelve weeks a year, so
+  // for a quarter of the year Max would flip a switch and nothing would happen.
+  // Let the toy always work; just never let it EARN anything.
+  const houseAllowed = !isSeason && !isPlayoff && !isRival && !isDrill && !G.bossGame;
+  G.houseGame = !!(window.TDHouse && TDHouse.begin(houseAllowed));
+  // the two rules you can SEE: an enormous ball, and half-sized defenders
+  if (ball) ball.setScale((1 / CHIBI_SS) * (window.TDHouse ? TDHouse.ballScale() : 1));
+  for (const d of defense) {
+    if (d && d.s) d.s.setScale((1 / CHIBI_SS) * (window.TDHouse ? TDHouse.defScale() : 1));
+  }
 
   // ⭐ Turn each team's OFFENSE/DEFENSE ratings into a gentle speed tilt: a 5 is
   // neutral, a 10 is +7.5%, a 1 is −6%. So a great team really does play tougher,
