@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.99 — cache-buster is `?v=130` in `index.html`.
+- **Version:** v2.1 — cache-buster is `?v=134` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -110,7 +110,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   - **🏁 Round 11 — "The Chalkboard Board" (opened 2026-09-09).** Artifact
     `857612f6-92de-42cf-8ab7-2b99b03878b2`. Max reversed the earlier stop order and asked for a new
     board, verified the whole game first, then "work on that until the end". The coaching round:
-    ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders · ③⭐ Traits That Matter ·
+    ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders **v2.0 ✅** · ③⭐ Traits That Matter **v2.1 ✅** ·
     ④📋 Scouting Report · ⑤🎲 Sim This Game · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
     ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
     it, because you can't both BE the head coach and HIRE one.)
@@ -122,6 +122,21 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     is why replacing a coach still resets him to level 1. ⚠️ **Old `{id,lvl,wins}` saves are MIGRATED**
     (level + wins kept, treated as ⭐3) — never reset. The six getters shop.js/main.js call are
     unchanged.
+  - **📊 v2.0 — LEAGUE LEADERS.** New read-only `TDSeason.table()` (deep copy) exposes the real league:
+    W/L and points for/against are genuine, because season.js already sims every other team's games.
+    ⚠️ **Rival PLAYERS don't exist** (their games resolve as scores), so a rival's star is DERIVED from
+    what his team actually scored, seeded off the team abbr so **the same player with the same numbers
+    is there every open** — a board that reshuffled on every visit would look broken. Your own players
+    are real, read from the 🏅 Awards season tally. Ties go to YOUR player.
+  - **⭐ v2.1 — TRAITS THAT MATTER. The ten ⭐ traits existed since Round 2 and were wired to NOTHING.**
+    ⚠️ **The rule that shaped it: a trait belongs to a PLAYER, not the team.** Everything else in this
+    game (gear, coaches, ball skins, house rules) folds into one shared number; traits must not, or
+    "my Speedster is fast" becomes "my team is fast". So `speedFor(slot)`/`catchFor(slot)`/`stiffFor(slot)`
+    are asked BY OFFENSE SLOT and pay out only for the man carrying or being thrown at. Team-wide ones
+    (🎯 Cannon Arm, 🦅 Ball Hawk, 🧱 Wall, 👑 Captain) fold into the usual shop.js chains.
+    🧊 **Clutch had to be special-cased**: a player holds only ONE trait, so a 4th-quarter-only trait
+    would be dead weight — instead it DOUBLES the squad's other trait effects in Q4.
+    ⚠️ **Slot mapping (0 QB, 1 RB, 2/3 WR) is shared with gamestats.js — change one, change both.**
   - **🐛 v1.99 ALSO FIXED A BUG LIVE SINCE v1.84: `TDStaff.gameWon` WAS NEVER CALLED.** staff.js had
     the levelling code from the day it shipped and nothing in main.js ever invoked it (`git log -S`
     confirms the line never existed), so for fifteen versions the screen promised "every game you win,
