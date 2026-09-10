@@ -2837,6 +2837,15 @@ function endGame() {
   // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
   // 🎲 …and for exactly the same reason a house-rules game never moves it either.
   if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame) TDRanked.recordResult(G.score > G.oppScore);
+  // 🎓 COACHING STAFF: a win is how your coaches level up. ⚠️ THIS LINE WAS
+  // MISSING FROM v1.84 UNTIL v1.99 — staff.js had `gameWon` ready and nothing
+  // ever called it, so for fifteen versions the screen promised "they get
+  // better every time you win" and no coach ever levelled up once. Same guard
+  // list as the streak and the ladder: a drill, a silly game or a showcase
+  // doesn't count towards a coach's development either.
+  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame) {
+    TDStaff.gameWon(G.score > G.oppScore);
+  }
   // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
   // screen so the coins land in the payday like everything else.
   if (G.drillGame && window.TDDrill) TDDrill.finish(G.score, G.oppScore, G.clock);
