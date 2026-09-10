@@ -731,6 +731,10 @@ function runSpeed() {
     s *= TDShop.speedMult();
     if (G.scene.time.now < G.boostUntil) s *= TDShop.ENERGY_MULT;
   }
+  // ⭐ …times the ⭐ TRAIT of the man ACTUALLY CARRYING IT (src/traits.js).
+  // Every other bonus here is team-wide; this one is deliberately not — a
+  // 🚀 Speedster is fast when HE has the ball and nobody else is.
+  if (window.TDTraits) s *= TDTraits.speedFor(offense.indexOf(G.ballCarrier));
   return s;
 }
 
@@ -907,7 +911,10 @@ function resolvePass(wr, x, y) {
   const gl = window.TDShop ? TDShop.gloveBoost() : { catchBonus: 0, dropCut: 0 };
   let wxCatch = window.TDWeather ? TDWeather.catchMult() : 1;     // 🌦 night/wind/snow/hot/blizzard make catches harder…
   if (window.TDShop && TDShop.weatherResist) wxCatch += (1 - wxCatch) * TDShop.weatherResist();   // 🧥 …All-Weather Gear shrugs it off
-  if (Math.random() > (CATCH_CHANCE + gl.catchBonus) * wxCatch) { endPlay('incomplete', wxIncompleteMsg()); return; }
+  // ⭐ …plus the ⭐ TRAIT of the receiver this ball was thrown to — 🧲 Sure
+  // Hands only helps the man being targeted (src/traits.js).
+  const trCatch = window.TDTraits ? TDTraits.catchFor(offense.indexOf(wr)) : 0;
+  if (Math.random() > (CATCH_CHANCE + gl.catchBonus + trCatch) * wxCatch) { endPlay('incomplete', wxIncompleteMsg()); return; }
   // ...or catch it and drop it.
   if (Math.random() < DROP_CHANCE - gl.dropCut)  { endPlay('incomplete', 'DROPPED IT!'); return; }
 
@@ -1394,7 +1401,10 @@ function checkTackle() {
     if (Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y) < TACKLE_DIST) {
       // 💪 STIFF ARM (shop): a chance to break the FIRST tackle of the play —
       // shove this tackler back and keep on running.
-      if (!G.stiffUsed && window.TDShop && Math.random() < TDShop.stiffChance()) {
+      // ⭐ a 🛡 BRUISER carrying it takes the BETTER of his trait and the gear.
+      const trStiff = window.TDTraits ? TDTraits.stiffFor(offense.indexOf(G.ballCarrier)) : 0;
+      if (!G.stiffUsed && window.TDShop &&
+          Math.random() < Math.max(TDShop.stiffChance(), trStiff)) {
         G.stiffUsed = true;
         G.stiffUntil = G.scene.time.now + 500;      // ~half a second of free running
         const ang = Math.atan2(d.s.y - c.y, d.s.x - c.x);
@@ -3270,6 +3280,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   // 🎓 DEFENSIVE COORDINATOR (staff.js) — a good DC makes the other team's
   // offense look a step slower. ×1 with nobody hired, and at most −6% at level 5.
   if (window.TDStaff && TDStaff.oppOffMult) G.oppOff *= TDStaff.oppOffMult();
+  // ⭐ …and a 🧱 WALL on your defensive line clogs their attack up too.
+  if (window.TDTraits && TDTraits.oppOffMult) G.oppOff *= TDTraits.oppOffMult();
 
   // 📈 Player progression: your leveled-up team plays a little stronger — a
   // gentle, CAPPED edge on YOUR offense & defense only (never the opponent's),

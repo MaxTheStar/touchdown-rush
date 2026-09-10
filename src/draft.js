@@ -452,7 +452,12 @@
     return '#9aa4b8';
   }
   function traitChip(tr) {
-    return tr ? `<span class="dr-trait">${tr.e} ${tr.n}</span>` : '';
+    if (!tr) return '';
+    // ⭐ Since v2.1 a trait actually DOES something (src/traits.js), so say what.
+    // Without that file this is exactly the chip it always was.
+    const fx = (window.TDTraits && TDTraits.describe) ? TDTraits.describe(tr) : '';
+    return `<span class="dr-trait">${tr.e} ${tr.n}</span>` +
+           (fx ? `<span class="dr-traitfx">${fx}</span>` : '');
   }
   // One player as a table-ish row. `extra` is optional right-side HTML (buttons).
   // `showGrowth` adds the 🌱 growth bar + "▲+N" badge (roster tab only).

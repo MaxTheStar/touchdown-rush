@@ -269,6 +269,8 @@
   // cap the top end.
   // 🎓 The COACHING STAFF folds in the same harmless way (+0 / ×1 with nobody hired).
   const stArm   = () => (window.TDStaff ? window.TDStaff.armAdd()    : 0);
+  const trArm   = () => (window.TDTraits ? window.TDTraits.armAdd()  : 0);   // 🎯 Cannon Arm trait
+  const trHawk  = () => (window.TDTraits ? window.TDTraits.hawkAdd() : 0);   // 🦅 Ball Hawk trait
   const stCatch = () => (window.TDStaff ? window.TDStaff.catchAdd()  : 0);
   const stHawk  = () => (window.TDStaff ? window.TDStaff.hawkAdd()   : 0);
   const stToe   = () => (window.TDStaff ? window.TDStaff.toeAdd()    : 0);
@@ -318,7 +320,7 @@
   // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
   // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
   //    🎡 A "safe throw" buff (Sure Hands / God Mode) pushes this to 1 = no picks.
-  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm() + blArm(), -0.50); }
+  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm() + blArm() + trArm(), -0.50); }
 
   // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
   // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,
@@ -331,7 +333,7 @@
 
   // 🖐 Ball hawk: extra takeaway chance on defense (0..0.20 at level 10). The
   // DefenseSim adds this to its interception & fumble odds. Read per play.
-  function hawkBoost() { return 0.02 * gear.hawk + stHawk(); }
+  function hawkBoost() { return 0.02 * gear.hawk + stHawk() + trHawk(); }
 
   // ============================================================
   // 🛍 THE PRO SHOP screen
