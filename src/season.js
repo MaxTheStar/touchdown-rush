@@ -346,6 +346,18 @@
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
     hasSeason: () => !!load(),  // is a season in progress?
+    // 📊 LEAGUE LEADERS (leaders.js) reads the whole table: who is in the
+    // league, everyone's W/L and points for/against, and how strong each team
+    // is. Read-only and a deep copy, so nobody can bend the standings from
+    // outside — the only place that writes them is record(), above.
+    table: () => {
+      const st = load(); if (!st) return null;
+      return JSON.parse(JSON.stringify({
+        you: st.you, league: st.league, rec: st.rec, power: st.power,
+        week: st.week, phase: st.phase, champion: st.champion,
+        order: sortedStandings()
+      }));
+    },
     // 📚 DYNASTY MODE (dynasty.js) reads these to know when a season has finished
     // and how it went, so it can turn the page to the next year.
     snapshot: () => {

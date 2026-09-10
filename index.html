@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=130" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=130" />
+  <link rel="icon" type="image/png" href="favicon.png?v=132" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=132" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=130" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=132" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=130" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=132" />
   <style>
     html, body {
       margin: 0;
@@ -2861,6 +2861,43 @@
     .aw-past-w { font: 700 8.5px Arial; letter-spacing: .1em; color: #8fb0d8;
       text-transform: uppercase; flex: none; }
 
+    /* ---- 📊 LEAGUE LEADERS (src/leaders.js) ------------------------ */
+    .ld-head { font: 700 10px Arial; letter-spacing: .12em; color: #8fb0d8;
+      text-transform: uppercase; text-align: center; margin: 2px 0 8px; }
+    .ld-tiles { display: flex; gap: 7px; margin-bottom: 10px; }
+    .ld-tile { flex: 1; text-align: center; padding: 8px 3px; border-radius: 12px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
+    .ld-tile.mine { border-color: rgba(70,227,160,0.55); background: rgba(70,227,160,0.10); }
+    .ld-tile-ic { font-size: 18px; line-height: 1; }
+    .ld-tile-ab { font: 800 13px "Arial Black", Arial; color: #fff; margin-top: 2px; }
+    .ld-tile-v { font: 800 17px "Arial Black", Arial; color: #ffd54a; }
+    .ld-tile-l { font: 700 8px Arial; letter-spacing: .06em; color: #8fb0d8;
+      text-transform: uppercase; margin-top: 1px; }
+    .ld-you { font: 600 12px Arial; color: #cdd6e6; line-height: 1.45; text-align: left;
+      padding: 9px 11px; border-radius: 11px; margin-bottom: 10px;
+      background: rgba(255,213,74,0.10); border: 1px solid rgba(255,213,74,0.30); }
+    .ld-you b { color: #ffd54a; }
+    .ld-sec { font: 800 10.5px Arial; letter-spacing: .1em; color: #ffd54a;
+      text-transform: uppercase; text-align: left; margin: 12px 2px 6px; }
+    .ld-row { display: flex; align-items: center; gap: 9px; text-align: left;
+      padding: 7px 10px; margin-bottom: 5px; border-radius: 10px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); }
+    .ld-row.mine { background: rgba(70,227,160,0.11); border-color: rgba(70,227,160,0.42); }
+    .ld-pos { flex: none; width: 18px; text-align: center; font: 800 13px "Arial Black", Arial;
+      color: #8fb0d8; }
+    .ld-row.mine .ld-pos { color: #46e3a0; }
+    .ld-who { flex: 1; min-width: 0; }
+    .ld-nm { font: 800 13px "Arial Black", Arial; color: #fff;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ld-sub { font: 700 10px Arial; color: #8fb0d8; margin-top: 1px; }
+    .ld-val { flex: none; font: 800 18px "Arial Black", Arial; color: #ffd54a; }
+    .ld-val small { font-size: 9px; color: #8fb0d8; margin-left: 1px; }
+    .ld-empty { font: 600 12.5px Arial; color: #aeb9cc; line-height: 1.5; text-align: left;
+      padding: 16px 12px; border-radius: 12px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10); }
+    .ld-empty b { color: #ffd54a; }
+    .ld-foot { font: 600 10.5px Arial; color: #7f8ea6; line-height: 1.45; margin: 12px 4px 4px; }
+
     /* ---- 🌟 ALL-STAR GAME (src/allstar.js) -------------------------- */
     .as-hero { text-align: center; padding: 6px 0 2px; }
     .as-hero-ic { font-size: 44px; line-height: 1; }
@@ -3408,6 +3445,8 @@
       <div class="ov-btn yes" id="season-play">START SEASON</div>
       <!-- 🏆 Jump straight into a quick single-elim bracket (playoffs.js) — lives
            here under the Season hub so it doesn't need its own menu button. -->
+      <!-- 📊 Who leads the league — reads the real standings. -->
+      <div class="ov-btn" id="open-leaders">📊 LEAGUE LEADERS →</div>
       <div class="ov-btn" id="open-playoffs">🏆 PLAYOFF TOURNAMENT →</div>
       <!-- ⏱️ One possession, 2:00 on the clock, four points down (drill.js). -->
       <div class="ov-btn" id="open-drill">⏱️ TWO-MINUTE DRILL →</div>
@@ -3875,6 +3914,19 @@
     </div>
   </div>
 
+  <!-- 📊 LEAGUE LEADERS — leaders.js reads the real season table (W/L,
+       points for/against) and ranks the league. Your players' numbers are real
+       (from the Awards tally); rival stars are derived from what those teams
+       actually scored, with a fixed seed so they never reshuffle. -->
+  <div class="ov" id="leaders-modal">
+    <div class="ov-card">
+      <div class="ov-title">📊 LEAGUE LEADERS</div>
+      <div class="ov-sub">Who's having the best year &mdash; and where your players rank.</div>
+      <div id="leaders-body"></div>
+      <div class="ov-btn" id="leaders-close">DONE</div>
+    </div>
+  </div>
+
   <!-- 🌟 ALL-STAR GAME — allstar.js reads who made the cut off the roster
        ratings and starts an exhibition vs the ALL-STARS through the TDGame
        bridge. It knows the game ended by wrapping TDGameStats.finish. -->
@@ -4203,65 +4255,66 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=130"></script>
-  <script src="src/sound.js?v=130"></script>
-  <script src="src/shop.js?v=130"></script>
-  <script src="src/spin.js?v=130"></script>
-  <script src="src/challenges.js?v=130"></script>
-  <script src="src/quests.js?v=130"></script>
-  <script src="src/progress.js?v=130"></script>
-  <script src="src/streak.js?v=130"></script>
-  <script src="src/achievements.js?v=130"></script>
-  <script src="src/trophy.js?v=130"></script>
-  <script src="src/records.js?v=130"></script>
-  <script src="src/road.js?v=130"></script>
-  <script src="src/roadtrip.js?v=130"></script>
-  <script src="src/cards.js?v=130"></script>
-  <script src="src/stadium.js?v=130"></script>
-  <script src="src/ranked.js?v=130"></script>
-  <script src="src/halftime.js?v=130"></script>
-  <script src="src/uniform.js?v=130"></script>
-  <script src="src/powerup.js?v=130"></script>
-  <script src="src/arcade.js?v=130"></script>
-  <script src="src/trivia.js?v=130"></script>
-  <script src="src/nemesis.js?v=130"></script>
-  <script src="src/weather.js?v=130"></script>
-  <script src="src/season.js?v=130"></script>
-  <script src="src/playoffs.js?v=130"></script>
-  <script src="src/film.js?v=130"></script>
-  <script src="src/celebration.js?v=130"></script>
-  <script src="src/juice.js?v=130"></script>
-  <script src="src/gamestats.js?v=130"></script>
-  <script src="src/sportspage.js?v=130"></script>
-  <script src="src/press.js?v=130"></script>
-  <script src="src/staff.js?v=130"></script>
-  <script src="src/chemistry.js?v=130"></script>
-  <script src="src/boxscore.js?v=130"></script>
-  <script src="src/field.js?v=130"></script>
-  <script src="src/ball.js?v=130"></script>
-  <script src="src/mascot.js?v=130"></script>
-  <script src="src/poster.js?v=130"></script>
-  <script src="src/house.js?v=130"></script>
-  <script src="src/allstar.js?v=130"></script>
-  <script src="src/awards.js?v=130"></script>
-  <script src="src/rebrand.js?v=130"></script>
-  <script src="src/draft.js?v=130"></script>
-  <script src="src/training.js?v=130"></script>
-  <script src="src/injuries.js?v=130"></script>
-  <script src="src/flag.js?v=130"></script>
-  <script src="src/freeagency.js?v=130"></script>
-  <script src="src/gameplan.js?v=130"></script>
-  <script src="src/playbook.js?v=130"></script>
-  <script src="src/createplayer.js?v=130"></script>
-  <script src="src/nicknames.js?v=130"></script>
-  <script src="src/special.js?v=130"></script>
-  <script src="src/events.js?v=130"></script>
-  <script src="src/dynasty.js?v=130"></script>
-  <script src="src/ads.js?v=130"></script>
-  <script src="src/tour.js?v=130"></script>
-  <script src="src/concession.js?v=130"></script>
-  <script src="src/kick.js?v=130"></script>
-  <script src="src/drill.js?v=130"></script>
-  <script src="src/main.js?v=130"></script>
+  <script src="src/stats.js?v=132"></script>
+  <script src="src/sound.js?v=132"></script>
+  <script src="src/shop.js?v=132"></script>
+  <script src="src/spin.js?v=132"></script>
+  <script src="src/challenges.js?v=132"></script>
+  <script src="src/quests.js?v=132"></script>
+  <script src="src/progress.js?v=132"></script>
+  <script src="src/streak.js?v=132"></script>
+  <script src="src/achievements.js?v=132"></script>
+  <script src="src/trophy.js?v=132"></script>
+  <script src="src/records.js?v=132"></script>
+  <script src="src/road.js?v=132"></script>
+  <script src="src/roadtrip.js?v=132"></script>
+  <script src="src/cards.js?v=132"></script>
+  <script src="src/stadium.js?v=132"></script>
+  <script src="src/ranked.js?v=132"></script>
+  <script src="src/halftime.js?v=132"></script>
+  <script src="src/uniform.js?v=132"></script>
+  <script src="src/powerup.js?v=132"></script>
+  <script src="src/arcade.js?v=132"></script>
+  <script src="src/trivia.js?v=132"></script>
+  <script src="src/nemesis.js?v=132"></script>
+  <script src="src/weather.js?v=132"></script>
+  <script src="src/season.js?v=132"></script>
+  <script src="src/playoffs.js?v=132"></script>
+  <script src="src/film.js?v=132"></script>
+  <script src="src/celebration.js?v=132"></script>
+  <script src="src/juice.js?v=132"></script>
+  <script src="src/gamestats.js?v=132"></script>
+  <script src="src/sportspage.js?v=132"></script>
+  <script src="src/press.js?v=132"></script>
+  <script src="src/staff.js?v=132"></script>
+  <script src="src/chemistry.js?v=132"></script>
+  <script src="src/boxscore.js?v=132"></script>
+  <script src="src/field.js?v=132"></script>
+  <script src="src/ball.js?v=132"></script>
+  <script src="src/mascot.js?v=132"></script>
+  <script src="src/poster.js?v=132"></script>
+  <script src="src/house.js?v=132"></script>
+  <script src="src/allstar.js?v=132"></script>
+  <script src="src/leaders.js?v=132"></script>
+  <script src="src/awards.js?v=132"></script>
+  <script src="src/rebrand.js?v=132"></script>
+  <script src="src/draft.js?v=132"></script>
+  <script src="src/training.js?v=132"></script>
+  <script src="src/injuries.js?v=132"></script>
+  <script src="src/flag.js?v=132"></script>
+  <script src="src/freeagency.js?v=132"></script>
+  <script src="src/gameplan.js?v=132"></script>
+  <script src="src/playbook.js?v=132"></script>
+  <script src="src/createplayer.js?v=132"></script>
+  <script src="src/nicknames.js?v=132"></script>
+  <script src="src/special.js?v=132"></script>
+  <script src="src/events.js?v=132"></script>
+  <script src="src/dynasty.js?v=132"></script>
+  <script src="src/ads.js?v=132"></script>
+  <script src="src/tour.js?v=132"></script>
+  <script src="src/concession.js?v=132"></script>
+  <script src="src/kick.js?v=132"></script>
+  <script src="src/drill.js?v=132"></script>
+  <script src="src/main.js?v=132"></script>
 </body>
 </html>
