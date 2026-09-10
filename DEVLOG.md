@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.98 — cache-buster is `?v=128` in `index.html`.
+- **Version:** v1.99 — cache-buster is `?v=130` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -107,6 +107,27 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     caps. ⚠️ Unlike 🎲 house rules these apply EVERYWHERE (season/playoff included) — you bought them
     with coins like gear, and gear has always counted. Classic returns the neutral value so the plain
     ball is byte-identical to pre-v1.98.
+  - **🏁 Round 11 — "The Chalkboard Board" (opened 2026-09-09).** Artifact
+    `857612f6-92de-42cf-8ab7-2b99b03878b2`. Max reversed the earlier stop order and asked for a new
+    board, verified the whole game first, then "work on that until the end". The coaching round:
+    ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders · ③⭐ Traits That Matter ·
+    ④📋 Scouting Report · ⑤🎲 Sim This Game · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
+    ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
+    it, because you can't both BE the head coach and HIRE one.)
+  - **🎓 v1.99 — STAFF ARE NOW HIRED BY ⭐ STAR RATING, AND THERE IS A HEAD COACH.** Candidates are
+    generated with a 1–5 rating (⭐5 = 7% of rolls), and the rating drives BOTH price and strength:
+    a ⭐5 does 2.78× a ⭐1 but costs 8.5× as much — the cost curve is steeper than the benefit on
+    purpose. 🔍 SCOUT re-rolls the market for 75 coins. ⚠️ **Stars and levels are deliberately two
+    different things**: ⭐ talent you BUY, 📈 loyalty you EARN, and `bonus()` multiplies them — which
+    is why replacing a coach still resets him to level 1. ⚠️ **Old `{id,lvl,wins}` saves are MIGRATED**
+    (level + wins kept, treated as ⭐3) — never reset. The six getters shop.js/main.js call are
+    unchanged.
+  - **🐛 v1.99 ALSO FIXED A BUG LIVE SINCE v1.84: `TDStaff.gameWon` WAS NEVER CALLED.** staff.js had
+    the levelling code from the day it shipped and nothing in main.js ever invoked it (`git log -S`
+    confirms the line never existed), so for fifteen versions the screen promised "every game you win,
+    they get better" and no coach ever levelled up once. `endGame` now calls it with the same guard
+    list as the streak and the ladder. **Lesson: an exported function nobody calls looks exactly like
+    a working feature — when a module exposes a hook, grep for its CALLER before believing it works.**
   - **📝 Round 10's picks all hang off EXISTING hubs** — 🛍 Pro Shop (ball, mascot, house rules,
     rebrand), 🏆 Trophy Case (poster, all-star, awards) and the 🎯 Practice Arcade (the quiz). Still
     **no new front-screen chips**, per the v1.44/45 lesson.
