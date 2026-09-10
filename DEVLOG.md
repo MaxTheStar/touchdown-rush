@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v1.97 — cache-buster is `?v=127` in `index.html`.
+- **Version:** v1.98 — cache-buster is `?v=128` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -97,6 +97,16 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     a cosmetic edit (`teamRating` prefers `ratingKey`). ⚠️ **The 3-letter code is LOCKED during a
     season or playoff run** — season.js saves you as `you:'SEA'`, so changing it underneath orphans
     the save. Names and colours stay editable; only the code waits.
+  - **🌈 v1.98 — BALL SKINS NOW CHANGE HOW THE GAME PLAYS (Max's call, 2026-09-09).** They were
+    cosmetic; he asked for balls you buy that actually do something. Each ball is now a playstyle:
+    🔥 Flame ×1.05 run speed · 🌙 Night Glow +0.06 catch · 🥇 Golden +0.35 grip (fewer fumbles) ·
+    ❄️ Ice +0.30 arm (fewer picks) · 🌈 Rainbow a little of all four · 🏈 Classic neutral.
+    **NO new balance system** — they fold into the same four shop.js functions the 👟 gear uses
+    (`speedMult`/`gloveBoost`/`gripFactor`/`armAccuracy`) via `blSpeed/blCatch/blGrip/blArm`, so they
+    stack with gear, spin, game plan, staff, chemistry and house rules and hit the same `clampPerk`
+    caps. ⚠️ Unlike 🎲 house rules these apply EVERYWHERE (season/playoff included) — you bought them
+    with coins like gear, and gear has always counted. Classic returns the neutral value so the plain
+    ball is byte-identical to pre-v1.98.
   - **📝 Round 10's picks all hang off EXISTING hubs** — 🛍 Pro Shop (ball, mascot, house rules,
     rebrand), 🏆 Trophy Case (poster, all-star, awards) and the 🎯 Practice Arcade (the quiz). Still
     **no new front-screen chips**, per the v1.44/45 lesson.
