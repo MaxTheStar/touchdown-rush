@@ -2645,6 +2645,10 @@ const DefenseSim = (function () {
     const tg = $id('dsim-togoal'); if (tg) tg.textContent = (100 - G.cpu.spot) + ' yds to the end zone';
     if (line != null) { const l = $id('dsim-log'); if (l) l.innerHTML = line; }
     const tap = $id('dsim-tap'); if (tap) tap.textContent = 'TAP TO CONTINUE ▶';
+    // 🛡️ …and let defcall.js have the last word on that label, and on whether
+    // the three call buttons belong on screen right now. Without it the panel
+    // reads exactly as it always did.
+    if (window.TDDefense) TDDefense.refresh();
   }
 
   // Begin the opponent's drive (G.cpu is already set by startCpuDrive).
@@ -2657,7 +2661,8 @@ const DefenseSim = (function () {
     const t = $id('dsim-team'); if (t) t.textContent = abbr;
     const ez = $id('dsim-ez-l'); if (ez) ez.textContent = abbr;
     panel(true);
-    render(pick(['They have the ball — tap to watch! ▶', 'Tap to see their play ▶']));
+    if (window.TDDefense) TDDefense.show();   // 🛡️ fresh call buttons for this drive
+    render(pick(['They have the ball — call your defense! ▶', 'Their ball. What are we playing? ▶']));
     updateHUD();
   }
 
@@ -2675,24 +2680,37 @@ const DefenseSim = (function () {
     // is telling the truth. It was a flat 0.56 for every team in the league
     // before, and that is still exactly what you get with scout.js missing.
     const passShare = (window.TDScout && TDScout.passLean) ? TDScout.passLean(G.oppTeam) : 0.56;
+    // 🛡️ THE DEFENSE YOU CALLED (defcall.js) — 🔥 blitz, 👤 man or 🛡 zone. It
+    // does not add a second simulation: every one of these folds into the five
+    // numbers this function was already rolling against. With no call made, or
+    // with defcall.js missing, `D` is all-neutral and the play resolves with
+    // exactly the numbers it had before v2.6.
+    const D = (window.TDDefense && TDDefense.mods()) ||
+              { sack: 0, stuff: 0, incomplete: 0, intAdd: 0, fumbleAdd: 0, bigPass: 0, bigRun: 0, passGain: 1, runGain: 1 };
 
     if (Math.random() < passShare) {                                          // ---- PASS ----
-      if (r < 0.045 + dStop * 0.03 + hawk) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
-      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow));
+      if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
+      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete);
       if (Math.random() < inc) return { r: 'inc', y: 0, t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
-      if (Math.random() < 0.10 + dStop * 0.10) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, t: '<b>SACK!</b> ' + y + ' yards.' }; }
-      let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow); if (Math.random() < 0.08) y += Phaser.Math.Between(10, 26);
+      if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, t: '<b>SACK!</b> ' + y + ' yards.' }; }
+      let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
+      if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
       return { r: 'gain', y, t: 'Pass complete for <b>' + y + '</b>.' };
     }
     // ---- RUN ----
-    if (r < (0.03 + dStop * 0.02 + hawk * 0.5) * wxFumble) return { r: 'fum', y: 0, t: '<b>FUMBLE!</b> You recovered it!' };
-    if (Math.random() < 0.18 + dStop * 0.15) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
-    let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow); if (Math.random() < 0.08) y += Phaser.Math.Between(10, 30);
+    if (r < (0.03 + dStop * 0.02 + hawk * 0.5 + D.fumbleAdd) * wxFumble) return { r: 'fum', y: 0, t: '<b>FUMBLE!</b> You recovered it!' };
+    if (Math.random() < 0.18 + dStop * 0.15 + D.stuff) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
+    let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain);
+    if (Math.random() < 0.08 + D.bigRun) y += Phaser.Math.Between(10, 30);
     return { r: 'gain', y, t: 'Run for <b>' + y + '</b> yards.' };
   }
 
   // Apply a play to the drive: move the ball, update downs, end it if it's over.
   function apply(p) {
+    // 🛡️ Put the defense you called on the front of the play-by-play line, and
+    // use the call up: one call, one play, choose again next down. Covers both
+    // the normal line AND a drive-ending one, because both read p.t.
+    if (window.TDDefense) p.t = TDDefense.consume() + p.t;
     advanceClock(p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY);
     if (p.r === 'int' || p.r === 'fum') { endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
     G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
@@ -2708,9 +2726,14 @@ const DefenseSim = (function () {
   // The drive is over — show the final line, then the NEXT tap hands off (via
   // cpuDriveEnd, exactly like the old live defense did).
   function endDrive(kind, msg, line) {
-    render(line);
+    // ⚠️ SET THE FLAG BEFORE RENDERING. The repaint asks whether this drive has
+    // ended — 🛡️ defcall.js hides the call buttons and puts "TAP TO CONTINUE"
+    // back when it has — and rendering first meant the panel drew the answer to
+    // the previous question: a finished drive still offering you a blitz.
+    // Nothing else in render() reads this flag.
     G.dsimEnding = true;
     G.dsimPending = { kind, msg };
+    render(line);
   }
 
   // One tap advances everything.
