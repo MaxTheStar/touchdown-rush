@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.5 — cache-buster is `?v=138` in `index.html`.
+- **Version:** v2.6 — cache-buster is `?v=139` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -111,7 +111,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `857612f6-92de-42cf-8ab7-2b99b03878b2`. Max reversed the earlier stop order and asked for a new
     board, verified the whole game first, then "work on that until the end". The coaching round:
     ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders **v2.0 ✅** · ③⭐ Traits That Matter **v2.1 ✅** ·
-    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game **v2.4 ✅** · ⑥🗣️ Audibles **v2.5 ✅** · ⑦🛡️ Call Your Own Defense ·
+    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game **v2.4 ✅** · ⑥🗣️ Audibles **v2.5 ✅** · ⑦🛡️ Call Your Own Defense **v2.6 ✅** ·
     ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
     it, because you can't both BE the head coach and HIRE one.)
   - **🎓 v1.99 — STAFF ARE NOW HIRED BY ⭐ STAR RATING, AND THERE IS A HEAD COACH.** Candidates are
@@ -148,6 +148,42 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **🛡️ v2.6 — CALL YOUR OWN DEFENSE, AND THE RULE THAT MAKES A CHOICE A CHOICE.** 🔥 BLITZ / 👤 MAN /
+    🛡 ZONE before every play the CPU runs. ⚠️ **It lives in the DEFENSE SIM, not on the grass** — in
+    1-player mode `startCpuDrive` sends every drive to `DefenseSim`, the tap-to-progress map, so the
+    field never sees the CPU's offense at all. That panel IS defense as Max experiences it. Choosing
+    a call runs the play (the buttons `stopPropagation`, or the panel's own tap handler fires too and
+    you get two plays for one tap).
+    ⚠️ **EACH CALL HAS TO BE THE BEST ANSWER TO SOMETHING AND THE WORST TO SOMETHING ELSE.** The
+    first cut failed that in both directions at once: 🛡 zone gave up the fewest yards AND killed
+    every big play (right every down), while 👤 man gave up MORE yards than making no call at all
+    (never worth choosing). Final, 600 plays per cell, **yards allowed per play**:
+    `vs KC (72% pass): man 3.42 < zone 3.91 < none 4.01 < blitz 4.24` ·
+    `vs CHI (60% run): blitz 2.50 < none 3.21 < zone 3.95 < man 4.54`. Guessing wrong is worse than
+    not calling — **which is what makes 📋 the Scouting Report worth reading.** v2.3, v2.5 and v2.6
+    are one idea in three pieces: know what is coming, and do something about it.
+  - **🐛 `bigPlay` HAD TO BECOME TWO NUMBERS, AND THAT IS THE REAL LESSON OF THIS PICK.** The 8%
+    chance of a 10–30 yard chunk is worth **~1.5 yards a play — about a third of everything a drive
+    gains** — so it is the strongest lever in `DefenseSim.play()`, and whichever call cut it won every
+    down no matter what else it did. It is also the one number that must point OPPOSITE ways for the
+    two kinds of play: a blitz means nobody is home if they THROW past it, but extra bodies in the box
+    if they RUN into it. `bigPass`/`bigRun`. **When one knob dominates the outcome, tuning the others
+    is theatre — find the dominant term first and check it can express what you actually mean.**
+  - **🐛 `endDrive()` RENDERED BEFORE IT SET `G.dsimEnding`,** so a finished drive still drew the call
+    buttons and still offered you a blitz on a play that was never going to happen. The flag is set
+    first now. **A repaint that asks "what state are we in?" has to run AFTER the state changes** —
+    the same shape as the v1.94 house-rules bug, where the flag was cleared before the things that
+    read it.
+  - **🐛 AND A PRE-EXISTING PHONE OVERHANG: `.dsim-card` was 385px wide on a 375px screen.**
+    `width: min(93vw, 470px)` with `padding: 16px` ADDED on top, no `box-sizing`, since the panel was
+    built. Fixed while measuring the new buttons. Worth grepping for other `width:` + `padding:` pairs
+    without `box-sizing`.
+  - **🛡️ "TAP TO CONTINUE" WAS QUIETLY THE ENEMY OF THE FEATURE.** It is the biggest, goldest thing on
+    the panel, so a nine-year-old taps it every down and never discovers the three calls at all. It
+    now reads **"▶ NO CALL — JUST PLAY"**, which is what it actually does — the third option instead
+    of the obvious one. ⚠️ When you add a choice to a screen that already has a big friendly button,
+    that button is now one of the choices and has to say so.
+
   - **🗣️ v2.5 — AUDIBLES, AND THE HALF OF THE FEATURE THAT ISN'T THE BUTTON.** The defense's plan for
     a down has been decided before the snap since v1.6 (`callPlay` sets `G.blitz`/`G.coverage` in
     `setupPlay`) — but the game only ever TOLD you about it as the ball was snapped, which is a
