@@ -287,7 +287,19 @@
 
   // 👟 Speed cleats: multiply your run speed (level 10 = 20% faster).
   //    …times any 🎡 speed buff that's ticking right now.
-  function speedMult() { return (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed() * stSpeed() * chSpeed() * hsSpeed() * blSpeed(); }
+  // ⚠️ A SAFETY CEILING, not a balance change. Eight separate systems multiply
+  // into this now (gear, spin, power-up, game plan, staff, chemistry, house
+  // rules, ball skin) and ⭐ traits multiply it again in main.js's runSpeed.
+  // Nothing today reaches 1.75 — a fully maxed build measures about 1.53, and
+  // even 🎲 Turbo Mode on top lands under the cap — so this changes no current
+  // play. It exists so the NEXT thing folded in here can't quietly make the
+  // player uncatchable (the defence pursues at 194 to your base 205).
+  const SPEED_CAP = 1.75;
+  function speedMult() {
+    const v = (1 + 0.02 * gear.cleats) * spinSpeed() * puSpeed() * gpSpeed()
+            * stSpeed() * chSpeed() * hsSpeed() * blSpeed();
+    return Math.min(SPEED_CAP, v);
+  }
 
   // ⚡ Turbo dash: how much STRONGER a swipe-dash is (added to the base
   // numbers in main.js): faster burst, lasts longer, recharges sooner.
@@ -333,7 +345,17 @@
 
   // 🖐 Ball hawk: extra takeaway chance on defense (0..0.20 at level 10). The
   // DefenseSim adds this to its interception & fumble odds. Read per play.
-  function hawkBoost() { return 0.02 * gear.hawk + stHawk() + trHawk(); }
+  // ⚠️ HARD-CAPPED, and this cap is load-bearing. Unlike the other perks this
+  // number is added STRAIGHT ONTO A RAW PROBABILITY in main.js — the CPU's
+  // interception chance starts at 0.045 — so it is the one perk where a big
+  // value doesn't mean "a bit better", it means "every other pass is picked
+  // off". Maxed gear (0.20) + a ⭐5 level-5 defensive coordinator and head
+  // coach (0.22) + two 🦅 Ball Hawk traits doubled by 🧊 Clutch (0.16) stacked
+  // to 0.58, which made the CPU throw 65% interceptions. Capped at 0.25 the
+  // ceiling is ~32%: still a huge edge for a maxed takeaway build, still a
+  // game of football. Anything new that feeds this chain is covered too.
+  const HAWK_CAP = 0.25;
+  function hawkBoost() { return Math.min(HAWK_CAP, 0.02 * gear.hawk + stHawk() + trHawk()); }
 
   // ============================================================
   // 🛍 THE PRO SHOP screen
