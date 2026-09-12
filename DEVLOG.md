@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.1 — cache-buster is `?v=134` in `index.html`.
+- **Version:** v2.2 — cache-buster is `?v=135` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -137,6 +137,17 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     🧊 **Clutch had to be special-cased**: a player holds only ONE trait, so a 4th-quarter-only trait
     would be dead weight — instead it DOUBLES the squad's other trait effects in Q4.
     ⚠️ **Slot mapping (0 QB, 1 RB, 2/3 WR) is shared with gamestats.js — change one, change both.**
+  - **🐛 v2.2 — ⚠️ `hawkBoost` IS THE ONE PERK ADDED STRAIGHT ONTO A RAW PROBABILITY, AND IT NOW HAS A
+    HARD CAP (0.25).** main.js starts the CPU interception chance at 0.045 and ADDS hawkBoost to it,
+    so a big value here means "every other pass is picked off", not "a bit better". Every other perk
+    is clamped (`clampPerk` at 0.95, `stiffChance` via `clamp01`) — this one wasn't. Maxed gear (0.20)
+    + a ⭐5 lvl-5 DC and head coach (0.22) + two 🦅 Ball Hawk traits doubled by 🧊 Clutch (0.16) stacked
+    to **0.58 → a 65% interception rate (14.6×)**. Partly pre-existing (gear + old flat staff already
+    hit 0.27) but v1.99 and v2.1 tipped it from strong to broken. Now ~32% at the ceiling. **Found by a
+    verification sweep, not by playing — measure the CEILING of any perk that feeds a probability.**
+    `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
+    it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
+    fold-in making the player uncatchable (pursuit is 194 vs a base 205).
   - **🐛 v1.99 ALSO FIXED A BUG LIVE SINCE v1.84: `TDStaff.gameWon` WAS NEVER CALLED.** staff.js had
     the levelling code from the day it shipped and nothing in main.js ever invoked it (`git log -S`
     confirms the line never existed), so for fifteen versions the screen promised "every game you win,
