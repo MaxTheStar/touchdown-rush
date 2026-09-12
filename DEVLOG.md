@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.3 — cache-buster is `?v=136` in `index.html`.
+- **Version:** v2.4 — cache-buster is `?v=137` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -111,7 +111,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `857612f6-92de-42cf-8ab7-2b99b03878b2`. Max reversed the earlier stop order and asked for a new
     board, verified the whole game first, then "work on that until the end". The coaching round:
     ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders **v2.0 ✅** · ③⭐ Traits That Matter **v2.1 ✅** ·
-    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
+    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game **v2.4 ✅** · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
     ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
     it, because you can't both BE the head coach and HIRE one.)
   - **🎓 v1.99 — STAFF ARE NOW HIRED BY ⭐ STAR RATING, AND THERE IS A HEAD COACH.** Candidates are
@@ -148,6 +148,37 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **🎲 v2.4 — SIM THIS GAME, AND THE RULE THAT A SHORTCUT MUST COST SOMETHING.**
+    Hand a regular-season week to the computer and watch it tick in. ⚠️ **It runs on the LEAGUE'S OWN
+    ENGINE** — new read-only `TDSeason.simNext()` runs the same `simGame()` that already plays the
+    other seven teams' games and hands the score back WITHOUT recording it, and simgame.js then
+    reports it through the same `reportResult()` a played game uses. If your simmed weeks ran on a
+    different engine, your record would be measured on a different yardstick than everyone else in
+    the same table.
+    ⚠️ **A SIMMED GAME EARNS NOTHING BUT THE RESULT** — no coins, XP, 🔥 streak, 🏅 ladder,
+    📖 records, 🎓 coach levels or ⭐ player stats. Otherwise the fastest way to get rich is to never
+    play football. **The panel says so BEFORE you press the button** — a cost you only discover
+    afterwards is a trap, not a trade-off.
+    ⚠️ **THE PLAYOFFS CAN NEVER BE SIMMED.** `simNext()` returns null outside `phase === 'regular'`:
+    the semifinal and the Max Bowl are the two games the whole year is for.
+  - **🎮 TAKING OVER AT HALF TIME PUT THE GUARD LIST FOUR DEEP.** `startSeasonGame` now takes an
+    optional `resume` ({my, opp, quarter}) and seeds the score after `beginGame` — without it the
+    call is byte-identical. That game flies `G.simTakeover`, which now sits beside `drillGame`,
+    `houseGame` and `allStarGame` on the streak, the ladder and the staff, plus **one line in
+    records.js's single `beat()` guard** (the same one place 🎲 house rules uses). Without it you
+    could sim to 28-0, take over, and bank a "personal best" the computer scored for you. It DOES
+    still count in the standings — a win is a win in the table.
+  - **🐛 v2.4's BUG, AND IT IS A GOOD ONE: THE TAKEOVER GUARD NEVER FIRED.** simgame.js kept its OWN
+    copy of the flag, set it in `takeOver()` and then called `startSeasonGame` → `beginGame` → which
+    RESETS the flag. The mirror was switched off a microsecond after it was switched on, so the
+    record book was never actually protected. `TDSim.takeover()` now READS `G.simTakeover`.
+    **ONE FLAG, ONE OWNER — a flag two files both write is a flag that will disagree with itself.**
+    (Related to the v1.94 lesson about *where* a flag is cleared; this one is about *who* owns it.)
+  - **🎲 Two smaller rules worth keeping:** the tick-in uses `setInterval`, not rAF — **a scoreboard
+    that stops when you look away is a bug** (same family as the film.js playback timer) — and the
+    quarter-by-quarter split decomposes the score into real 7s and 3s so it **always adds up to the
+    engine's exact total** (verified for every total 0–70). The drama is invented; the score is not.
+
   - **📋 v2.3 — THE SCOUTING REPORT, AND THE RULE THAT SHAPED IT: THE CARD HAS TO BE TRUE.**
     A pre-kickoff card that said "expect the pass" and meant nothing would teach Max to ignore his
     own coaches, so `TDScout.passLean()` does both jobs — it is what the card SHOWS *and* what the
