@@ -1945,6 +1945,26 @@ const RED_FORMATIONS = [
 // Pick the red team's next formation — never the same one twice in a row (just like
 // the playbook avoids back-to-back concepts). Remembers it in G.dformation.
 function pickRedFormation() {
+  // 📋 SCOUTING REPORT (scout.js) — WHICH FAMILY of looks they show is this
+  // opponent's real run/pass tendency, the same number the pre-kickoff card
+  // told you. A throwing team comes out spread; a running team lines up in
+  // I-FORM and pounds it. With scout.js missing we fall straight back to the
+  // old even shuffle, so flag-off behaviour is byte-identical.
+  const lean = (window.TDScout && TDScout.passLean) ? TDScout.passLean(G.oppTeam) : null;
+  if (lean != null) {
+    if (Math.random() < lean) {
+      // A throwing look. Three to choose from, so we can still keep the old
+      // "never the same one twice in a row" rule inside the family.
+      const opts = [0, 1, 2].filter(n => n !== G.dformation);
+      const i = opts[Phaser.Math.Between(0, opts.length - 1)];
+      G.dformation = i;
+      return RED_FORMATIONS[i];
+    }
+    // I-FORM is the only run look there is, so a run-first team is ALLOWED to
+    // show it twice in a row — that is what pounding the ball looks like.
+    G.dformation = 3;
+    return RED_FORMATIONS[3];
+  }
   let i = Phaser.Math.Between(0, RED_FORMATIONS.length - 1);
   if (i === G.dformation) i = (i + 1) % RED_FORMATIONS.length;
   G.dformation = i;
@@ -2650,8 +2670,13 @@ const DefenseSim = (function () {
     const wxFumble = window.TDWeather ? TDWeather.fumbleMult() : 1;
     const hawk = (window.TDShop && TDShop.hawkBoost) ? TDShop.hawkBoost() : 0;  // 🖐 Ball Hawk: more takeaways
     const r = Math.random();
+    // 📋 HOW OFTEN THEY THROW IT is this opponent's real tendency (scout.js) —
+    // the very number the pre-kickoff Scouting Report showed you, so the card
+    // is telling the truth. It was a flat 0.56 for every team in the league
+    // before, and that is still exactly what you get with scout.js missing.
+    const passShare = (window.TDScout && TDScout.passLean) ? TDScout.passLean(G.oppTeam) : 0.56;
 
-    if (Math.random() < 0.56) {                                               // ---- PASS ----
+    if (Math.random() < passShare) {                                          // ---- PASS ----
       if (r < 0.045 + dStop * 0.03 + hawk) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow));
       if (Math.random() < inc) return { r: 'inc', y: 0, t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
@@ -3370,6 +3395,13 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
     sayComment('2:00 to go, four points down. Score or go home!');
     return;
   }
+  // 📋 SCOUTING REPORT (scout.js) — your coaches' card on this opponent, read
+  // BEFORE the kickoff. If it puts the card up it returns true and holds the
+  // kickoff until you tap 🏈 LET'S PLAY (G.state is still 'menu' here, and
+  // update() returns early on 'menu', so nothing runs behind it). With the
+  // module missing, or the card switched off, it returns false and we kick off
+  // exactly as before.
+  if (window.TDScout && TDScout.pregame(G.team, G.oppTeam, startKickoff)) return;
   startKickoff();   // the game opens with a kickoff for you to return
 }
 
@@ -3384,6 +3416,10 @@ window.TDGame = {
   currentMenuTeamAbbr: () => { const t = allTeams()[G.menuIndex]; return t ? t.abbr : null; },
   // just the real NFL teams (season.js builds the 8-team league from these)
   nflAbbrs: () => NFL_TEAMS.map(t => t.abbr),
+  // a team's ⭐ OFFENSE/DEFENSE ratings (📋 scout.js reads these to write the
+  // scouting report). Goes through teamRating, so a 🚚 renamed team still
+  // reports the ratings it really has.
+  teamRating: (team) => teamRating(team),
   // start a season game: your team vs the week's scheduled opponent
   startSeasonGame(youAbbr, oppAbbr) {
     const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
