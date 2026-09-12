@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.6 — cache-buster is `?v=139` in `index.html`.
+- **Version:** v2.7 — cache-buster is `?v=140` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -112,7 +112,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     board, verified the whole game first, then "work on that until the end". The coaching round:
     ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders **v2.0 ✅** · ③⭐ Traits That Matter **v2.1 ✅** ·
     ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game **v2.4 ✅** · ⑥🗣️ Audibles **v2.5 ✅** · ⑦🛡️ Call Your Own Defense **v2.6 ✅** ·
-    ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
+    ⑧🌟 Superstar Mode **v2.7 ✅**. **🏁 SWEPT 8/8 on 2026-09-12.** (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
     it, because you can't both BE the head coach and HIRE one.)
   - **🎓 v1.99 — STAFF ARE NOW HIRED BY ⭐ STAR RATING, AND THERE IS A HEAD COACH.** Candidates are
     generated with a 1–5 rating (⭐5 = 7% of rolls), and the rating drives BOTH price and strength:
@@ -148,6 +148,34 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **🌟 v2.7 — SUPERSTAR MODE, AND THE QUESTION THAT DESIGNED IT.** You play a whole game as ONE man.
+    ⚠️ **What happens when the ball goes somewhere else?** In this game the player has ALWAYS been
+    whoever is holding the ball — **there is no AI ball carrier anywhere in main.js** and there never
+    needed to be one. A mode where the QB could throw to the OTHER receiver would need a brain for a
+    man running with the ball: a whole new system and a whole new set of ways to break. So the
+    offense runs through YOU, which is the fantasy anyway, and the mode is built almost entirely out
+    of parts that already exist — `controlStar` is `controlBallCarrier`'s movement block, the throw
+    is `throwTo(1)`, the catch is `resolvePass` (which already weighs the nearest defender), and
+    after the catch **there is nothing to write at all**, because you ARE the carrier.
+  - **🐛 v2.7's FIRST BUG: THE QUARTERBACK WAS A TACKLING DUMMY.** He dropped back, stood perfectly
+    still and waited 2.6s — sacked on EVERY down, one for a safety, ball never thrown once. **In the
+    normal game the PLAYER is holding that quarterback up the whole time**, jinking him away from the
+    rush without ever thinking about it. Take the player away and you have to put that back: he now
+    feels pressure, slides off the nearest rusher (never past the line) and throws the instant he is
+    hurried. 5/5 downs after. **When you automate a role the player used to fill, list what the
+    player was silently doing — it is never just the obvious thing.**
+  - **🐛 v2.7's SECOND BUG: THE STAR COULD NOT GET OPEN.** An AI receiver gets a "work open" nudge in
+    `updateReceivers` worth 0.28 of a receiver's speed — **and your star no longer runs that code,
+    because you are running him.** He was the one receiver on the field with no way to shake a
+    defender: separation measured 12px through a whole route and every throw was contested. He now
+    carries a **1.10 speed edge** (`TDStar.speedEdge()`, exactly 1.0 outside the mode so it cannot
+    leak) and separation reaches 32–63px against a 38px "open" bar. **Taking a player out of a system
+    also takes away everything that system was quietly giving him.**
+  - **🌟 THE GUARD LIST IS NOW FIVE DEEP** (`!G.drillGame && !G.houseGame && !G.allStarGame &&
+    !G.simTakeover && !G.starGame`) on the streak, the ladder and the staff, plus its own line in
+    records.js's single `beat()` guard. A different control scheme cannot share a scoreboard with the
+    real thing. Verified: a 77-0 Superstar game moved none of them; a normal game straight after did.
+
   - **🛡️ v2.6 — CALL YOUR OWN DEFENSE, AND THE RULE THAT MAKES A CHOICE A CHOICE.** 🔥 BLITZ / 👤 MAN /
     🛡 ZONE before every play the CPU runs. ⚠️ **It lives in the DEFENSE SIM, not on the grass** — in
     1-player mode `startCpuDrive` sends every drive to `DefenseSim`, the tap-to-progress map, so the
