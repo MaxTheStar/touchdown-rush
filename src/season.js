@@ -358,6 +358,20 @@
         order: sortedStandings()
       }));
     },
+    // 🎲 SIM THIS GAME (simgame.js) — play YOUR next fixture on the LEAGUE'S OWN
+    // engine and hand the score back WITHOUT recording it. ⚠️ It must be this
+    // same `simGame()`, or your simmed weeks would be judged on a different
+    // yardstick than the other seven teams in the same table. Reporting it is
+    // still done the normal way, through reportResult().
+    // ⚠️ REGULAR SEASON ONLY — the semifinal and the Max Bowl are the two games
+    // the whole year is for, so they are never offered up to the computer.
+    simNext: () => {
+      if (!S || S.phase !== 'regular') return null;
+      const opp = pairFor(S.week, S.you);
+      if (!opp) return null;
+      const r = simGame(S.you, opp);
+      return { you: S.you, opp: opp, week: S.week, my: r.a, oppScore: r.b };
+    },
     // 📚 DYNASTY MODE (dynasty.js) reads these to know when a season has finished
     // and how it went, so it can turn the page to the next year.
     snapshot: () => {

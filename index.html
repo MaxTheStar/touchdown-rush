@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=136" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=136" />
+  <link rel="icon" type="image/png" href="favicon.png?v=137" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=137" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=136" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=137" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=136" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=137" />
   <style>
     html, body {
       margin: 0;
@@ -2900,6 +2900,28 @@
     .ld-empty b { color: #ffd54a; }
     .ld-foot { font: 600 10.5px Arial; color: #7f8ea6; line-height: 1.45; margin: 12px 4px 4px; }
 
+    /* ---- 🎲 SIM THIS GAME (src/simgame.js) ------------------------------- */
+    #sim-modal { z-index: 77; }
+    .sm-board { display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+                padding: 11px 10px; border-radius: 14px; background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.14); }
+    .sm-side { flex: 1; }
+    .sm-side b { display: block; font: 800 12px Arial; letter-spacing: .08em; color: #aab4c8; }
+    .sm-side i { display: block; font: 800 30px "Arial Black", Arial; color: #fff; font-style: normal;
+                 line-height: 1.05; }
+    .sm-mid { font: 800 10px Arial; letter-spacing: .1em; color: #ffe066; width: 78px; }
+    .sm-log { text-align: left; margin-top: 4px; }
+    .sm-log-row { font: 11px/1.5 Arial; color: #aab4c8; padding: 4px 8px; border-radius: 8px;
+                  background: rgba(255,255,255,0.04); margin-bottom: 4px; }
+    .sm-note { font: 12px/1.45 Arial; color: #dfe8f5; text-align: left; margin-top: 8px; }
+    .sm-warn { font: 11px/1.45 Arial; color: #ffd9a6; text-align: left; margin-top: 8px;
+               padding: 8px 9px; border-radius: 10px; background: rgba(255,170,40,0.10);
+               border-left: 3px solid rgba(255,170,40,0.55); }
+    .sm-final { margin-top: 9px; padding: 9px 10px; border-radius: 12px;
+                font: 800 14px "Arial Black", Arial; }
+    .sm-final.win  { color: #9fe0ad; background: rgba(63,168,85,0.14); border: 1px solid rgba(63,168,85,0.5); }
+    .sm-final.loss { color: #ffb0b0; background: rgba(220,70,70,0.12); border: 1px solid rgba(220,70,70,0.45); }
+
     /* ---- 📋 SCOUTING REPORT (src/scout.js) ------------------------------ */
     /* Shown OVER the field before a kickoff, so it sits above every other
        pop-up (the staff screen is 76). */
@@ -3508,6 +3530,9 @@
       <div class="ov-title">🏆 SEASON</div>
       <div id="season-body"></div>
       <div class="ov-btn yes" id="season-play">START SEASON</div>
+      <!-- 🎲 Hand this week to the computer instead of playing it (simgame.js).
+           Regular-season weeks only — the playoffs you play yourself. -->
+      <div class="ov-btn" id="open-sim">🎲 SIM THIS GAME →</div>
       <!-- 🏆 Jump straight into a quick single-elim bracket (playoffs.js) — lives
            here under the Season hub so it doesn't need its own menu button. -->
       <!-- 📊 Who leads the league — reads the real standings. -->
@@ -3993,6 +4018,22 @@
     </div>
   </div>
 
+  <!-- 🎲 SIM THIS GAME — simgame.js runs YOUR next fixture on the league's own
+       engine (TDSeason.simNext), ticks it out quarter by quarter, then reports
+       it through the same reportResult() a played game uses. A simmed game
+       counts in the standings and NOWHERE else. -->
+  <div class="ov" id="sim-modal">
+    <div class="ov-card">
+      <div class="ov-title">🎲 SIM THIS GAME</div>
+      <div class="ov-sub">Let the computer play it &mdash; and watch the score come in.</div>
+      <div id="sim-body"></div>
+      <div class="ov-btn yes" id="sim-go">🎲 SIM IT</div>
+      <div class="ov-btn" id="sim-keep">🎲 KEEP SIMMING</div>
+      <div class="ov-btn yes" id="sim-take">🎮 TAKE OVER</div>
+      <div class="ov-btn" id="sim-close">CLOSE</div>
+    </div>
+  </div>
+
   <!-- 📋 SCOUTING REPORT — scout.js. Comes up by itself before the kickoff
        (main.js holds startKickoff until you tap LET'S PLAY) and can be reopened
        from 🎓 COACHING STAFF. The run/pass meter shows the SAME number the CPU
@@ -4337,68 +4378,69 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=136"></script>
-  <script src="src/sound.js?v=136"></script>
-  <script src="src/shop.js?v=136"></script>
-  <script src="src/spin.js?v=136"></script>
-  <script src="src/challenges.js?v=136"></script>
-  <script src="src/quests.js?v=136"></script>
-  <script src="src/progress.js?v=136"></script>
-  <script src="src/streak.js?v=136"></script>
-  <script src="src/achievements.js?v=136"></script>
-  <script src="src/trophy.js?v=136"></script>
-  <script src="src/records.js?v=136"></script>
-  <script src="src/road.js?v=136"></script>
-  <script src="src/roadtrip.js?v=136"></script>
-  <script src="src/cards.js?v=136"></script>
-  <script src="src/stadium.js?v=136"></script>
-  <script src="src/ranked.js?v=136"></script>
-  <script src="src/halftime.js?v=136"></script>
-  <script src="src/uniform.js?v=136"></script>
-  <script src="src/powerup.js?v=136"></script>
-  <script src="src/arcade.js?v=136"></script>
-  <script src="src/trivia.js?v=136"></script>
-  <script src="src/nemesis.js?v=136"></script>
-  <script src="src/weather.js?v=136"></script>
-  <script src="src/season.js?v=136"></script>
-  <script src="src/playoffs.js?v=136"></script>
-  <script src="src/film.js?v=136"></script>
-  <script src="src/celebration.js?v=136"></script>
-  <script src="src/juice.js?v=136"></script>
-  <script src="src/gamestats.js?v=136"></script>
-  <script src="src/sportspage.js?v=136"></script>
-  <script src="src/press.js?v=136"></script>
-  <script src="src/staff.js?v=136"></script>
-  <script src="src/chemistry.js?v=136"></script>
-  <script src="src/boxscore.js?v=136"></script>
-  <script src="src/field.js?v=136"></script>
-  <script src="src/ball.js?v=136"></script>
-  <script src="src/mascot.js?v=136"></script>
-  <script src="src/poster.js?v=136"></script>
-  <script src="src/house.js?v=136"></script>
-  <script src="src/allstar.js?v=136"></script>
-  <script src="src/leaders.js?v=136"></script>
-  <script src="src/traits.js?v=136"></script>
-  <script src="src/awards.js?v=136"></script>
-  <script src="src/rebrand.js?v=136"></script>
-  <script src="src/draft.js?v=136"></script>
-  <script src="src/training.js?v=136"></script>
-  <script src="src/injuries.js?v=136"></script>
-  <script src="src/flag.js?v=136"></script>
-  <script src="src/freeagency.js?v=136"></script>
-  <script src="src/gameplan.js?v=136"></script>
-  <script src="src/playbook.js?v=136"></script>
-  <script src="src/createplayer.js?v=136"></script>
-  <script src="src/nicknames.js?v=136"></script>
-  <script src="src/special.js?v=136"></script>
-  <script src="src/events.js?v=136"></script>
-  <script src="src/dynasty.js?v=136"></script>
-  <script src="src/ads.js?v=136"></script>
-  <script src="src/tour.js?v=136"></script>
-  <script src="src/concession.js?v=136"></script>
-  <script src="src/kick.js?v=136"></script>
-  <script src="src/drill.js?v=136"></script>
-  <script src="src/scout.js?v=136"></script>
-  <script src="src/main.js?v=136"></script>
+  <script src="src/stats.js?v=137"></script>
+  <script src="src/sound.js?v=137"></script>
+  <script src="src/shop.js?v=137"></script>
+  <script src="src/spin.js?v=137"></script>
+  <script src="src/challenges.js?v=137"></script>
+  <script src="src/quests.js?v=137"></script>
+  <script src="src/progress.js?v=137"></script>
+  <script src="src/streak.js?v=137"></script>
+  <script src="src/achievements.js?v=137"></script>
+  <script src="src/trophy.js?v=137"></script>
+  <script src="src/records.js?v=137"></script>
+  <script src="src/road.js?v=137"></script>
+  <script src="src/roadtrip.js?v=137"></script>
+  <script src="src/cards.js?v=137"></script>
+  <script src="src/stadium.js?v=137"></script>
+  <script src="src/ranked.js?v=137"></script>
+  <script src="src/halftime.js?v=137"></script>
+  <script src="src/uniform.js?v=137"></script>
+  <script src="src/powerup.js?v=137"></script>
+  <script src="src/arcade.js?v=137"></script>
+  <script src="src/trivia.js?v=137"></script>
+  <script src="src/nemesis.js?v=137"></script>
+  <script src="src/weather.js?v=137"></script>
+  <script src="src/season.js?v=137"></script>
+  <script src="src/playoffs.js?v=137"></script>
+  <script src="src/film.js?v=137"></script>
+  <script src="src/celebration.js?v=137"></script>
+  <script src="src/juice.js?v=137"></script>
+  <script src="src/gamestats.js?v=137"></script>
+  <script src="src/sportspage.js?v=137"></script>
+  <script src="src/press.js?v=137"></script>
+  <script src="src/staff.js?v=137"></script>
+  <script src="src/chemistry.js?v=137"></script>
+  <script src="src/boxscore.js?v=137"></script>
+  <script src="src/field.js?v=137"></script>
+  <script src="src/ball.js?v=137"></script>
+  <script src="src/mascot.js?v=137"></script>
+  <script src="src/poster.js?v=137"></script>
+  <script src="src/house.js?v=137"></script>
+  <script src="src/allstar.js?v=137"></script>
+  <script src="src/leaders.js?v=137"></script>
+  <script src="src/traits.js?v=137"></script>
+  <script src="src/awards.js?v=137"></script>
+  <script src="src/rebrand.js?v=137"></script>
+  <script src="src/draft.js?v=137"></script>
+  <script src="src/training.js?v=137"></script>
+  <script src="src/injuries.js?v=137"></script>
+  <script src="src/flag.js?v=137"></script>
+  <script src="src/freeagency.js?v=137"></script>
+  <script src="src/gameplan.js?v=137"></script>
+  <script src="src/playbook.js?v=137"></script>
+  <script src="src/createplayer.js?v=137"></script>
+  <script src="src/nicknames.js?v=137"></script>
+  <script src="src/special.js?v=137"></script>
+  <script src="src/events.js?v=137"></script>
+  <script src="src/dynasty.js?v=137"></script>
+  <script src="src/ads.js?v=137"></script>
+  <script src="src/tour.js?v=137"></script>
+  <script src="src/concession.js?v=137"></script>
+  <script src="src/kick.js?v=137"></script>
+  <script src="src/drill.js?v=137"></script>
+  <script src="src/scout.js?v=137"></script>
+  <script src="src/simgame.js?v=137"></script>
+  <script src="src/main.js?v=137"></script>
 </body>
 </html>

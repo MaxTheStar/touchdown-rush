@@ -2838,7 +2838,9 @@ function endGame() {
   // ⏱️ A Two-Minute Drill is practice — it never touches your win streak,
   // because failing one is the ordinary result and should cost you nothing.
   // 🎲 …and neither a drill nor a 🎲 house-rules game touches your win streak.
-  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame) TDStreak.recordResult(G.score > G.oppScore);
+  // 🎲 …nor a game you TOOK OVER at half time from a sim (simgame.js): half of
+  // that scoreline was played by the computer, so it cannot earn you a streak.
+  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2871,14 +2873,14 @@ function endGame() {
   // screen so any promotion coins count in this game's payday.
   // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
   // 🎲 …and for exactly the same reason a house-rules game never moves it either.
-  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame) TDRanked.recordResult(G.score > G.oppScore);
+  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover) TDRanked.recordResult(G.score > G.oppScore);
   // 🎓 COACHING STAFF: a win is how your coaches level up. ⚠️ THIS LINE WAS
   // MISSING FROM v1.84 UNTIL v1.99 — staff.js had `gameWon` ready and nothing
   // ever called it, so for fifteen versions the screen promised "they get
   // better every time you win" and no coach ever levelled up once. Same guard
   // list as the streak and the ladder: a drill, a silly game or a showcase
   // doesn't count towards a coach's development either.
-  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame) {
+  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover) {
     TDStaff.gameWon(G.score > G.oppScore);
   }
   // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
@@ -3334,6 +3336,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
   G.trickAvailable = true; G.trickArmed = false; G.trickActive = false;   // 🎩 a fresh trick play each game
+  G.simTakeover = false;                         // 🎲 a normal game, not a half-simmed one
+                                                 // (simgame.js READS this flag; it keeps no copy)
   G.fakeKick = false;
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
@@ -3420,10 +3424,28 @@ window.TDGame = {
   // scouting report). Goes through teamRating, so a 🚚 renamed team still
   // reports the ratings it really has.
   teamRating: (team) => teamRating(team),
-  // start a season game: your team vs the week's scheduled opponent
-  startSeasonGame(youAbbr, oppAbbr) {
+  // start a season game: your team vs the week's scheduled opponent.
+  // 🎲 `resume` (simgame.js) means "you are TAKING OVER a game the computer
+  // already played half of": keep the simmed score and start in that quarter.
+  // Without it this is exactly the call it has always been.
+  startSeasonGame(youAbbr, oppAbbr, resume) {
     const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
-    if (team && opp && G.scene) beginGame(team, opp, true);
+    if (!team || !opp || !G.scene) return;
+    beginGame(team, opp, true);
+    if (!resume) return;
+    G.score = Math.max(0, resume.my | 0);
+    G.oppScore = Math.max(0, resume.opp | 0);
+    G.quarter = Math.max(1, Math.min(NUM_QUARTERS, resume.quarter || 3));
+    G.clock = QUARTER_SECONDS;
+    // ⚠️ THE FLAG THAT KEEPS A HALF-SIMMED GAME HONEST. You only played half of
+    // it, so it must not reach your 🔥 streak, your 🏅 ladder, your 🎓 coaches or
+    // the 📖 record book — otherwise you could sim your way to 28-0, take over,
+    // and bank a "personal best" you never earned. It DOES still count in the
+    // season standings, because a win is a win in the table.
+    G.simTakeover = true;
+    updateHUD();
+    showBanner('🎮 YOU TAKE OVER · ' + G.score + '–' + G.oppScore, true);
+    sayComment('Second half, and it is yours now!');
   },
   // 😈 start a GRUDGE MATCH: your currently-picked team vs your Rival Nemesis
   // (nemesis.js calls this from the CHALLENGE button). If you happen to be playing

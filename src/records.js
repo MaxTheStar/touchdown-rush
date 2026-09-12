@@ -57,6 +57,9 @@
     // main.js. A 90-point romp against half-sized defenders must not become
     // your "Most Points" forever — see src/house.js.
     if (window.TDHouse && TDHouse.live()) return;
+    // 🎲 …and neither can a game you TOOK OVER at half time from a sim: the
+    // computer scored half of those points (see src/simgame.js).
+    if (window.TDSim && TDSim.takeover()) return;
     if (value > (r[key] || 0)) {
       r[key] = value; save();
       const m = BESTS.find(b => b.key === key);
