@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=137" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=137" />
+  <link rel="icon" type="image/png" href="favicon.png?v=138" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=138" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=137" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=138" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=137" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=138" />
   <style>
     html, body {
       margin: 0;
@@ -215,11 +215,34 @@
     body.menu #ingame-ctrls,
     body.kicking #ingame-ctrls,
     body.returning #ingame-ctrls { display: none !important; }
+    /* ⚠️ FIVE BUTTONS HAVE TO FIT ON A PHONE. Before v2.5 the most this row
+       could ever show at once was four (⏱ 🧩 🎩 ⚡); 🗣️ AUDIBLE makes five, and
+       at 375px wide that pushed the row to x = −11 and sliced the ⏱ button off
+       the left edge of the screen — the same overhang that made v1.44/45 such a
+       pain. So on a narrow screen the row shrinks itself to fit instead. Any
+       SIXTH button added here has to check this measurement again. */
+    @media (max-width: 430px) {
+      /* Shrink to fit five across… */
+      #ingame-ctrls { gap: 5px; }
+      #ingame-ctrls .btn { width: 58px; height: 38px; font-size: 15px; border-radius: 12px; }
+      #ingame-ctrls .btn small { font-size: 7px; }
+      /* …and drop BELOW the scoreboard. ⚠️ On a phone the HUD's "1ST & 10" and
+         "Ball on the own 30" lines run to about x=134, and this row has always
+         started left of that — so the scoreboard has been printing underneath
+         these buttons since the row was added, and a fifth button made it
+         worse. Measured at 375×812: the HUD block ends at y=95, so +92px of
+         offset clears it with room to spare. */
+      #ingame-ctrls { top: calc(max(12px, env(safe-area-inset-top)) + 92px); }
+    }
     /* 🎩 The trick-play button only appears BEFORE the snap, and only while you
        still have your one trick this game (main.js toggles body.trick-ready). */
     #btn-trick { display: none; background: rgba(255,214,10,0.22); border-color: rgba(255,214,10,0.7); }
     body.trick-ready #btn-trick { display: flex; }
     #btn-trick.armed { background: rgba(255,214,10,0.6); border-color: #ffd60a; }
+    /* 🗣️ AUDIBLE — appears at the line only, exactly like the 🎩 button. */
+    #btn-audible { display: none; background: rgba(70,227,160,0.20); border-color: rgba(70,227,160,0.7); }
+    body.audible-ready #btn-audible { display: flex; }
+    #btn-audible.armed { background: rgba(70,227,160,0.55); border-color: #46e3a0; }
 
     /* 👑 The Maxwell toggle lights up gold when he's switched on. */
     #toggle-maxwell.on { background: rgba(255,214,10,0.5); border-color: #ffd60a; color: #fff; }
@@ -2900,6 +2923,28 @@
     .ld-empty b { color: #ffd54a; }
     .ld-foot { font: 600 10.5px Arial; color: #7f8ea6; line-height: 1.45; margin: 12px 4px 4px; }
 
+    /* ---- 🗣️ AUDIBLES (src/audible.js) ----------------------------------- */
+    /* Opens at the line of scrimmage, over the field, so it sits above the
+       other pop-ups — nothing else can be open at that moment anyway. */
+    #aud-modal { z-index: 79; }
+    #aud-modal .ov-card { width: min(94vw, 400px); }
+    .au-show { font: 800 12px Arial; letter-spacing: .06em; color: #aab4c8; text-align: left;
+               padding: 9px 11px; border-radius: 12px; margin-bottom: 9px;
+               background: rgba(255,90,90,0.10); border: 1px solid rgba(255,90,90,0.35); }
+    .au-show b { display: block; font: 800 17px "Arial Black", Arial; color: #ff9b9b;
+                 letter-spacing: 0; margin-top: 2px; }
+    .au-call { display: flex; align-items: center; gap: 10px; text-align: left;
+               padding: 10px 11px; margin-bottom: 7px; border-radius: 13px;
+               background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
+    .au-call:active { transform: scale(0.985); }
+    .au-call.on { background: rgba(70,227,160,0.16); border-color: rgba(70,227,160,0.6); }
+    .au-ic { font-size: 21px; }
+    .au-txt { min-width: 0; }
+    .au-txt b { display: block; font: 800 14px "Arial Black", Arial; color: #fff; }
+    .au-txt span { display: block; font: 11px/1.4 Arial; color: #aab4c8; margin-top: 1px; }
+    .au-foot { font: 10.5px/1.45 Arial; color: #8fb0d8; text-align: left; margin-top: 8px;
+               opacity: .9; }
+
     /* ---- 🎲 SIM THIS GAME (src/simgame.js) ------------------------------- */
     #sim-modal { z-index: 77; }
     .sm-board { display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
@@ -3413,6 +3458,8 @@
     <div class="btn" id="btn-timeout">⏱<small>3</small></div>
     <div class="btn" id="btn-formation">🧩<small>SPREAD</small></div>
     <div class="btn" id="btn-trick">🎩<small>TRICK</small></div>
+    <!-- 🗣️ AUDIBLE (audible.js) — pre-snap only, same show/hide moments as 🎩. -->
+    <div class="btn" id="btn-audible">🗣️<small>AUDIBLE</small></div>
     <div class="btn" id="btn-power"><span class="pw-ic">⚡</span><small>POWER</small></div>
   </div>
 
@@ -4018,6 +4065,18 @@
     </div>
   </div>
 
+  <!-- 🗣️ AUDIBLES — audible.js. Opens from the 🗣️ button at the line: change
+       the play based on what the defense is showing you. About one look in five
+       is a disguise, so it stays a read rather than an answer key. -->
+  <div class="ov" id="aud-modal">
+    <div class="ov-card">
+      <div class="ov-title">🗣️ CHANGE THE PLAY</div>
+      <div class="ov-sub">Read the defense &mdash; then call something that beats it.</div>
+      <div id="aud-body"></div>
+      <div class="ov-btn" id="aud-close">KEEP THE PLAY</div>
+    </div>
+  </div>
+
   <!-- 🎲 SIM THIS GAME — simgame.js runs YOUR next fixture on the league's own
        engine (TDSeason.simNext), ticks it out quarter by quarter, then reports
        it through the same reportResult() a played game uses. A simmed game
@@ -4378,69 +4437,70 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=137"></script>
-  <script src="src/sound.js?v=137"></script>
-  <script src="src/shop.js?v=137"></script>
-  <script src="src/spin.js?v=137"></script>
-  <script src="src/challenges.js?v=137"></script>
-  <script src="src/quests.js?v=137"></script>
-  <script src="src/progress.js?v=137"></script>
-  <script src="src/streak.js?v=137"></script>
-  <script src="src/achievements.js?v=137"></script>
-  <script src="src/trophy.js?v=137"></script>
-  <script src="src/records.js?v=137"></script>
-  <script src="src/road.js?v=137"></script>
-  <script src="src/roadtrip.js?v=137"></script>
-  <script src="src/cards.js?v=137"></script>
-  <script src="src/stadium.js?v=137"></script>
-  <script src="src/ranked.js?v=137"></script>
-  <script src="src/halftime.js?v=137"></script>
-  <script src="src/uniform.js?v=137"></script>
-  <script src="src/powerup.js?v=137"></script>
-  <script src="src/arcade.js?v=137"></script>
-  <script src="src/trivia.js?v=137"></script>
-  <script src="src/nemesis.js?v=137"></script>
-  <script src="src/weather.js?v=137"></script>
-  <script src="src/season.js?v=137"></script>
-  <script src="src/playoffs.js?v=137"></script>
-  <script src="src/film.js?v=137"></script>
-  <script src="src/celebration.js?v=137"></script>
-  <script src="src/juice.js?v=137"></script>
-  <script src="src/gamestats.js?v=137"></script>
-  <script src="src/sportspage.js?v=137"></script>
-  <script src="src/press.js?v=137"></script>
-  <script src="src/staff.js?v=137"></script>
-  <script src="src/chemistry.js?v=137"></script>
-  <script src="src/boxscore.js?v=137"></script>
-  <script src="src/field.js?v=137"></script>
-  <script src="src/ball.js?v=137"></script>
-  <script src="src/mascot.js?v=137"></script>
-  <script src="src/poster.js?v=137"></script>
-  <script src="src/house.js?v=137"></script>
-  <script src="src/allstar.js?v=137"></script>
-  <script src="src/leaders.js?v=137"></script>
-  <script src="src/traits.js?v=137"></script>
-  <script src="src/awards.js?v=137"></script>
-  <script src="src/rebrand.js?v=137"></script>
-  <script src="src/draft.js?v=137"></script>
-  <script src="src/training.js?v=137"></script>
-  <script src="src/injuries.js?v=137"></script>
-  <script src="src/flag.js?v=137"></script>
-  <script src="src/freeagency.js?v=137"></script>
-  <script src="src/gameplan.js?v=137"></script>
-  <script src="src/playbook.js?v=137"></script>
-  <script src="src/createplayer.js?v=137"></script>
-  <script src="src/nicknames.js?v=137"></script>
-  <script src="src/special.js?v=137"></script>
-  <script src="src/events.js?v=137"></script>
-  <script src="src/dynasty.js?v=137"></script>
-  <script src="src/ads.js?v=137"></script>
-  <script src="src/tour.js?v=137"></script>
-  <script src="src/concession.js?v=137"></script>
-  <script src="src/kick.js?v=137"></script>
-  <script src="src/drill.js?v=137"></script>
-  <script src="src/scout.js?v=137"></script>
-  <script src="src/simgame.js?v=137"></script>
-  <script src="src/main.js?v=137"></script>
+  <script src="src/stats.js?v=138"></script>
+  <script src="src/sound.js?v=138"></script>
+  <script src="src/shop.js?v=138"></script>
+  <script src="src/spin.js?v=138"></script>
+  <script src="src/challenges.js?v=138"></script>
+  <script src="src/quests.js?v=138"></script>
+  <script src="src/progress.js?v=138"></script>
+  <script src="src/streak.js?v=138"></script>
+  <script src="src/achievements.js?v=138"></script>
+  <script src="src/trophy.js?v=138"></script>
+  <script src="src/records.js?v=138"></script>
+  <script src="src/road.js?v=138"></script>
+  <script src="src/roadtrip.js?v=138"></script>
+  <script src="src/cards.js?v=138"></script>
+  <script src="src/stadium.js?v=138"></script>
+  <script src="src/ranked.js?v=138"></script>
+  <script src="src/halftime.js?v=138"></script>
+  <script src="src/uniform.js?v=138"></script>
+  <script src="src/powerup.js?v=138"></script>
+  <script src="src/arcade.js?v=138"></script>
+  <script src="src/trivia.js?v=138"></script>
+  <script src="src/nemesis.js?v=138"></script>
+  <script src="src/weather.js?v=138"></script>
+  <script src="src/season.js?v=138"></script>
+  <script src="src/playoffs.js?v=138"></script>
+  <script src="src/film.js?v=138"></script>
+  <script src="src/celebration.js?v=138"></script>
+  <script src="src/juice.js?v=138"></script>
+  <script src="src/gamestats.js?v=138"></script>
+  <script src="src/sportspage.js?v=138"></script>
+  <script src="src/press.js?v=138"></script>
+  <script src="src/staff.js?v=138"></script>
+  <script src="src/chemistry.js?v=138"></script>
+  <script src="src/boxscore.js?v=138"></script>
+  <script src="src/field.js?v=138"></script>
+  <script src="src/ball.js?v=138"></script>
+  <script src="src/mascot.js?v=138"></script>
+  <script src="src/poster.js?v=138"></script>
+  <script src="src/house.js?v=138"></script>
+  <script src="src/allstar.js?v=138"></script>
+  <script src="src/leaders.js?v=138"></script>
+  <script src="src/traits.js?v=138"></script>
+  <script src="src/awards.js?v=138"></script>
+  <script src="src/rebrand.js?v=138"></script>
+  <script src="src/draft.js?v=138"></script>
+  <script src="src/training.js?v=138"></script>
+  <script src="src/injuries.js?v=138"></script>
+  <script src="src/flag.js?v=138"></script>
+  <script src="src/freeagency.js?v=138"></script>
+  <script src="src/gameplan.js?v=138"></script>
+  <script src="src/playbook.js?v=138"></script>
+  <script src="src/createplayer.js?v=138"></script>
+  <script src="src/nicknames.js?v=138"></script>
+  <script src="src/special.js?v=138"></script>
+  <script src="src/events.js?v=138"></script>
+  <script src="src/dynasty.js?v=138"></script>
+  <script src="src/ads.js?v=138"></script>
+  <script src="src/tour.js?v=138"></script>
+  <script src="src/concession.js?v=138"></script>
+  <script src="src/kick.js?v=138"></script>
+  <script src="src/drill.js?v=138"></script>
+  <script src="src/scout.js?v=138"></script>
+  <script src="src/simgame.js?v=138"></script>
+  <script src="src/audible.js?v=138"></script>
+  <script src="src/main.js?v=138"></script>
 </body>
 </html>

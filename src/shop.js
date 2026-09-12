@@ -245,6 +245,7 @@
   const puCatch = () => (window.TDPowerup ? window.TDPowerup.catchAdd()  : 0);
   const hsCatch = () => (window.TDHouse ? window.TDHouse.catchAdd()  : 0);   // 🧲 Sticky Hands house rule
   const blCatch = () => (window.TDBall ? window.TDBall.catchAdd()   : 0);   // 🌙 the Night Glow ball is easy to spot
+  const auCatch = () => (window.TDAudible ? window.TDAudible.catchAdd() : 0); // 🗣️ you read the defense right this snap
   const blGrip  = () => (window.TDBall ? window.TDBall.gripAdd()    : 0);   // 🥇 the Golden ball never slips
   const blArm   = () => (window.TDBall ? window.TDBall.armAdd()     : 0);   // ❄️ the Ice ball is slippery for them
   // 🎓 The GAME PLAN folds in the same way — but it's the only one that can go
@@ -310,7 +311,8 @@
   // 🧤 Sticky gloves: nudge the catch chances (added to the base chances).
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
-    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch() + hsCatch() + blCatch();
+    const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch() + hsCatch() + blCatch()
+                + auCatch();
     const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
     return { catchBonus: v, dropCut: v };
   }

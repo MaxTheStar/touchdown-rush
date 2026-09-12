@@ -3861,6 +3861,16 @@ function setupPlay(next) {
   } else {
     G.state = 'presnap';
     if (window.TDTour) TDTour.maybeStart('offense');   // 🎓 first-snap offense tour
+    // 🗣️ AUDIBLES (audible.js) — the defense's plan for this down was just made
+    // in callPlay, and until now you only found out about it AS the ball was
+    // snapped. Give audible.js the plan and read out what they are SHOWING, so
+    // there is something to read before you change the play. (It disguises the
+    // look about one time in five, so the tell is a read and not an answer key.)
+    if (window.TDAudible) {
+      TDAudible.newPlay(G.blitz, G.coverage);
+      const t = TDAudible.tell();
+      if (t) sayComment(t);
+    }
   }
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -4041,6 +4051,11 @@ function updateTrickBtn() {
   document.body.classList.toggle('trick-ready', ready);
   const b = document.getElementById('btn-trick');
   if (b) b.classList.toggle('armed', G.trickArmed);
+  // 🗣️ The audible button lives and dies with this one: this function is
+  // already called the moment a play is set up, the moment it is snapped, and
+  // the moment the 🎩 trick is armed — which is exactly when the 🗣️ button has
+  // to appear, vanish, or give way (the trick rewrites the same routes).
+  if (window.TDAudible) TDAudible.sync();
 }
 
 // Arm the trick for this snap: send everyone deep and redraw the preview so you
