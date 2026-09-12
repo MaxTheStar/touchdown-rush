@@ -664,7 +664,19 @@ function update(time, delta) {
   // state is 'live' or 'pass'
   const elapsed = (time - G.snapTime) / 1000;
 
-  if (G.state === 'live') controlBallCarrier();
+  // 🌟 SUPERSTAR MODE (superstar.js) — you are ONE player, not the team. While
+  // somebody else is holding the ball you drive your star and the quarterback
+  // runs himself; the moment YOU have it, everything is the normal game again.
+  // ⚠️ You can steer him during 'pass' too — that is the catch, and it is the
+  // whole point of the mode. With the flag off, this is the one line it was.
+  const starMode = !!(window.TDStar && TDStar.on());
+  const meStar = starMode ? TDStar.player() : null;
+  if (G.state === 'live') {
+    if (starMode && G.ballCarrier !== meStar) { controlStar(); TDStar.qbThink(elapsed); }
+    else controlBallCarrier();
+  } else if (G.state === 'pass' && starMode && G.ballCarrier !== meStar) {
+    controlStar();
+  }
   updateReceivers(elapsed);
   updateLine();
   updateDefense(elapsed);
@@ -691,7 +703,10 @@ function snap(time) {
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
-  G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
+  // 🌟 SUPERSTAR MODE: the camera belongs to YOU, not to the man with the ball.
+  const starNow = (window.TDStar && TDStar.on()) ? TDStar.player() : null;
+  if (starNow) TDStar.snap();
+  G.scene.cameras.main.startFollow((starNow || G.ballCarrier).s, true, 0.12, 0.12);
 
   // 🎩 If you armed the trick play, THIS snap is the flea flicker: the defense
   // "bites" on the fake run for a beat (see updateDefense), springing a receiver
@@ -739,6 +754,35 @@ function runSpeed() {
 }
 
 // ---- Move the player you control ----
+// 🌟 SUPERSTAR MODE: drive your star receiver while somebody else has the ball.
+// Deliberately the same movement code as controlBallCarrier below (minus the
+// throwing, which is not yours to do) so the man handles identically whether he
+// is running a route or running after a catch.
+function controlStar() {
+  const star = (window.TDStar && TDStar.player()) || null;
+  if (!star) return;
+  const p = star.s;
+  // ⚠️ HE HAS TO BE ABLE TO GET OPEN, AND BY DEFAULT HE COULDN'T. An AI receiver
+  // gets a "work open" nudge in updateReceivers — a shove away from whoever is
+  // crowding him, worth 0.28 of a receiver's speed. Your star does not run that
+  // code any more (you are running him), so out of the box he was the ONLY
+  // receiver on the field with no way to shake a defender: measured separation
+  // stayed at 12px through a full route and every throw was contested. He is
+  // the superstar, so he gets the edge back as raw speed instead.
+  const spd = runSpeed() * (window.TDStar && TDStar.speedEdge ? TDStar.speedEdge() : 1);
+  let vx = 0, vy = 0;
+  if (keys.left.isDown || touch.left) vx = -spd;
+  else if (keys.right.isDown || touch.right) vx = spd;
+  if (keys.up.isDown || touch.up) vy = -spd;
+  else if (keys.down.isDown || touch.down) vy = spd;
+  if (vx && vy) { vx *= 0.707; vy *= 0.707; }
+  // Don't let him run off the field or into the back of the endzone.
+  if ((p.x < 12 && vx < 0) || (p.x > FIELD_WIDTH - 12 && vx > 0)) vx = 0;
+  if (p.y <= ENDZONE + 8 && vy < 0) vy = 0;
+  p.setVelocity(vx, vy);
+  if (vx || vy) p.setRotation(Math.atan2(vy, vx) + Math.PI / 2);
+}
+
 function controlBallCarrier() {
   const p = G.ballCarrier.s;
   const dash = dashVelocity();
@@ -1123,9 +1167,11 @@ function routeVelocity(o, depth, side) {
 }
 
 function updateReceivers(elapsed) {
+  const starMan = (window.TDStar && TDStar.on()) ? TDStar.player() : null;
   for (const o of offense) {
     if (o.role !== 'WR' && o.role !== 'RB') continue;
     if (o === G.ballCarrier) continue; // once caught / handed the ball, the player drives
+    if (o === starMan) continue;       // 🌟 in Superstar Mode YOU run this man's route
 
     const depth = o.startY - o.s.y; // yards upfield since the snap
     const side = sideOf(o);
@@ -2863,7 +2909,7 @@ function endGame() {
   // 🎲 …and neither a drill nor a 🎲 house-rules game touches your win streak.
   // 🎲 …nor a game you TOOK OVER at half time from a sim (simgame.js): half of
   // that scoreline was played by the computer, so it cannot earn you a streak.
-  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover) TDStreak.recordResult(G.score > G.oppScore);
+  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover && !G.starGame) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2896,14 +2942,14 @@ function endGame() {
   // screen so any promotion coins count in this game's payday.
   // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
   // 🎲 …and for exactly the same reason a house-rules game never moves it either.
-  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover) TDRanked.recordResult(G.score > G.oppScore);
+  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover && !G.starGame) TDRanked.recordResult(G.score > G.oppScore);
   // 🎓 COACHING STAFF: a win is how your coaches level up. ⚠️ THIS LINE WAS
   // MISSING FROM v1.84 UNTIL v1.99 — staff.js had `gameWon` ready and nothing
   // ever called it, so for fifteen versions the screen promised "they get
   // better every time you win" and no coach ever levelled up once. Same guard
   // list as the streak and the ladder: a drill, a silly game or a showcase
   // doesn't count towards a coach's development either.
-  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover) {
+  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover && !G.starGame) {
     TDStaff.gameWon(G.score > G.oppScore);
   }
   // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
@@ -3360,6 +3406,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
   G.trickAvailable = true; G.trickArmed = false; G.trickActive = false;   // 🎩 a fresh trick play each game
   G.simTakeover = false;                         // 🎲 a normal game, not a half-simmed one
+  G.starGame = false;                            // 🌟 …and not a Superstar game either
                                                  // (simgame.js READS this flag; it keeps no copy)
   G.fakeKick = false;
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
@@ -3469,6 +3516,19 @@ window.TDGame = {
     updateHUD();
     showBanner('🎮 YOU TAKE OVER · ' + G.score + '–' + G.oppScore, true);
     sayComment('Second half, and it is yours now!');
+  },
+  // 🌟 start a SUPERSTAR game: a normal exhibition, except you play as ONE man
+  // (see src/superstar.js). The flag is set AFTER beginGame, which clears it.
+  startSuperstarGame() {
+    if (G.state !== 'menu') return;
+    const team = allTeams()[G.menuIndex];
+    let opp;
+    do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp === team);
+    if (!team || !G.scene) return;
+    beginGame(team, opp, false);
+    G.starGame = true;
+    showBanner('🌟 SUPERSTAR MODE', true);
+    sayComment('You are the star. Get open!');
   },
   // 😈 start a GRUDGE MATCH: your currently-picked team vs your Rival Nemesis
   // (nemesis.js calls this from the CHALLENGE button). If you happen to be playing

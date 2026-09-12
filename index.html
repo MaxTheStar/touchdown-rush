@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=139" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=139" />
+  <link rel="icon" type="image/png" href="favicon.png?v=140" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=140" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=139" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=140" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=139" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=140" />
   <style>
     html, body {
       margin: 0;
@@ -2939,6 +2939,21 @@
     .ld-empty b { color: #ffd54a; }
     .ld-foot { font: 600 10.5px Arial; color: #7f8ea6; line-height: 1.45; margin: 12px 4px 4px; }
 
+    /* ---- 🌟 SUPERSTAR MODE (src/superstar.js) ---------------------------- */
+    .ss-hero { font-size: 40px; line-height: 1; }
+    .ss-name { font: 800 18px "Arial Black", Arial; color: #ffe066; margin: 2px 0 8px; }
+    .ss-note { font: 12.5px/1.5 Arial; color: #dfe8f5; text-align: left; }
+    .ss-steps { margin-top: 10px; }
+    .ss-steps > div { display: flex; gap: 9px; align-items: flex-start; text-align: left;
+                      padding: 7px 9px; margin-bottom: 5px; border-radius: 11px;
+                      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); }
+    .ss-steps b { flex: none; width: 19px; height: 19px; border-radius: 50%; background: #ffd60a;
+                  color: #1a1300; font: 800 11px/19px "Arial Black", Arial; text-align: center; }
+    .ss-steps span { font: 11.5px/1.4 Arial; color: #dfe8f5; }
+    .ss-warn { font: 11px/1.45 Arial; color: #ffd9a6; text-align: left; margin-top: 9px;
+               padding: 8px 9px; border-radius: 10px; background: rgba(255,170,40,0.10);
+               border-left: 3px solid rgba(255,170,40,0.55); }
+
     /* ---- 🗣️ AUDIBLES (src/audible.js) ----------------------------------- */
     /* Opens at the line of scrimmage, over the field, so it sits above the
        other pop-ups — nothing else can be open at that moment anyway. */
@@ -3607,6 +3622,8 @@
       <div class="ov-btn" id="open-playoffs">🏆 PLAYOFF TOURNAMENT →</div>
       <!-- ⏱️ One possession, 2:00 on the clock, four points down (drill.js). -->
       <div class="ov-btn" id="open-drill">⏱️ TWO-MINUTE DRILL →</div>
+      <!-- 🌟 Play a whole game as ONE player (superstar.js). -->
+      <div class="ov-btn" id="open-star">🌟 SUPERSTAR MODE →</div>
       <div class="ov-btn" id="open-events">🎃 SEASON EVENTS →</div>
       <div class="ov-btn" id="open-dynasty">📚 DYNASTY MODE →</div>
       <div class="ov-btn" id="season-close">CLOSE</div>
@@ -4085,6 +4102,19 @@
     </div>
   </div>
 
+  <!-- 🌟 SUPERSTAR MODE — superstar.js. A whole game as one player: you drive
+       your star receiver, the quarterback looks for you and only you, and the
+       moment you catch it every normal system takes over again. -->
+  <div class="ov" id="star-modal">
+    <div class="ov-card">
+      <div class="ov-title">🌟 SUPERSTAR MODE</div>
+      <div class="ov-sub">Be one player for a whole game &mdash; the star.</div>
+      <div id="star-body"></div>
+      <div class="ov-btn yes" id="star-play">▶ PLAY AS YOUR STAR</div>
+      <div class="ov-btn" id="star-close">CLOSE</div>
+    </div>
+  </div>
+
   <!-- 🗣️ AUDIBLES — audible.js. Opens from the 🗣️ button at the line: change
        the play based on what the defense is showing you. About one look in five
        is a disguise, so it stays a read rather than an answer key. -->
@@ -4457,71 +4487,72 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=139"></script>
-  <script src="src/sound.js?v=139"></script>
-  <script src="src/shop.js?v=139"></script>
-  <script src="src/spin.js?v=139"></script>
-  <script src="src/challenges.js?v=139"></script>
-  <script src="src/quests.js?v=139"></script>
-  <script src="src/progress.js?v=139"></script>
-  <script src="src/streak.js?v=139"></script>
-  <script src="src/achievements.js?v=139"></script>
-  <script src="src/trophy.js?v=139"></script>
-  <script src="src/records.js?v=139"></script>
-  <script src="src/road.js?v=139"></script>
-  <script src="src/roadtrip.js?v=139"></script>
-  <script src="src/cards.js?v=139"></script>
-  <script src="src/stadium.js?v=139"></script>
-  <script src="src/ranked.js?v=139"></script>
-  <script src="src/halftime.js?v=139"></script>
-  <script src="src/uniform.js?v=139"></script>
-  <script src="src/powerup.js?v=139"></script>
-  <script src="src/arcade.js?v=139"></script>
-  <script src="src/trivia.js?v=139"></script>
-  <script src="src/nemesis.js?v=139"></script>
-  <script src="src/weather.js?v=139"></script>
-  <script src="src/season.js?v=139"></script>
-  <script src="src/playoffs.js?v=139"></script>
-  <script src="src/film.js?v=139"></script>
-  <script src="src/celebration.js?v=139"></script>
-  <script src="src/juice.js?v=139"></script>
-  <script src="src/gamestats.js?v=139"></script>
-  <script src="src/sportspage.js?v=139"></script>
-  <script src="src/press.js?v=139"></script>
-  <script src="src/staff.js?v=139"></script>
-  <script src="src/chemistry.js?v=139"></script>
-  <script src="src/boxscore.js?v=139"></script>
-  <script src="src/field.js?v=139"></script>
-  <script src="src/ball.js?v=139"></script>
-  <script src="src/mascot.js?v=139"></script>
-  <script src="src/poster.js?v=139"></script>
-  <script src="src/house.js?v=139"></script>
-  <script src="src/allstar.js?v=139"></script>
-  <script src="src/leaders.js?v=139"></script>
-  <script src="src/traits.js?v=139"></script>
-  <script src="src/awards.js?v=139"></script>
-  <script src="src/rebrand.js?v=139"></script>
-  <script src="src/draft.js?v=139"></script>
-  <script src="src/training.js?v=139"></script>
-  <script src="src/injuries.js?v=139"></script>
-  <script src="src/flag.js?v=139"></script>
-  <script src="src/freeagency.js?v=139"></script>
-  <script src="src/gameplan.js?v=139"></script>
-  <script src="src/playbook.js?v=139"></script>
-  <script src="src/createplayer.js?v=139"></script>
-  <script src="src/nicknames.js?v=139"></script>
-  <script src="src/special.js?v=139"></script>
-  <script src="src/events.js?v=139"></script>
-  <script src="src/dynasty.js?v=139"></script>
-  <script src="src/ads.js?v=139"></script>
-  <script src="src/tour.js?v=139"></script>
-  <script src="src/concession.js?v=139"></script>
-  <script src="src/kick.js?v=139"></script>
-  <script src="src/drill.js?v=139"></script>
-  <script src="src/scout.js?v=139"></script>
-  <script src="src/simgame.js?v=139"></script>
-  <script src="src/audible.js?v=139"></script>
-  <script src="src/defcall.js?v=139"></script>
-  <script src="src/main.js?v=139"></script>
+  <script src="src/stats.js?v=140"></script>
+  <script src="src/sound.js?v=140"></script>
+  <script src="src/shop.js?v=140"></script>
+  <script src="src/spin.js?v=140"></script>
+  <script src="src/challenges.js?v=140"></script>
+  <script src="src/quests.js?v=140"></script>
+  <script src="src/progress.js?v=140"></script>
+  <script src="src/streak.js?v=140"></script>
+  <script src="src/achievements.js?v=140"></script>
+  <script src="src/trophy.js?v=140"></script>
+  <script src="src/records.js?v=140"></script>
+  <script src="src/road.js?v=140"></script>
+  <script src="src/roadtrip.js?v=140"></script>
+  <script src="src/cards.js?v=140"></script>
+  <script src="src/stadium.js?v=140"></script>
+  <script src="src/ranked.js?v=140"></script>
+  <script src="src/halftime.js?v=140"></script>
+  <script src="src/uniform.js?v=140"></script>
+  <script src="src/powerup.js?v=140"></script>
+  <script src="src/arcade.js?v=140"></script>
+  <script src="src/trivia.js?v=140"></script>
+  <script src="src/nemesis.js?v=140"></script>
+  <script src="src/weather.js?v=140"></script>
+  <script src="src/season.js?v=140"></script>
+  <script src="src/playoffs.js?v=140"></script>
+  <script src="src/film.js?v=140"></script>
+  <script src="src/celebration.js?v=140"></script>
+  <script src="src/juice.js?v=140"></script>
+  <script src="src/gamestats.js?v=140"></script>
+  <script src="src/sportspage.js?v=140"></script>
+  <script src="src/press.js?v=140"></script>
+  <script src="src/staff.js?v=140"></script>
+  <script src="src/chemistry.js?v=140"></script>
+  <script src="src/boxscore.js?v=140"></script>
+  <script src="src/field.js?v=140"></script>
+  <script src="src/ball.js?v=140"></script>
+  <script src="src/mascot.js?v=140"></script>
+  <script src="src/poster.js?v=140"></script>
+  <script src="src/house.js?v=140"></script>
+  <script src="src/allstar.js?v=140"></script>
+  <script src="src/leaders.js?v=140"></script>
+  <script src="src/traits.js?v=140"></script>
+  <script src="src/awards.js?v=140"></script>
+  <script src="src/rebrand.js?v=140"></script>
+  <script src="src/draft.js?v=140"></script>
+  <script src="src/training.js?v=140"></script>
+  <script src="src/injuries.js?v=140"></script>
+  <script src="src/flag.js?v=140"></script>
+  <script src="src/freeagency.js?v=140"></script>
+  <script src="src/gameplan.js?v=140"></script>
+  <script src="src/playbook.js?v=140"></script>
+  <script src="src/createplayer.js?v=140"></script>
+  <script src="src/nicknames.js?v=140"></script>
+  <script src="src/special.js?v=140"></script>
+  <script src="src/events.js?v=140"></script>
+  <script src="src/dynasty.js?v=140"></script>
+  <script src="src/ads.js?v=140"></script>
+  <script src="src/tour.js?v=140"></script>
+  <script src="src/concession.js?v=140"></script>
+  <script src="src/kick.js?v=140"></script>
+  <script src="src/drill.js?v=140"></script>
+  <script src="src/scout.js?v=140"></script>
+  <script src="src/simgame.js?v=140"></script>
+  <script src="src/audible.js?v=140"></script>
+  <script src="src/defcall.js?v=140"></script>
+  <script src="src/superstar.js?v=140"></script>
+  <script src="src/main.js?v=140"></script>
 </body>
 </html>
