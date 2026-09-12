@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.4 — cache-buster is `?v=137` in `index.html`.
+- **Version:** v2.5 — cache-buster is `?v=138` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -111,7 +111,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `857612f6-92de-42cf-8ab7-2b99b03878b2`. Max reversed the earlier stop order and asked for a new
     board, verified the whole game first, then "work on that until the end". The coaching round:
     ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders **v2.0 ✅** · ③⭐ Traits That Matter **v2.1 ✅** ·
-    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game **v2.4 ✅** · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
+    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game **v2.4 ✅** · ⑥🗣️ Audibles **v2.5 ✅** · ⑦🛡️ Call Your Own Defense ·
     ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
     it, because you can't both BE the head coach and HIRE one.)
   - **🎓 v1.99 — STAFF ARE NOW HIRED BY ⭐ STAR RATING, AND THERE IS A HEAD COACH.** Candidates are
@@ -148,6 +148,41 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **🗣️ v2.5 — AUDIBLES, AND THE HALF OF THE FEATURE THAT ISN'T THE BUTTON.** The defense's plan for
+    a down has been decided before the snap since v1.6 (`callPlay` sets `G.blitz`/`G.coverage` in
+    `setupPlay`) — but the game only ever TOLD you about it as the ball was snapped, which is a
+    heartbeat too late to act on. ⚠️ **An audible is only a decision if you can see something first**,
+    so half of this pick is THE TELL at the line, and the other half is three calls that each answer
+    one thing the defense can be doing: 🔥 HOT ROUTES vs a blitz, 🎯 CROSSERS vs man, 🪟 SIT DOWN vs
+    zone.
+    ⚠️ **THE TELL LIES ABOUT ONE TIME IN FIVE, ON PURPOSE.** A tell that is always right is not a
+    read, it is an answer key — you stop looking at the defense and just obey the caption. The
+    disguise is rolled ONCE per down and remembered, so the caption, the panel and the button can
+    never contradict each other (rolling it per-read was the first instinct and would have).
+    ⚠️ **Right pays, wrong costs nothing** — a correct call adds a capped catch bonus through the
+    SAME `gloveBoost` chain the gear/spin/staff/balls use (0.185 vs 0.105 on the same snap). For a
+    nine-year-old, getting it right should feel clever; getting it wrong shouldn't feel like a fine.
+  - **🗣️ THE HOOK IS `updateTrickBtn`, AND THAT IS THE WHOLE TRICK.** That function is already called
+    at exactly the three moments an audible cares about — a play is set up, the ball is snapped, the
+    🎩 trick is armed — so one line inside it (`TDAudible.sync()`) gives the 🗣️ button the same
+    lifetime as the 🎩 one AND makes arming the trick cancel an audible for free, because the trick
+    rewrites those same routes. **One call at the line, not two.** Look for a function that already
+    fires at your moments before adding new ones.
+  - **🐛 v2.5's TWO PORTRAIT BUGS — AND THE SECOND ONE WAS YEARS OLD.** 🗣️ AUDIBLE is the FIFTH button
+    in `#ingame-ctrls`, and at 375×812 five × 66px pushed the row to **x = −11**, slicing ⏱ TIMEOUT
+    off the left edge of the phone — the v1.44/45 overhang again. Measuring that turned up an older
+    one: **the HUD's "1ST & 10" and "Ball on the own 30" run to x=134, and this row has always
+    started left of that**, so the scoreboard had been printing underneath these buttons since the
+    row was added (at four buttons it started at x=81 — still overlapping). A `≤430px` media query
+    now shrinks the row AND drops it below the scoreboard (`top: safe-area + 92px`): measured
+    33–363 at y 104–146, **zero collisions against all nineteen fixed overlays**.
+    ⚠️ **A SIXTH BUTTON IN THAT ROW HAS TO RE-MEASURE THIS.**
+  - **🧪 And a measuring lesson: `#hud` is an empty container.** Its four lines (`#hud-score`,
+    `#hud-clock`, `#hud-down`, `#hud-spot`) are positioned independently, so `#hud`'s own
+    bounding box is a zero-width point and an overlap test against it **returns a clean pass while
+    the text visibly runs under your buttons**. Test against the CHILDREN. A screenshot caught what
+    the measurement missed.
+
   - **🎲 v2.4 — SIM THIS GAME, AND THE RULE THAT A SHORTCUT MUST COST SOMETHING.**
     Hand a regular-season week to the computer and watch it tick in. ⚠️ **It runs on the LEAGUE'S OWN
     ENGINE** — new read-only `TDSeason.simNext()` runs the same `simGame()` that already plays the
