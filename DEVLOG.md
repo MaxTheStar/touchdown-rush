@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.2 — cache-buster is `?v=135` in `index.html`.
+- **Version:** v2.3 — cache-buster is `?v=136` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -111,7 +111,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `857612f6-92de-42cf-8ab7-2b99b03878b2`. Max reversed the earlier stop order and asked for a new
     board, verified the whole game first, then "work on that until the end". The coaching round:
     ①🎓 Hire Staff by ⭐ Rating **v1.99 ✅** · ②📊 League Leaders **v2.0 ✅** · ③⭐ Traits That Matter **v2.1 ✅** ·
-    ④📋 Scouting Report · ⑤🎲 Sim This Game · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
+    ④📋 Scouting Report **v2.3 ✅** · ⑤🎲 Sim This Game · ⑥🗣️ Audibles · ⑦🛡️ Call Your Own Defense ·
     ⑧🌟 Superstar Mode. (Pick ① was originally 🧢 Create-A-Coach; Max's staff-hiring request replaced
     it, because you can't both BE the head coach and HIRE one.)
   - **🎓 v1.99 — STAFF ARE NOW HIRED BY ⭐ STAR RATING, AND THERE IS A HEAD COACH.** Candidates are
@@ -148,6 +148,48 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **📋 v2.3 — THE SCOUTING REPORT, AND THE RULE THAT SHAPED IT: THE CARD HAS TO BE TRUE.**
+    A pre-kickoff card that said "expect the pass" and meant nothing would teach Max to ignore his
+    own coaches, so `TDScout.passLean()` does both jobs — it is what the card SHOWS *and* what the
+    CPU ROLLS AGAINST. ⚠️ **There are TWO places the other team calls a play and both had to be
+    wired**: `DefenseSim.play()` (1-player's tap-to-progress drive, a flat `0.56` for every team in
+    the league until now) and `pickRedFormation()` (2-player's live defense, where the look already
+    leaned run/pass but was picked by an even shuffle). Miss either and half the game contradicts
+    the card. The tendency is derived from the team's own ⭐ ratings — a monster offense throws it
+    (KC 10/7 → 72% pass), a defense-first club hands it off (CHI 5/8 → 40%) — with a fixed seed off
+    the team code so **a team plays the same way every time you meet it and can actually be learnt**
+    (and so a 🚚 rename never changes how a team plays: the seed uses `ratingKey`).
+    ⚠️ **The league average is still 0.56** (measured 0.5711 across all 32 teams): spreading teams
+    out must change WHO is dangerous in which way, not how hard the league is. With `scout.js`
+    missing, `pickRedFormation` returns to an exactly even shuffle (verified 207/193/201/199 of 800)
+    and the sim to the flat 0.56.
+  - **📋 HOLDING THE KICKOFF IS THE OTHER HALF.** `beginGame` asks `TDScout.pregame()`, and a `true`
+    answer means "the card is up, you wait" — `G.state` is still `'menu'` there and `update()`
+    returns early on `'menu'`, so the game is **fully parked with nothing running behind it**.
+    ⚠️ **Every path back calls `done`** (the button, the backdrop, a 45s safety timer) and
+    `release()` is once-only — the 🚩 flag.js discipline, which is what keeps a held game from
+    becoming a stuck game. The Phaser keyboard is disabled while the card is up, **or SPACE would
+    call `startGameWithTeam()` and start a second game behind it**.
+  - **📋 EVERYTHING ELSE ON THE CARD IS READ, NEVER INVENTED** — the real ⭐ ratings, the real season
+    standings, a head-to-head counted game by game, and their star *borrowed from* 📊 League Leaders
+    (`TDLeaders._rivalStar`) so the two screens never disagree about who their best player is.
+    ⚠️ **The head-to-head refuses games that teach you nothing**: a 🎲 house-rules game (it asks
+    `TDHouse.live()`, exactly as records.js does before saving a personal best), a ⏱️ drill and the
+    🌟 All-Star Game. Verified end-to-end: a real 63-0 giant-ball game recorded nothing, a real
+    21-17 game recorded exactly. Zero new `endGame` lines — the history wraps `TDGameStats.finish`
+    (the injuries.js trick), which runs *before* `TDHouse.endGame()` clears the silly-game flag.
+  - **🐛 v2.3 FIXED ONE IN VERIFICATION: "about 5 throws in 10" for a team that leans RUN.** The
+    lean was being read out as a whole number out of ten, so a 48%-pass team's sentence said the
+    even split the sentence was trying to say it wasn't. It now reads out as a percentage.
+  - **🧪 TWO TESTING LESSONS FROM THIS PICK, BOTH COST TIME.** ① **A long synchronous loop makes the
+    preview pane reload itself** — 3,000 iterations of `pickRedFormation` did it — and the reload
+    lands on the **browser-cached previous build**, where the new module simply does not exist. That
+    looks exactly like "my feature is broken". Chunk verification loops and yield. ② **A hidden pane
+    suspends network I/O** (`ERR_NETWORK_IO_SUSPENDED`), so scripts silently fail to load and
+    `__td`/`TDScout` come back undefined — take a screenshot to wake the pane, *then* reload. ③ And
+    when a src file changes but keeps the same `?v=`, the browser serves the stale copy:
+    `fetch(url, {cache:'reload'})` then reload.
+
   - **🐛 v1.99 ALSO FIXED A BUG LIVE SINCE v1.84: `TDStaff.gameWon` WAS NEVER CALLED.** staff.js had
     the levelling code from the day it shipped and nothing in main.js ever invoked it (`git log -S`
     confirms the line never existed), so for fifteen versions the screen promised "every game you win,
@@ -202,7 +244,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-09-01.
+- **Last updated:** 2026-09-12.
 - **📦 CrazyGames portal build:** refreshed to v1.57 on 2026-08-22 and staged in
   `~/Desktop/CrazyGames Submission/` (`touchdown-fun-READY.zip` — 568 KB, 33 files, index.html at root).
   Recipe = a COPY of the repo with 3 changes so it makes ZERO external requests: vendor Phaser (CDN→local
