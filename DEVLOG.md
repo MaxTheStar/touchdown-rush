@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.7 — cache-buster is `?v=140` in `index.html`.
+- **Version:** v2.9 — cache-buster is `?v=142` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -148,6 +148,55 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **🐛 v2.8 — "IT'S STUCK ON THE COMMENTS" (Max's bug report, 2026-09-13). THE ANNOUNCER BAR WAS ON
+    SCREEN 100% OF THE TIME.** Measured over real downs: FOUR lines per down arriving inside a ~1.6s
+    window, each wanting 1.2s of screen — and two of them **15 milliseconds apart saying nearly the
+    same thing** (`🔴 Press coverage — everybody has a man.` at t=3265, `Press coverage!` at t=3280).
+    The bar sits across the middle of the field where the players are, so it never got out of the way.
+    ⚠️ **THE FIX WAS NOT TO TRIM THE LINE, IT WAS TO STOP SPEAKING IT.** v2.5's audible tell now lives
+    ON the 🗣️ BUTTON (label reads `BLITZ?` / `MAN?` / `ZONE?`, red glow while it is showing their look):
+    zero screen time, always visible instead of for 1.2s, and it is on the button your thumb is
+    already going to. Plus main.js skips its own snap-time coverage call-out when the button is
+    already showing it, `sayComment` now DROPS a line that arrives while another is still fresh
+    (<320ms) instead of swapping it in, and the hold is 600ms not 850ms. **Result: 4 lines per down
+    → 1, bar presence 100% → 10%.** Big moments never came through here anyway (TOUCHDOWN/FINAL are
+    `showBanner`), so a crowded-out line only ever loses chatter.
+    **LESSON: when you add a voice to a game, count the voices that are already talking.** A feature
+    that is right in isolation can still be wrong as the fourth thing shouting at once.
+  - **🧪 AND A TESTING TRAP THAT COST TIME: `G.scene.time.now` IS NOT A STOPWATCH ACROSS TOOL CALLS.**
+    The preview pane sleeps between them, so one `V.RUN(150)` advanced Phaser's clock by **20,641ms**
+    and made the new freshness guard look broken when it was fine. Same family as "rAF pauses in a
+    hidden pane". Test time-based logic inside ONE synchronous burst.
+  - **🎲🌟⚡ v2.9 — MAX'S FOUR CALLS after playing v2.7.**
+    ① **A simmed game now gives 📈 XP ONLY** — no coins, no streak. Deliberately NOT
+    `TDProgress.claimLevelUps()`, because that pays a coin bonus: a level earned by simming is
+    celebrated and paid at the end of your next REAL game, so a sim still hands out zero coins.
+    ② **A game you TAKE OVER at half time counts for all three** (coins, XP, streak) — "you played
+    it". `G.simTakeover` is out of `endGame`'s guard list and out of records.js entirely.
+    ③ **🌟 Superstar Mode counts for the 🔥 streak — and got harder in the same breath**, because the
+    moment a mode's wins share a board with your real ones it must not be the easy way to fill it.
+    ④ **⚡ POWER-UPS is its own button on the SIDE**, which also put `#ingame-ctrls` back to FOUR
+    buttons and undid the v2.5 crowding.
+  - **🌟 THE SUPERSTAR RETUNE IS THE CLEAREST "TUNE IT BY MEASURING" STORY IN THE REPO.** Max: "you
+    can score a million touchdowns with it pretty fast." Three things were stacking — a 10% speed
+    edge, a low 38px "open" bar, and a quarterback who threw to the star on every down however
+    buried he was. Two passes to get it right:
+    `edge 1.10 / bar 38` → a LAZY straight run reached **32–63px** (the million touchdowns) ·
+    `edge 1.035 / bar 50` → a PROPER route reached only **24–26px** and three good routes in a row
+    came back incomplete (too hard, the other way) · **`edge 1.05 / bar 42`** → jogging straight gets
+    31–45px, a route with a real break gets **65–76px**, and pressure still forces contested throws.
+    Four test plays now finish 0-0 where the old build was 13-0. A smothered receiver (<26px at the
+    deadline) now gets the ball **thrown away** rather than gifted. ⚠️ Note found while measuring:
+    **standing perfectly still in zone coverage leaves you wide open (~106px)** because nobody covers
+    a man who does not run — it is a 0-yard catch, so it is not worth chasing, but don't be surprised.
+  - **⚡ THE POWER-UPS BUTTON DOES TWO JOBS, AND WHICH ONE DEPENDS ON THE MOMENT.** At the line there
+    is time to think, so it opens the picker and you choose your power on the field instead of walking
+    back to the 🛍 Pro Shop; during a play there is no time at all, so it stays one instant tap that
+    fires. **A picker on a live play would have made the feature worse** — you would be tackled
+    reading a menu. The label says which job it is on (`POWER-UPS` / `TURBO` / `USED`). New spot
+    measured at 375×812: right edge, vertically centred, x 297–363 y 381–431, **zero collisions
+    against all twenty other fixed overlays.**
+
   - **🌟 v2.7 — SUPERSTAR MODE, AND THE QUESTION THAT DESIGNED IT.** You play a whole game as ONE man.
     ⚠️ **What happens when the ball goes somewhere else?** In this game the player has ALWAYS been
     whoever is holding the ball — **there is no AI ball carrier anywhere in main.js** and there never
@@ -374,7 +423,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   namespace `touchdown-rush-maxthestar` — changing those would break the live link and wipe everyone's
   saved coins/uniforms/streak and the worldwide counters. The name and the plumbing are allowed to differ.
 - **Live site:** https://maxthestar.github.io/touchdown-rush/ (GitHub Pages, served from `main`).
-- **Last updated:** 2026-09-12.
+- **Last updated:** 2026-09-13.
 - **📦 CrazyGames portal build:** refreshed to v1.57 on 2026-08-22 and staged in
   `~/Desktop/CrazyGames Submission/` (`touchdown-fun-READY.zip` — 568 KB, 33 files, index.html at root).
   Recipe = a COPY of the repo with 3 changes so it makes ZERO external requests: vendor Phaser (CDN→local
