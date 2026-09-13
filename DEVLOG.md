@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v2.9 — cache-buster is `?v=142` in `index.html`.
+- **Version:** v3.0 — cache-buster is `?v=143` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -148,6 +148,42 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `speedMult` also gained a 1.75 safety ceiling: eight systems multiply into it and traits multiply
     it again, but a maxed build only reaches 1.53, so nothing today changes — it just stops the NEXT
     fold-in making the player uncatchable (pursuit is 194 vs a base 205).
+  - **🏁 Round 12 — "The Rulebook Board" (drawn 2026-09-13, after Max verified v2.9 and sanctioned a
+    new board).** Artifact `0fe7e588-1808-4f12-90d8-ff516e96b77f`. **Theme: the parts of real football
+    this game has never had.** Every pick was grepped for first and the check was unusually clean —
+    **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
+    or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper ·
+    ③⏱️ Spike It & Kneel It · ④📊 Self-Scouting · ⑤🚩 Penalties · ⑥⏰ Hurry-Up Offense · ⑦🔥 Momentum ·
+    ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
+    Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
+    ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
+    often stop being football, and momentum that only rewards whoever is ahead turns every game into
+    a blowout. Both must be tuned by MEASUREMENT.
+  - **📣 v3.0 — HOME CROWD: THE STADIUM FINALLY PLAYS FOOTBALL.** Eleven rounds of building seats and
+    the stadium only ever paid coins. Loudness = 🏟 seats (`stadium.js` level/18) × 0.55 + 🔥 streak
+    (capped at six) × 0.30 + 0.15, all **multiplied by the OCCASION** (playoff/boss 1.0, rival 0.85,
+    season 0.7, event 0.6, friendly 0.25) — because a friendly in a huge stadium is still a quiet
+    afternoon. It folds into the SAME `G.oppOff` chain the 🎓 DC and the ⭐ 🧱 Wall use, **and** into
+    the one `cpuPow` line the 1-player sim runs on, so the two paths can never disagree.
+    ⚠️ **Capped at −6% — the same ceiling a maxed coach gets.** Home field is worth two or three
+    points in real football; it must never be why you won. Starter stadium + no streak = exactly ×1.
+    ⚠️ **Empty stands for ⏱️ the drill (practice field), 🌟 the All-Star Game (neutral site) and a
+    🎲 house-rules game (garden kickabout)** — football reasons, not code ones.
+  - **🐛 v3.0's BUG IS THE BEST KIND: A GUARD THAT ASKED "HAS THE GAME STARTED?" FROM INSIDE THE CODE
+    THAT STARTS THE GAME.** `crowd.js` opened its stands test with `if (G.state === 'menu') return
+    false` — sensible, and completely wrong: **`beginGame` computes every strength tilt BEFORE it
+    leaves the menu state** (the state only changes at the very end, in `startKickoff`). So at the one
+    moment the crowd was asked for its number the answer was "no game on", and `G.oppOff` came out
+    **identical with and without the feature (0.9597 both ways)**. The stands question now asks only
+    about the OCCASION, from flags `beginGame` has already set; "is a game running" is a separate
+    question used only for drawing the readout. **Verification caught it; playing never would have —
+    a feature that does nothing looks exactly like a feature that is working subtly.**
+  - **🧪 And a measuring trap worth remembering: DON'T A/B TWO EXHIBITION GAMES.** The first attempt
+    compared `G.oppOff` with the module and without it — and got 0.9923 vs 0.9741, i.e. the crowd
+    apparently making them BETTER. `startGameWithTeam()` picks a RANDOM opponent, so the two runs
+    were different teams. The honest test was to instrument the getter on ONE game: called once,
+    value 0.9895, `G.oppOff` 1.0029 → 0.9923.
+
   - **🐛 v2.8 — "IT'S STUCK ON THE COMMENTS" (Max's bug report, 2026-09-13). THE ANNOUNCER BAR WAS ON
     SCREEN 100% OF THE TIME.** Measured over real downs: FOUR lines per down arriving inside a ~1.6s
     window, each wanting 1.2s of screen — and two of them **15 milliseconds apart saying nearly the
