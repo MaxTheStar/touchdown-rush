@@ -86,12 +86,37 @@
   }
 
   // ---- the in-game button (shows your power; greys out once used) ----------
+  // ⚠️ IT DOES TWO JOBS NOW (Max asked for a side button you press to activate a
+  // power-up, 2026-09-13), and which one depends on the moment — because the
+  // two jobs want opposite things. AT THE LINE there is time to think, so it
+  // opens the picker and you choose your power right there on the field instead
+  // of walking back to the 🛍 Pro Shop. DURING A PLAY there is no time at all,
+  // so it stays what it always was: ONE tap, fires instantly. Putting the
+  // picker on a live play would have made the feature worse — you would be
+  // tackled while reading a menu.
+  function inPlay() {
+    const g = window.__td && window.__td.G;
+    return !!g && (g.state === 'live' || g.state === 'pass');
+  }
+  function inGame() {
+    const g = window.__td && window.__td.G;
+    return !!g && g.state !== 'menu' && g.state !== 'gameover';
+  }
+  function tapBtn() { if (inPlay()) fire(); else openPicker(); }
+
   function paintBtn() {
     const b = $('btn-power'); if (!b) return;
     const p = POWERS[equipped] || POWERS.turbo;
-    const ic = b.querySelector('.pw-ic'); if (ic) ic.textContent = p.icon;
+    const ic = b.querySelector('.pw-ic'); if (ic) ic.textContent = usedThisGame ? '✔' : p.icon;
+    const sm = b.querySelector('small');
+    if (sm) sm.textContent = usedThisGame ? 'USED' : (inPlay() ? p.name.split(' ')[0] : 'POWER-UPS');
     b.classList.toggle('off', usedThisGame);
+    b.classList.toggle('ready', !usedThisGame && inPlay());
   }
+
+  // main.js's updateTrickBtn calls this at the three moments the label can
+  // change: a play is set up, the ball is snapped, the 🎩 trick is armed.
+  function sync() { paintBtn(); }
 
   // ---- the Pro Shop picker (equip your power for next game) ----------------
   function render() {
@@ -110,19 +135,33 @@
     equipped = kind; store('powerup', equipped);
     render(); paintBtn();
     const p = POWERS[kind];
+    // Picked from the field? Get out of the way and let him play — the toast
+    // says what happened. Picked in the 🛍 Pro Shop? Stay put, he may browse.
+    if (inGame()) {
+      close();
+      toast(p.icon + ' ' + p.name + ' ready — tap ⚡ during the play!', true);
+      return;
+    }
     if (window.TDShop && TDShop.celebrate) TDShop.celebrate($('power-list') || $('power-modal'), p.icon, p.name + ' equipped!');
   }
 
   // ---- pop-up plumbing ----------------------------------------------------
   function gameKeyboard(on) { try { window.game.input.keyboard.enabled = on; } catch (e) {} }
   function open()  { const m = $('power-modal'); if (!m) return; gameKeyboard(false); render(); m.style.display = 'flex'; }
+  // The same picker, opened from the field. It refuses mid-play (that is what
+  // firing is for) and says so, rather than silently doing nothing.
+  function openPicker() {
+    if (usedThisGame) { toast('Already used your power this game!', false); return; }
+    if (inPlay()) { fire(); return; }
+    open();
+  }
   function close() { const m = $('power-modal'); if (m) m.style.display = 'none'; gameKeyboard(true); }
 
   function wire() {
     const tap = (id, fn) => { const el = $(id); if (el) el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); }); };
     tap('open-power', open);
     tap('power-close', close);
-    tap('btn-power', fire);                 // the in-game hero button
+    tap('btn-power', tapBtn);               // at the line: pick · during a play: FIRE
     const list = $('power-list');
     if (list) list.addEventListener('pointerdown', e => {
       const c = e.target.closest('[data-pick]'); if (!c) return;
@@ -136,7 +175,7 @@
   // ---- what the rest of the game reads ------------------------------------
   window.TDPowerup = {
     speedMult, catchAdd, defSlow,   // live multipliers (shop.js + main.js fold these in)
-    newGame, fire, open, close,
+    newGame, fire, open, close, sync, openPicker,
     equipped: () => equipped,
     _state: () => ({ equipped, usedThisGame, firing: activeKind, until: activeUntil }),
   };

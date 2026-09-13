@@ -17,26 +17,27 @@
 // playoffs, 🏅 Awards Night and 📚 Dynasty all carry on knowing nothing about
 // this feature at all.
 //
-// ⚠️ A SIMMED GAME EARNS NOTHING BUT THE RESULT, and this is the rule that keeps
-// the feature safe. No coins, no XP, no 🔥 streak, no 🏅 ladder, no 📖 records,
-// no 🎓 coach levels, no ⭐ player stats. It moves the season table and nothing
-// else. Otherwise the fastest way to get rich would be to never play football,
-// which would be a strange thing for a football game to teach. The panel says so
-// out loud before you press the button — a cost you find out about afterwards is
-// just a trap.
+// ⚠️ WHAT A SIMMED GAME EARNS — MAX'S CALL, 2026-09-13: **📈 XP ONLY.** The team
+// still learns something from a week of football, so the XP is real; but there
+// are **no 🪙 coins and no 🔥 win streak**, and still no 🏅 ladder, 📖 records,
+// 🎓 coach levels or ⭐ player stats. Otherwise the fastest way to get rich would
+// be to never play football, which would be a strange thing for a football game
+// to teach. The panel says so out loud before you press the button — a cost you
+// find out about afterwards is just a trap.
+// ⚠️ AND IF YOU TAKE OVER AT HALF TIME, YOU GET EVERYTHING — coins, XP and the
+// streak, exactly like a game you played from the kickoff. Also Max's call, and
+// it is the right one: you did play it. That is why `G.simTakeover` no longer
+// appears in endGame's guard list at all.
 //
 // ⚠️ YOU CANNOT SIM A PLAYOFF GAME. The semifinal and the Max Bowl are the two
 // games the whole season is for, and they are short work to play. Only the six
 // regular-season weeks can be handed over.
 //
 // 🎮 TAKING OVER AT HALF TIME plays the rest for real from the simmed half-time
-// score (main.js's `startSeasonGame` takes a `resume`). ⚠️ That game then sets
-// `G.simTakeover`, which keeps it off the streak, the ladder, your coaches and
-// the record book — you only actually played half of it, and without that guard
-// you could sim until you were 28-0 up, take over, and bank a "personal best"
-// you never earned. It still counts in the season, because a win is a win in the
-// standings. Same family of rule as 🎲 house.js: let the thing work, just never
-// let it EARN anything.
+// score (main.js's `startSeasonGame` takes a `resume`). `G.simTakeover` still
+// flies so the game KNOWS it was half-simmed, and simgame.js still reads it —
+// but per Max it no longer costs you anything: a taken-over game counts for the
+// coins, the XP and the streak like any other.
 //
 // The tick-in uses setInterval, not requestAnimationFrame: rAF is paused in a
 // background tab, and a scoreboard that stops when you look away is a bug.
@@ -98,9 +99,9 @@
       scoreboard(0, 0, 'KICKOFF') +
       '<div class="sm-note">Hand week ' + plan.week + ' to the computer and watch it play out. ' +
         'You can take over at half time if it is going badly.</div>' +
-      '<div class="sm-warn">⚠️ A simmed game counts in the <b>standings only</b>. No coins, no XP, ' +
-        'no win streak, no ranked stars, no records, and your coaches do not level up. ' +
-        'Play it yourself to earn all that.</div>';
+      '<div class="sm-warn">⚠️ A simmed game gives you <b>📈 XP only</b> &mdash; no 🪙 coins and no ' +
+        '🔥 win streak, no ranked stars, no records, and your coaches do not level up. ' +
+        '<b>Take over at half time and you get all of it.</b></div>';
     btn('sim-go', '🎲 SIM IT');
     show('sim-take', false); show('sim-keep', false);
     show('sim-go', true); show('sim-close', true);
@@ -129,8 +130,8 @@
                            : 'All square at the half. Sim it out, or take it yourself?') +
       '</div>' +
       '<div class="sm-warn">🎮 Taking over plays the second half for real from ' + my + '–' + op +
-        '. It still counts in the standings — but because you only played half of it, it will not ' +
-        'touch your streak, your ranked stars, your coaches or your record book.</div>';
+        ' &mdash; and because you actually played it, you get the <b>🪙 coins, the 📈 XP and the ' +
+        '🔥 win streak</b>, just like any other game.</div>';
     show('sim-go', false);
     show('sim-keep', true); show('sim-take', true); show('sim-close', false);
   }
@@ -185,7 +186,13 @@
   function finish() {
     if (!plan || plan.reported) return;
     plan.reported = true;
+    const won = plan.my > plan.opp;
     if (window.TDSeason && TDSeason.reportResult) TDSeason.reportResult(plan.my, plan.opp);
+    // 📈 XP, and ONLY XP (Max, 2026-09-13) — the same numbers endGame banks for
+    // a played game. Deliberately NOT TDProgress.claimLevelUps(), because that
+    // pays a 🪙 coin bonus: a level earned here gets celebrated and paid at the
+    // end of your next REAL game instead, so a sim still never hands out coins.
+    if (window.TDProgress && TDProgress.addXP) TDProgress.addXP(won ? 40 : 15);
     // 📚 …and if that finished the season, turn the page, exactly as endGame does.
     if (window.TDDynasty && TDDynasty.check) TDDynasty.check();
   }

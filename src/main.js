@@ -2910,9 +2910,13 @@ function endGame() {
   // ⏱️ A Two-Minute Drill is practice — it never touches your win streak,
   // because failing one is the ordinary result and should cost you nothing.
   // 🎲 …and neither a drill nor a 🎲 house-rules game touches your win streak.
-  // 🎲 …nor a game you TOOK OVER at half time from a sim (simgame.js): half of
-  // that scoreline was played by the computer, so it cannot earn you a streak.
-  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover && !G.starGame) TDStreak.recordResult(G.score > G.oppScore);
+  // 🎲 A game you TOOK OVER from a sim at half time DOES count here — Max's call
+  // on 2026-09-13, and he is right: you played it. (`G.simTakeover` still exists
+  // so the game knows, it just no longer costs you anything.)
+  // 🌟 …and so does a SUPERSTAR game, same date, same reasoning — which is why
+  // that mode was made harder at the same time (see src/superstar.js). It stays
+  // off the ladder, the coaches and the record book below.
+  if (window.TDStreak && !G.drillGame && !G.houseGame && !G.allStarGame) TDStreak.recordResult(G.score > G.oppScore);
   // 📈 Progression XP: winning is worth a lot; a loss still earns some for playing.
   // Then cash in any level-ups (pays a coin bonus, into "coins this game") and
   // remember what to show on the FINAL screen below.
@@ -2945,14 +2949,14 @@ function endGame() {
   // screen so any promotion coins count in this game's payday.
   // ⏱️ …and for the same reason a drill never moves the Ranked Ladder either.
   // 🎲 …and for exactly the same reason a house-rules game never moves it either.
-  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover && !G.starGame) TDRanked.recordResult(G.score > G.oppScore);
+  if (window.TDRanked && !G.drillGame && !G.houseGame && !G.allStarGame && !G.starGame) TDRanked.recordResult(G.score > G.oppScore);
   // 🎓 COACHING STAFF: a win is how your coaches level up. ⚠️ THIS LINE WAS
   // MISSING FROM v1.84 UNTIL v1.99 — staff.js had `gameWon` ready and nothing
   // ever called it, so for fifteen versions the screen promised "they get
   // better every time you win" and no coach ever levelled up once. Same guard
   // list as the streak and the ladder: a drill, a silly game or a showcase
   // doesn't count towards a coach's development either.
-  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame && !G.simTakeover && !G.starGame) {
+  if (window.TDStaff && TDStaff.gameWon && !G.drillGame && !G.houseGame && !G.allStarGame && !G.starGame) {
     TDStaff.gameWon(G.score > G.oppScore);
   }
   // ⏱️ TWO-MINUTE DRILL: record the attempt and pay it out — before the FINAL
@@ -4143,6 +4147,10 @@ function updateTrickBtn() {
   // the moment the 🎩 trick is armed — which is exactly when the 🗣️ button has
   // to appear, vanish, or give way (the trick rewrites the same routes).
   if (window.TDAudible) TDAudible.sync();
+  // ⚡ …and the POWER-UPS button relabels itself at the same three moments: at
+  // the line it says POWER-UPS (tap to pick), during a play it says the power
+  // (tap to fire).
+  if (window.TDPowerup && TDPowerup.sync) TDPowerup.sync();
 }
 
 // Arm the trick for this snap: send everyone deep and redraw the preview so you

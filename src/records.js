@@ -57,9 +57,6 @@
     // main.js. A 90-point romp against half-sized defenders must not become
     // your "Most Points" forever — see src/house.js.
     if (window.TDHouse && TDHouse.live()) return;
-    // 🎲 …and neither can a game you TOOK OVER at half time from a sim: the
-    // computer scored half of those points (see src/simgame.js).
-    if (window.TDSim && TDSim.takeover()) return;
     // 🌟 …and neither can a Superstar game: you played it as one man with a
     // different control scheme, so it is not the same contest (superstar.js).
     if (window.TDStar && TDStar.on()) return;

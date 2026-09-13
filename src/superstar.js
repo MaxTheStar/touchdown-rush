@@ -35,13 +35,13 @@
 //               never getting open gets you a contested ball. And if the pocket
 //               collapses first he is sacked, exactly as he would be for you.
 //
-// ⚠️ IT IS AN EXHIBITION, AND IT COUNTS FOR NOTHING — no 🔥 streak, no 🏅 ladder,
-// no 🎓 coach levels, no 📖 records. Every other "special" mode in this game
-// (⏱️ the drill, 🎲 house rules, 🌟 the All-Star Game, a half-simmed takeover)
-// made that same promise, and the reason is the same: you are playing a
-// different game with a different control scheme, so its results cannot share a
-// scoreboard with the real thing. The panel says so before you start. You still
-// get the normal payday, because you still played a game.
+// ⚠️ IT COUNTS FOR YOUR 🔥 WIN STREAK — Max's call, 2026-09-13. That decision is
+// the reason the mode got harder in the same breath: the moment a mode's wins go
+// on the same board as your real ones, it must not be the easy way to fill that
+// board. So the star's speed edge dropped from 10% to 5%, "open" went from 38
+// to 42, and a smothered receiver now gets the ball thrown AWAY instead of
+// handed to him. It stays off the 🏅 ranked ladder, your 🎓 coaches and the
+// 📖 record book, because those measure the eleven-man game.
 //
 // Nothing is saved. Opened from the 🏆 SEASON hub, where the other game modes
 // already live — no new front-screen chip.
@@ -56,10 +56,32 @@
   const STAR_NUM  = 1;
   const DROP_S    = 0.35;   // how long the QB spends dropping back
   const LOOK_S    = 1.90;   // how long he can wait for you to come open
-  const OPEN_DIST = 38;     // how far from the nearest defender counts as "open"
   const PRESSURE  = 74;     // a rusher this close and the ball has to come out NOW
   const SLIDE     = 96;     // how fast he slides away from the man closest to him
-  const EDGE      = 1.10;   // your star runs a little faster than anybody else
+
+  // ⚠️ TONED DOWN ON MAX'S ORDERS (2026-09-13): "you can score a million
+  // touchdowns with it pretty fast." He was right, and it was three things
+  // stacking, not one:
+  //   • the star was 10% faster than anyone on the field
+  //   • "open" was a low bar (38px), so almost any route earned a clean throw
+  //   • the quarterback threw to him EVERY down, no matter how buried he was
+  // All three are dialled back, and the third one is the important one: a
+  // covered receiver now gets the ball thrown away instead of gifted to him, so
+  // the mode finally has a way to say no. It is worth the same as a real game
+  // now (it counts for your 🔥 streak), so it had better not be easier than one.
+  // ⚠️ TUNED BY MEASUREMENT, NOT BY FEEL — and it needed two passes. The star is
+  // only faster by EDGE, so the separation he can win over the quarterback's
+  // ~1.9 seconds is small and the "open" bar has to sit inside it:
+  //   edge 1.10 / bar 38  → a lazy straight run reached 32–63px. Too easy; this
+  //                         is the "million touchdowns" Max was complaining about.
+  //   edge 1.035 / bar 50 → a PROPER downfield route only reached 24–26px, so
+  //                         "open" was unreachable and three good routes in a row
+  //                         came back incomplete. Too hard, the other way.
+  //   edge 1.05 / bar 42  → a lazy straight run still falls short, a route with a
+  //                         real break clears it. A skill gate, which is the point.
+  const OPEN_DIST = 42;     // how far from the nearest defender counts as "open"
+  const EDGE      = 1.05;   // your star is a little quicker — not a rocket
+  const SMOTHERED = 26;     // this well covered at the deadline and he won't force it
 
   let thrown = false;       // has he let it go on this play?
 
@@ -156,10 +178,23 @@
     let canThrow = false;
     try { canThrow = __td.canPass(); } catch (e) {}
     if (!canThrow) return;
-    const open = coverDist() >= OPEN_DIST;
+    const sep = coverDist();
+    const open = sep >= OPEN_DIST;
     const hurried = rush < PRESSURE;
     if (open || hurried || elapsed >= LOOK_S) {
       thrown = true;
+      // ⚠️ IF YOU ARE SMOTHERED HE THROWS IT AWAY. Before this, the ball came to
+      // you on literally every down however badly you were covered, and a
+      // contested ball in this game is still often catchable — which is how you
+      // scored a million touchdowns. Now being blanketed costs you the down,
+      // which is what getting open is supposed to be worth.
+      if (!open && !hurried && sep < SMOTHERED) {
+        try {
+          __td.sayComment('🌟 You were blanketed — he threw it away.');
+          __td.endPlay('incomplete', 'THROWN AWAY');
+        } catch (e) {}
+        return;
+      }
       try {
         __td.sayComment(open ? '🌟 You are OPEN — here it comes!'
                       : hurried ? '🌟 He is under pressure — go get it!'
@@ -191,9 +226,10 @@
         '<div><b>3</b><span>Stay covered for three seconds and he throws it anyway &mdash; into coverage.</span></div>' +
         '<div><b>4</b><span>Catch it and you are off. From there it is the game you know.</span></div>' +
       '</div>' +
-      '<div class="ss-warn">⚠️ A showcase game: it pays the normal coins, but it does <b>not</b> touch ' +
-        'your win streak, your ranked stars, your coaches or your record book &mdash; you are playing ' +
-        'a different game from the one those are measured on.</div>';
+      '<div class="ss-warn">⚠️ This one <b>counts for your 🔥 win streak</b> and pays the normal ' +
+        'coins &mdash; so it is not a walkover: get buried by your defender and the quarterback ' +
+        'throws it away instead of forcing it. It stays off your ranked stars, your coaches and ' +
+        'your record book, which measure the eleven-man game.</div>';
   }
 
   function open() { render(); const m = $('star-modal'); if (m) m.style.display = 'flex'; gameKeyboard(false); }
