@@ -732,7 +732,10 @@ function snap(time) {
   // warning!), and the coverage is called out some of the time so you learn it.
   if (G.blitz) sayComment(pick(['BLITZ!!', "They're coming!", 'Pressure!']));
   else if (Math.random() < 0.5) sayComment(pick(['Hut, hut!', 'Here we go!', 'The snap!']));
-  else if (Math.random() < 0.55) sayComment(G.coverage === 'zone'
+  // 🗣️ …and the coverage call-out is skipped when the 🗣️ button is already
+  // showing you the same thing — it was the duplicate half of the stuck-bar bug.
+  else if (!(window.TDAudible && TDAudible.showing()) && Math.random() < 0.55)
+    sayComment(G.coverage === 'zone'
              ? pick(['Zone coverage!', "They're in zone!"])
              : pick(['Man to man!', 'Press coverage!']));
 }
@@ -3946,14 +3949,15 @@ function setupPlay(next) {
     if (window.TDTour) TDTour.maybeStart('offense');   // 🎓 first-snap offense tour
     // 🗣️ AUDIBLES (audible.js) — the defense's plan for this down was just made
     // in callPlay, and until now you only found out about it AS the ball was
-    // snapped. Give audible.js the plan and read out what they are SHOWING, so
-    // there is something to read before you change the play. (It disguises the
-    // look about one time in five, so the tell is a read and not an answer key.)
-    if (window.TDAudible) {
-      TDAudible.newPlay(G.blitz, G.coverage);
-      const t = TDAudible.tell();
-      if (t) sayComment(t);
-    }
+    // snapped. Hand audible.js the plan so there is something to read before
+    // you change the play. (It disguises the look about one time in five, so
+    // the tell is a read and not an answer key.)
+    // ⚠️ THE TELL IS NOT SPOKEN. It used to go through sayComment and it was
+    // the line that broke the announcer bar — a fourth voice on a bar that was
+    // already full, saying almost exactly what main.js says 15ms later at the
+    // snap. It now lives ON the 🗣️ button instead: always readable, costs no
+    // screen time, and it is right where your thumb already is.
+    if (window.TDAudible) TDAudible.newPlay(G.blitz, G.coverage);
   }
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -4420,8 +4424,24 @@ function showBanner(text, big) {
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // The "announcer": pop a quick play-by-play call-out, then fade it out.
+// ⚠️ THE ANNOUNCER BAR WAS ON SCREEN 100% OF THE TIME (found 2026-09-13, from
+// Max: "it's stuck on the comments"). Measured over real downs: FOUR lines per
+// down arriving inside a ~1.6-second window, each wanting 1.2s of screen —
+// two of them 15ms apart and saying nearly the same thing. So the bar never
+// cleared, and it sits right across the middle of the field where the players
+// are. Two rules now keep it honest:
+//   • a line that arrives while another is still FRESH is DROPPED, not swapped
+//     in (a 15ms-apart pair used to flicker and only the loser was readable)
+//   • the hold is shorter, so a busy down gets gaps instead of a solid wall
+// Big moments do not come through here at all — TOUCHDOWN, FINAL and the rest
+// are showBanner — so dropping a crowded-out line only ever loses chatter.
+const COMMENT_HOLD = 600;     // was 850
+const COMMENT_FRESH = 320;    // don't replace a line younger than this
 function sayComment(text) {
   if (!G.comment) return;
+  const now = G.scene ? G.scene.time.now : 0;
+  if (G.commentAt && now - G.commentAt < COMMENT_FRESH && G.comment.visible) return;
+  G.commentAt = now;
   if (G.commentTween) G.commentTween.stop();
   G.comment.setText(text).setVisible(true).setAlpha(0);
   // The longest announcer lines — event names ("TRAINING CAMP HEAT — special
@@ -4432,7 +4452,7 @@ function sayComment(text) {
   G.comment.setScale(0.7 * fit);
   G.commentTween = G.scene.tweens.add({
     targets: G.comment, alpha: 1, scale: fit, duration: 180, ease: 'Back.Out',
-    yoyo: true, hold: 850,
+    yoyo: true, hold: COMMENT_HOLD,
     onComplete: () => { if (G.comment) G.comment.setVisible(false); }
   });
 }

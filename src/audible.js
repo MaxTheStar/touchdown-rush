@@ -104,8 +104,17 @@
     wasRight = false;
   }
 
-  // The line main.js reads out at the line of scrimmage.
+  // The line main.js used to read out at the line of scrimmage.
+  // ⚠️ KEPT, BUT NOT SPOKEN ANY MORE. Saying this every single down is what
+  // broke the announcer bar (see main.js's sayComment note): it was a fourth
+  // voice on a bar that was already full, and main.js says almost the same
+  // thing 15ms later at the snap. The tell now shows on the 🗣️ BUTTON, which
+  // costs no screen time at all and is where you are already looking. This
+  // getter stays for the panel and for tests.
   function tell() { return showing ? pick(TELLS[showing]) : null; }
+
+  // The short version that fits under the 🗣️ icon on the button.
+  const BTN_LABEL = { blitz: 'BLITZ?', man: 'MAN?', zone: 'ZONE?' };
 
   // ---- the panel ---------------------------------------------------------
   function render() {
@@ -167,7 +176,15 @@
     const ready = g.state === 'presnap' && !!showing && !g.trickArmed;
     document.body.classList.toggle('audible-ready', ready);
     const b = $('btn-audible');
-    if (b) b.classList.toggle('armed', !!armed);
+    if (b) {
+      b.classList.toggle('armed', !!armed);
+      // 🗣️ The tell, written on the button: what they are SHOWING you, or the
+      // call you have made. This is the readout that replaced the spoken line.
+      const small = b.querySelector('small');
+      if (small) small.textContent = armed ? armed.name.split(' ')[0]
+                                   : (showing ? BTN_LABEL[showing] : 'AUDIBLE');
+      b.classList.toggle('reading', ready && !armed);
+    }
     // 🎩 Arming the trick overwrites these same routes, so it cancels the
     // audible — one call at the line, not two.
     if (g.trickArmed && armed) { armed = null; wasRight = false; }
