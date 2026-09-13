@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.0 — cache-buster is `?v=143` in `index.html`.
+- **Version:** v3.1 — cache-buster is `?v=144` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -152,13 +152,35 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     new board).** Artifact `0fe7e588-1808-4f12-90d8-ff516e96b77f`. **Theme: the parts of real football
     this game has never had.** Every pick was grepped for first and the check was unusually clean —
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
-    or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper ·
+    or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
     ③⏱️ Spike It & Kneel It · ④📊 Self-Scouting · ⑤🚩 Penalties · ⑥⏰ Hurry-Up Offense · ⑦🔥 Momentum ·
     ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
     a blowout. Both must be tuned by MEASUREMENT.
+  - **🧮 v3.1 — FOURTH-DOWN HELPER: ADVICE, NOT AUTOPILOT.** Six rules checked in order, each a real
+    piece of football reasoning (last minute behind → go, or kick if three actually ties · last minute
+    ahead → make them go the length of the field · own half with more than a yard → punt, because a
+    turnover there is how you lose a close game · in range → take the points, unless it is short
+    yardage at the goal line where seven beats three · short past midfield → go · else punt).
+    ⚠️ **It highlights a button and never presses one** — a helper that took the decision away would
+    turn the most interesting moment in football into a cutscene. ⚠️ **The panel's second button is
+    BOTH the field goal and the punt** (main.js relabels it), so those two answers highlight the same
+    button; getting that wrong would point at a button that is not on screen.
+  - **🧮 `advise()` IS A PURE FUNCTION AND THAT IS THE DESIGN, NOT A DETAIL.** It takes a plain context
+    object — no globals, no DOM — so every situation in the game could be checked without playing a
+    down: four distances × every 5-yard line × early and late, confirming it never recommends a field
+    goal from out of range. **When a feature's whole job is a judgement, make the judgement a pure
+    function and the verification stops being guesswork.**
+  - **🐛 v3.1's BUG WAS THE WORST POSSIBLE ANSWER: "4th and 7, three down, fifty seconds left" → PUNT.**
+    The late-game rule read `!!c.last && clock <= 120`, i.e. it required the caller to pass a `last`
+    flag ALONGSIDE the `quarter` it was already being handed. A caller that passed `quarter: 4,
+    clock: 50` and no flag fell straight through to the ordinary "your own half → punt" rule. It now
+    derives lateness from the quarter, with the flag left as an override for a caller that genuinely
+    knows better (overtime). **LESSON: a pure function must not depend on the caller repeating itself
+    correctly — if you can derive it from what you were already given, derive it.**
+
   - **📣 v3.0 — HOME CROWD: THE STADIUM FINALLY PLAYS FOOTBALL.** Eleven rounds of building seats and
     the stadium only ever paid coins. Loudness = 🏟 seats (`stadium.js` level/18) × 0.55 + 🔥 streak
     (capped at six) × 0.30 + 0.15, all **multiplied by the OCCASION** (playoff/boss 1.0, rival 0.85,
