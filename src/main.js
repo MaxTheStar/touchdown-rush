@@ -2719,7 +2719,11 @@ const DefenseSim = (function () {
   function play() {
     const dDef = window.TDDraft ? TDDraft.teamOverall().def : 65;
     const dStop = Math.min(1, Math.max(0, (dDef - 60) / 39));                 // 0..1: your defense strength
-    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop);
+    // 📣 …times the HOME CROWD (crowd.js): the same noise number beginGame folds
+    // into G.oppOff, so the live game and this sim can never disagree about how
+    // loud it is. ×1 when the stands are empty or this file is missing.
+    const crowd = (window.TDCrowd && TDCrowd.cpuPowMult) ? TDCrowd.cpuPowMult() : 1;
+    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop) * crowd;
     const wxCatch  = window.TDWeather ? TDWeather.catchMult()  : 1;
     const wxFumble = window.TDWeather ? TDWeather.fumbleMult() : 1;
     const hawk = (window.TDShop && TDShop.hawkBoost) ? TDShop.hawkBoost() : 0;  // 🖐 Ball Hawk: more takeaways
@@ -3230,6 +3234,7 @@ function enterMenu() {
   if (window.TDRoad) TDRoad.onMenu();            // 🎟️ refresh the Reward Road bar (glows when claimable)
   if (window.TDCards) TDCards.onMenu();          // 🃏 refresh the unopened-packs badge on SHOP
   if (window.TDStadium) TDStadium.onMenu();      // 🏟️ refresh the "can afford an upgrade" badge
+  if (window.TDCrowd) TDCrowd.onMenu();          // 📣 refresh the crowd-noise readout
   if (window.TDDraft && TDDraft.onMenu) TDDraft.onMenu();   // 🌱 refresh the TEAM growth badge
   if (window.TDNemesis) { TDNemesis.ensure(); TDNemesis.onMenu(); }   // 😈 pick/refresh your rival
   if (window.TDStats && TDStats.refreshTracker) TDStats.refreshTracker();  // 🌍 side panel
@@ -3385,6 +3390,13 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDStaff && TDStaff.oppOffMult) G.oppOff *= TDStaff.oppOffMult();
   // ⭐ …and a 🧱 WALL on your defensive line clogs their attack up too.
   if (window.TDTraits && TDTraits.oppOffMult) G.oppOff *= TDTraits.oppOffMult();
+  // 📣 HOME CROWD (crowd.js) — your own stadium, finally doing something on the
+  // field instead of just selling hot dogs. Loudest with seats built, a win
+  // streak going and a real occasion; capped at −6%, the same ceiling a maxed
+  // coach gets. Exactly ×1 with a starter stadium and no streak, so a brand-new
+  // save plays precisely as it did before. ⚠️ It must be read AFTER the flags
+  // above are set (drill / all-star / house), because those empty the stands.
+  if (window.TDCrowd && TDCrowd.oppOffMult) G.oppOff *= TDCrowd.oppOffMult();
 
   // 📈 Player progression: your leveled-up team plays a little stronger — a
   // gentle, CAPPED edge on YOUR offense & defense only (never the opponent's),
