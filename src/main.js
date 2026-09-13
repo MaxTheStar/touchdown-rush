@@ -1673,12 +1673,28 @@ function showFourthDownChoice() {
     if (can) fakeBtn.textContent = TDSpecial.fakeLabel(inFieldGoalRange()) +
       ' · ' + TDSpecial.fakesRemaining() + ' left';
   }
+  // 🧮 FOURTH-DOWN HELPER (fourth.js) — the coach's read on this exact spot.
+  // Everything it thinks with is already known right here, so this is the one
+  // place that has to hand it over. It highlights a button; it never presses
+  // one. Without the module the panel is exactly what it always was.
+  if (window.TDFourth) TDFourth.show({
+    togo:    Math.max(0, Math.round(G.firstDownYards - G.losYards)),
+    spot:    Math.round(G.losYards),
+    fgDist:  Math.round(fieldGoalDistance()),
+    inRange: inFieldGoalRange(),
+    quarter: G.quarter,
+    clock:   G.clock,
+    my:      G.score,
+    opp:     G.oppScore,
+    last:    G.quarter >= NUM_QUARTERS,
+  });
   if (panel) panel.style.display = 'flex';
 }
 
 function hideFourthDownChoice() {
   const panel = document.getElementById('fourth-down');
   if (panel) panel.style.display = 'none';
+  if (window.TDFourth) TDFourth.clear();     // 🧮 drop the recommendation with it
 }
 
 // The player picked an option ('play' or 'kick').
