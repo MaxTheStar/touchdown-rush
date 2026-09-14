@@ -4076,7 +4076,9 @@ function setupTouchButtons() {
   // The main-menu buttons: ◀ ▶ flip teams, PLAY starts the game
   bindTapEl('tm-prev', () => menuNav(-1));
   bindTapEl('tm-next', () => menuNav(1));
-  bindTapEl('tm-play', startGameWithTeam);
+  // ⛶ …and PLAY is the gesture that takes the game full screen (see
+  // autoFullscreen — a browser only allows this inside a real tap).
+  bindTapEl('tm-play', () => { autoFullscreen(); startGameWithTeam(); });
 
   // Difficulty picker on the menu (Easy / Medium / Hard)
   bindTapEl('diff-easy',   () => setDifficulty('easy'));
@@ -4146,20 +4148,65 @@ function setupTouchButtons() {
   if (gc && window.ResizeObserver) new ResizeObserver(refit).observe(gc);
 }
 
-// Fill the whole screen (works in Safari on iPad, and elsewhere). We fullscreen
-// the WHOLE page so the touch buttons stay visible on top of the field.
-function toggleFullscreen() {
-  const doc = document;
-  const el = doc.documentElement;
-  const isFull = doc.fullscreenElement || doc.webkitFullscreenElement;
-  if (!isFull) {
-    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  } else {
-    if (doc.exitFullscreen) doc.exitFullscreen();
-    else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
-  }
+// ============================================================
+// ⛶ FULL SCREEN — fill the whole screen to play (v3.3, Max asked for it)
+// ------------------------------------------------------------
+// ⚠️ A BROWSER WILL NOT LET A PAGE GO FULL SCREEN ON ITS OWN. requestFullscreen
+// only works inside a real user gesture (a tap or a click), so "just make it
+// full screen when I open it" is impossible on page load — every browser blocks
+// it, deliberately, so a web page can't hijack your screen. What IS allowed is
+// going full screen on a tap you were making anyway, so that is what this does:
+// the first time you press ▶ PLAY, the game takes the whole screen with you.
+//
+// You stay in charge of it. The ⛶ button toggles it any time, and turning it
+// OFF that way is remembered (`tdr-fullscreen`), so the game stops doing it
+// until you ask again. Nothing about the football changes either way.
+//
+// ⚠️ iPhone Safari has no fullscreen API at all (iPad and computers do). There
+// the honest answer is "Add to Home Screen", which gives a real full-screen app
+// — so `fsSupported()` says no rather than failing silently, and the button
+// explains instead of doing nothing.
+const FS_KEY = 'tdr-fullscreen';
+function fsSupported() {
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen);
+}
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function fsWanted() {
+  try { return localStorage.getItem(FS_KEY) !== '0'; } catch (e) { return true; }
+}
+function fsRemember(on) {
+  try { localStorage.setItem(FS_KEY, on ? '1' : '0'); } catch (e) {}
+}
+function enterFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   setTimeout(() => { if (window.game && game.scale) game.scale.refresh(); }, 300);
+}
+function leaveFullscreen() {
+  if (document.exitFullscreen) document.exitFullscreen();
+  else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  setTimeout(() => { if (window.game && game.scale) game.scale.refresh(); }, 300);
+}
+// We fullscreen the WHOLE page, not just the canvas, so the touch buttons stay
+// visible on top of the field.
+function toggleFullscreen() {
+  if (!fsSupported()) {
+    sayComment && sayComment('Add to Home Screen for full screen on iPhone!');
+    showBanner && showBanner('⛶ NOT AVAILABLE ON IPHONE', false);
+    return;
+  }
+  if (!isFullscreen()) { fsRemember(true); enterFullscreen(); }
+  else { fsRemember(false); leaveFullscreen(); }   // turning it off means "stop doing it"
+}
+// Called from INSIDE the ▶ PLAY tap — a real gesture, which is the only moment
+// the browser will allow this. Silent and harmless when it can't or shouldn't.
+function autoFullscreen() {
+  if (!fsSupported() || isFullscreen() || !fsWanted()) return;
+  enterFullscreen();
 }
 
 // ---- 👑 MAXWELL boss-battle toggle (on the menu) --------------------------
