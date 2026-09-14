@@ -4204,7 +4204,18 @@ function toggleFullscreen() {
 }
 // Called from INSIDE the ▶ PLAY tap — a real gesture, which is the only moment
 // the browser will allow this. Silent and harmless when it can't or shouldn't.
+//
+// ⚠️ THERE IS NO BUTTON FOR THIS, ON PURPOSE (Max, 2026-09-13): CrazyGames will
+// not accept a game carrying its own full-screen button, and their build is a
+// copy of this repo. So full screen is something the game just DOES for you on
+// the tap you were already making. Press Escape (or swipe down on an iPad) to
+// leave it; the next ▶ PLAY puts you back.
+//
+// ⚠️ …and the portal build must not do it either — inside their iframe a
+// fullscreen request either fails or fights their own control. `body.portal` is
+// the one switch that turns this whole feature off for that build.
 function autoFullscreen() {
+  if (document.body && document.body.classList.contains('portal')) return;
   if (!fsSupported() || isFullscreen() || !fsWanted()) return;
   enterFullscreen();
 }
