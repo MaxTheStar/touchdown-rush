@@ -256,7 +256,34 @@ function allTeams() {
   // the newspaper, the poster and everything else all see it without knowing
   // this feature exists. It returns a COPY, never a mutated NFL_TEAMS entry.
   if (window.TDRebrand) list = TDRebrand.apply(list);
-  return list;
+  return dedupeCodes(list);
+}
+
+// ⚠️ TWO TEAMS MUST NEVER SHARE A THREE-LETTER CODE, and until v3.2 they could.
+// Found from a real report (Max, 2026-09-13): he had designed a custom kit and
+// called it "seahawks", so `abbrFor()` gave it the code SEA — the code the REAL
+// Seattle already owns. Nothing crashed; it was quieter than that. The code is
+// the game's primary key: `teamByAbbr` does a `.find()`, season.js saves you as
+// `you:'SEA'`, the playoff bracket stores codes, and 🚚 rebrand matches on one.
+// A `.find()` returns the FIRST hit, so one of the two teams became permanently
+// invisible to every lookup in the game while still sitting in the menu list.
+//
+// The real team always wins its own code. A later entry that collides keeps its
+// name and colours and gets a fresh code built from its own name, so a custom
+// kit stays yours and stays REACHABLE instead of being shadowed.
+function dedupeCodes(list) {
+  const seen = Object.create(null);
+  return list.map(t => {
+    if (!t || !t.abbr) return t;
+    if (!seen[t.abbr]) { seen[t.abbr] = 1; return t; }
+    const base = String(t.name || 'KIT').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 2) || 'MY';
+    let code = (base + '2').slice(0, 3), n = 2;
+    while (seen[code]) { n++; code = (base + n).slice(0, 3); }
+    seen[code] = 1;
+    // ⚠️ ratingKey keeps pointing at whatever it pointed at, so a renamed code
+    // never changes how a team actually plays (the v1.97 lesson).
+    return Object.assign({}, t, { abbr: code, ratingKey: t.ratingKey || t.abbr });
+  });
 }
 
 const config = {

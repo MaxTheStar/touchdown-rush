@@ -56,11 +56,23 @@
     return customs.map(c => ({ abbr: c.abbr, name: c.name, jersey: c.jersey, helmet: c.helmet }));
   }
 
-  // A short scoreboard code from the name (unique among YOUR kits).
+  // A short scoreboard code from the name — unique among YOUR kits AND among the
+  // real teams. ⚠️ It used to only check your own kits, so naming a kit
+  // "seahawks" handed it the code SEA, which the real Seattle already owns. Two
+  // teams sharing a code makes one of them invisible to every lookup in the game
+  // (main.js's dedupeCodes now catches that too, but the right place to not
+  // create the clash is here).
+  function takenByRealTeam(abbr) {
+    try {
+      if (window.TDGame && TDGame.nflAbbrs) return TDGame.nflAbbrs().indexOf(abbr) >= 0;
+    } catch (e) {}
+    return false;
+  }
   function abbrFor(name) {
     let base = (name || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'MY';
     let abbr = base, n = 2;
-    while (customs.some(c => c.abbr === abbr && c.id !== editing)) { abbr = base.slice(0, 2) + n; n++; }
+    const clash = a => customs.some(c => c.abbr === a && c.id !== editing) || takenByRealTeam(a);
+    while (clash(abbr)) { abbr = (base.slice(0, 2) + n).slice(0, 3); n++; }
     return abbr;
   }
 
