@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.1 — cache-buster is `?v=144` in `index.html`.
+- **Version:** v3.4 — cache-buster is `?v=147` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -159,6 +159,41 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
     a blowout. Both must be tuned by MEASUREMENT.
+  - **🚚 v3.2 — "WE ARE STUCK ON THE COMETS AND THERE ARE NO SEAHAWKS ANYMORE" (Max, 2026-09-13).**
+    ⚠️ **I first misread that as "stuck on the comments"** and went off and fixed the announcer bar
+    (v2.8 — a real problem, and the measurement stood up, but it was not what he was reporting). The
+    Comets were the answer: his save held a 🚚 Relocation & Rebrand `{"base":"SEA","city":"Fortree",
+    "name":"COMETS"}`, and that feature REPLACES your team's entry by design (v1.97) — which is
+    exactly why Seattle had vanished rather than gained a second row. ↩️ BACK TO NORMAL undoes it and
+    does work: verified back to SEAHAWKS, navy `#002244` + action green `#69BE28`, all 32 teams
+    matching the table. **LESSON: read the bug report literally before reaching for the nearest
+    plausible bug.**
+  - **🐛 …AND UNDERNEATH IT, A REAL ONE: TWO TEAMS COULD SHARE A THREE-LETTER CODE.** He had also
+    designed a custom kit named "seahawks", so `uniform.js`'s `abbrFor()` gave it the code **SEA** —
+    the code the real Seattle owns. `abbrFor()` only ever checked YOUR OTHER KITS for a clash, never
+    the 32 real teams. ⚠️ **The code is this game's primary key**: `teamByAbbr` does a `.find()`,
+    season.js saves you as `you:'SEA'`, the playoff bracket stores codes, rebrand matches on one. A
+    `.find()` returns the FIRST hit, so one of the two teams was **permanently invisible to every
+    lookup in the game while still sitting in the menu**. Nothing crashed; it was quieter than that.
+    Fixed at both ends: `abbrFor()` now avoids real-team codes (so the clash is never created), and
+    `allTeams()` ends in a new **`dedupeCodes()`** — the real team keeps its code, a later collider
+    keeps its name and colours and gets a fresh code from its own name (his kit is now `SE2`, kept
+    and reachable rather than deleted). ⚠️ `ratingKey` is carried through so a re-coded team still
+    plays exactly as before (the v1.97 rule: a cosmetic change must never become a gameplay change).
+  - **⛶ v3.3 → v3.4 — FULL SCREEN, AND THE HONEST ANSWER TO "MAKE IT FULL SCREEN WHEN I OPEN IT".**
+    ⚠️ **No page can do that.** `requestFullscreen` only works inside a real user gesture; every
+    browser blocks it on load, deliberately, so a page cannot hijack your screen. What IS allowed is
+    going full screen on a tap you were making anyway — so the ▶ PLAY tap now takes the whole screen
+    with you. Escape leaves it; the next PLAY puts you back.
+  - **⚠️ v3.4 — THERE IS NO FULL-SCREEN BUTTON, AND THERE MUST NOT BE (Max's call).** CrazyGames will
+    not accept a game carrying its own full-screen control — it clashes with theirs — and **the portal
+    build is a COPY of this repo**, so the hide rule belongs in the source, unscoped, not in a recipe
+    step somebody has to remember. v3.3 briefly scoped it to `body.portal` and that was the wrong way
+    round. ⚠️ **`autoFullscreen()` also returns early on `body.portal`**, because inside their iframe a
+    fullscreen request either fails or fights their own control — that one class switches the whole
+    feature off for the portal copy. ⚠️ **iPhone Safari has no fullscreen API at all** (iPad and
+    computers do), so `fsSupported()` says no rather than failing silently.
+
   - **🧮 v3.1 — FOURTH-DOWN HELPER: ADVICE, NOT AUTOPILOT.** Six rules checked in order, each a real
     piece of football reasoning (last minute behind → go, or kick if three actually ties · last minute
     ahead → make them go the length of the field · own half with more than a yard → punt, because a
