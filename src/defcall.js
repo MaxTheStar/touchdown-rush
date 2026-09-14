@@ -130,7 +130,18 @@
   }
 
   // main.js: their drive just started (or the panel came back). Fresh call.
-  function show() { armed = null; paint(); refresh(); }
+  // ⚠️ AND CHECK NOTHING IS SITTING ON TOP OF US. These buttons live at z-index
+  // 40; the 🗣️ audible panel and the ⚡ power picker are full-screen overlays at
+  // 79. main.js closes them on a possession change (closePreSnapPanels), and
+  // this is the belt to that braces: the panel that OWNS these buttons refuses
+  // to come up underneath a leftover overlay. Max could not pick a defensive
+  // call at all because of exactly this, and nothing looked broken — the
+  // buttons were drawn, lit and listening, just unreachable.
+  function clearCovers() {
+    try { if (window.TDAudible && TDAudible.close) TDAudible.close(); } catch (e) {}
+    try { if (window.TDPowerup && TDPowerup.close) TDPowerup.close(); } catch (e) {}
+  }
+  function show() { armed = null; clearCovers(); paint(); refresh(); }
 
   // main.js calls this every time the panel repaints. Two jobs:
   //  • hide the three calls when the next tap is NOT a play (a drive that has

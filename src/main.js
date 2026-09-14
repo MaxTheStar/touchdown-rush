@@ -1718,6 +1718,15 @@ function showFourthDownChoice() {
   if (panel) panel.style.display = 'flex';
 }
 
+// ⚠️ Shut every "at the line" overlay. Called whenever the ball changes hands.
+// Any future pre-snap panel belongs on this list — the rule is that a choice you
+// make before a snap must never still be on screen after the possession ends.
+function closePreSnapPanels() {
+  try { if (window.TDAudible && TDAudible.close) TDAudible.close(); } catch (e) {}
+  try { if (window.TDPowerup && TDPowerup.close) TDPowerup.close(); } catch (e) {}
+  hideFourthDownChoice();
+}
+
 function hideFourthDownChoice() {
   const panel = document.getElementById('fourth-down');
   if (panel) panel.style.display = 'none';
@@ -2007,6 +2016,19 @@ function redYardsFromGoal(y) { return (y - ENDZONE) / PX_PER_YARD; }
 function startCpuDrive() {
   // A safety net: if somehow there's no opponent, just kick off to the player.
   if (!G.oppTeam) { startKickoff(); return; }
+  // ⚠️ THE BALL HAS CHANGED HANDS, SO EVERY PRE-SNAP PANEL OF YOURS IS OVER.
+  // Found from a real report (Max, 2026-09-13): "you can't even pick which
+  // defense you want to call." The 🛡 call buttons were fine — something was
+  // sitting ON them. Both the 🗣️ audible panel and the ⚡ power picker are
+  // full-screen overlays at z-index 79, the 🛡 panel sits at 40, and the only
+  // thing that ever closed the audible panel was `TDAudible.sync()`, which runs
+  // from `updateTrickBtn()` — i.e. only when a play is SET UP or SNAPPED. A
+  // possession change is neither. So a panel still open when your drive ended
+  // stayed open, invisible in the sense that nobody thinks to look for it, and
+  // swallowed every tap meant for the defensive calls underneath.
+  // Closing them here is the fix at the right level: it is not about those two
+  // features, it is that YOUR pre-snap choices cannot outlive your possession.
+  closePreSnapPanels();
   // After a turnover, they take over right where it happened; otherwise a normal
   // possession starts at their own 25.
   const spot = (G.turnoverSpotCpu != null) ? G.turnoverSpotCpu : 25;
