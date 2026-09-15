@@ -723,6 +723,7 @@ function update(time, delta) {
 // ============================================================
 function snap(time) {
   G.state = 'live';
+  if (window.TDClock) TDClock.hide();   // ⏱️ the ball is gone: no spiking it now
   G.snapTime = time;
   G.hasPassed = false;
   G.replay = [];              // start a fresh film reel for this play
@@ -1948,6 +1949,50 @@ function updateTimeoutBtn() {
   if (!b) return;
   b.innerHTML = '⏱<small>' + G.timeouts + '</small>';
   b.classList.toggle('off', G.timeouts <= 0);
+}
+
+// ⏱️ SPIKE IT / KNEEL IT (clockplay.js) — a play whose whole point is the clock.
+// clockplay.js decided WHICH play and what it costs; this just performs it.
+// Both are ordinary dead-ball endings, so everything downstream (the quarter
+// roll-over, the 4th-down panel, the CPU getting the ball) already works — this
+// sets G.next exactly the way endPlay does and lets the machinery take over.
+//
+// ⚠️ IT DOES NOT GO THROUGH endPlay. A spike is not an incomplete pass and a
+// kneel is not a tackle: there is no ball carrier to measure, no receiver stat
+// to log, nothing for the Coach's Challenge to review and nobody to celebrate.
+// Routing it through endPlay would have quietly filed a fake catch in the box
+// score and offered you a flag on a play the referee never had to judge.
+function runClockPlay(play) {
+  if (!play || G.state !== 'presnap' || G.gameOver) return;
+
+  // ⚠️ A KNEEL LOSES A YARD — BUT NEVER INTO YOUR OWN END ZONE. Backing over
+  // your own goal line is a SAFETY, two points for them, and "I pressed the
+  // win-the-game button and lost 2 points" is the worst surprise this game
+  // could hand a nine-year-old. Real teams don't kneel on their own 1 either.
+  const spot = Math.max(1, Math.min(99, G.losYards + (play.yards || 0)));
+
+  const nd = G.down + 1;   // a clock play always costs you the down
+  G.next = (nd > 4)
+    ? { los: 20, down: 1, fd: 30, fresh: true }              // (can't happen: 4th down is never offered)
+    : { los: spot, down: nd, fd: G.firstDownYards };
+
+  // The clock. A spike stops it: 6 seconds instead of the 32 an ordinary play
+  // burns. A kneel feeds it: 42, MORE than a normal play, because the offence
+  // stands there and runs the play clock down first.
+  advanceClock(play.secs);
+
+  if (play.kind === 'kneel') {
+    sayComment(pick(['Takes a knee!', 'Victory formation!', 'He kneels it down.']));
+    showBanner('🧎 KNEEL  ·  CLOCK RUNNING', false);
+  } else {
+    sayComment(pick(['Spikes it! Clock stopped.', 'He throws it down — clock stops!', 'Spiked!']));
+    showBanner('🏈 SPIKE  ·  CLOCK STOPPED', false);
+  }
+
+  freezeEveryone();
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1100;   // a shorter beat than a real play: nothing happened
+  updateHUD();
 }
 
 // Called at a dead-ball boundary AFTER the clock's been charged. Rolls into
@@ -4040,6 +4085,16 @@ function setupPlay(next) {
     // screen time, and it is right where your thumb already is.
     if (window.TDAudible) TDAudible.newPlay(G.blitz, G.coverage);
   }
+  // ⏱️ SPIKE IT / KNEEL IT (clockplay.js) — is one of the two clock plays the
+  // right call from here? It answers "no" almost every down and shows nothing.
+  // ⚠️ Pass null on 4th down: that down has its own panel, and a clock play
+  // there would just hand the ball over.
+  if (window.TDClock) TDClock.update(G.down === 4 ? null : {
+    down: G.down, quarter: G.quarter, clock: G.clock,
+    my: G.score, opp: G.oppScore, spot: Math.round(G.losYards),
+    quarters: NUM_QUARTERS, overtime: G.overtime,
+    stopped: G.clockStopped,
+  });
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
 
@@ -4082,6 +4137,9 @@ function setupTouchButtons() {
 
   // ⏱ Timeout + 🧩 Formation + 🎩 Trick play (in-game), and the menu HOW TO / Maxwell toggle
   bindTapEl('btn-timeout', callTimeout);
+  // ⏱️ SPIKE IT / KNEEL IT — clockplay.js owns the tap and hands back the play
+  // it decided on; runClockPlay just performs it.
+  if (window.TDClock) TDClock.setup(runClockPlay);
   bindTapEl('btn-formation', cycleFormation);
   bindTapEl('btn-trick', callTrick);
   bindTapEl('open-howto', () => { if (window.TDTour) { TDTour.reset(); TDTour.start('menu', true); } });  // 🎓 replay ALL tutorials
