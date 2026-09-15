@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.4 — cache-buster is `?v=147` in `index.html`.
+- **Version:** v3.6 — cache-buster is `?v=149` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -153,8 +153,8 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     this game has never had.** Every pick was grepped for first and the check was unusually clean —
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
     or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
-    ③⏱️ Spike It & Kneel It · ④📊 Self-Scouting · ⑤🚩 Penalties · ⑥⏰ Hurry-Up Offense · ⑦🔥 Momentum ·
-    ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
+    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting · ⑤🚩 Penalties · ⑥⏰ Hurry-Up Offense ·
+    ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
@@ -193,6 +193,54 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     fullscreen request either fails or fights their own control — that one class switches the whole
     feature off for the portal copy. ⚠️ **iPhone Safari has no fullscreen API at all** (iPad and
     computers do), so `fsSupported()` says no rather than failing silently.
+
+  - **⏱️ v3.6 — SPIKE IT & KNEEL IT (Round 12, pick ③, `src/clockplay.js`).** The two plays where the
+    POINT of the play is the clock, and they are OPPOSITES — which is the whole lesson. 🏈 SPIKE costs
+    a down, gains nothing and **stops** the clock (6s, against the 32 an ordinary play burns and the 12
+    an incompletion costs — a spike is quicker than both). 🧎 KNEEL costs a down, loses a yard and
+    **feeds** the clock (42s, MORE than a normal play, because the offence milks the play clock first).
+    Three kneels = 126s, which is most of a 150s quarter — so "can I still run this out?" is literally
+    `clock <= 3 kneels` in the code rather than a number somebody picked, and **three kneels from 2:00
+    with the lead really does end the game** (verified: 120 → 0 → gameover).
+  - **⏱️ ONE BUTTON, BECAUSE ONLY ONE OF THEM IS EVER RIGHT.** Behind = spike, ahead = kneel; the
+    button already knows which and relabels itself (cool teal 🏈 / warm orange 🧎, so you can tell them
+    apart without reading). ⚠️ **AND IT IS NOT PERMANENT FURNITURE** — `display` starts at `none` and
+    it is only shown at the line of scrimmage when a clock play is genuinely the call: **3.7% of
+    downs**. That is the ONLY reason a phone can afford it. `#ingame-ctrls` is already **full at five**
+    (the v2.5 warning printed above it: a sixth button pushed the row to x = −11 at 375px and sliced
+    the ⏱ button off). It mirrors ⚡ POWER-UPS across the screen instead. Measured at 375×812:
+    **0 collisions**, 163px clear above the D-pad, 219px from ⚡, 66×50 tap target, no x-scroll.
+  - **⏱️ IT DOES NOT GO THROUGH `endPlay`, ON PURPOSE.** A spike is not an incomplete pass and a kneel
+    is not a tackle: there is no carrier to measure, no catch to file, nothing for the 🚩 Coach's
+    Challenge to review and nobody to celebrate. Routing it through `endPlay` would have quietly put a
+    **fake catch in the box score** and offered you a flag on a play the referee never had to judge.
+    It sets `G.next` the same way `endPlay` does and lets the existing machinery (quarter roll-over,
+    the 4th-down panel, handing the ball to the CPU) take over — four surgical hooks in main.js, no
+    changes to the play loop.
+  - **🐛 v3.6's BUG WAS THE SAME SHAPE AS v3.1's: A COMMENT THAT ONE BRANCH DIDN'T IMPLEMENT.** The
+    header said "end of a half or end of a game, never in between" and **only the KNEEL branch checked
+    it**. So the spike came up at the end of Q1 and Q3 as well — the two quarter breaks a drive plays
+    straight through (`startBreak`: inside a half, your drive carries over) — spending a down to stop
+    a clock that was never going to cost you anything. `advise()` now **derives** the period from the
+    quarter, main.js hands over `quarters: NUM_QUARTERS` rather than this file keeping a second copy
+    of the constant, and the optional `lastPeriod` flag **can only widen the answer, never narrow it**
+    — which is what stops v3.1's "caller forgot the flag" bug coming back in the other direction.
+    ⚠️ **Found by sweeping 43,776 situations, not by playing.** (The ⏱️ drill needs no override at
+    all: it sets `quarter = NUM_QUARTERS` on purpose, so it derives correctly for free.)
+  - **⏱️ A KNEEL NEVER BACKS INTO YOUR OWN END ZONE.** That is a safety, and *"I pressed the
+    win-the-game button and gave the other team 2 points"* is the worst surprise this game could hand
+    a nine-year-old. Clamped at your own 1 (real teams don't kneel on their own 1 either) — verified
+    by kneeling from the 1 and checking the opponent's score never moved.
+  - **⚠️ `_verify.js` HAD SILENTLY STOPPED STARTING GAMES, AND IT WAS NOT A REGRESSION.** Every
+    autoplay run was stalling at `state: 'menu'` with zero errors. Cause: `beginGame` **holds the
+    kickoff** behind the 📋 Scouting Report card (`if (TDScout.pregame(…)) return;`), so the game does
+    not begin until you tap 🏈 LET'S PLAY — and the harness's `closeModals()` **hid** that card, which
+    is not the same thing: hiding it never fires the callback. Also `startGameWithTeam()` takes **no
+    arguments** (it reads `allTeams()[G.menuIndex]`), so the harness's `'SEA'` was doing nothing.
+    ⚠️ **Confirmed pre-existing by serving a pristine `git archive HEAD` copy on another port and
+    watching it fail identically** — worth doing before blaming your own diff. The harness now taps
+    `scout-go` for real. ⚠️ `autoplay` still cannot drive the `dsim` defence state; tap it through
+    with `__td.DefenseSim.tap()`.
 
   - **🧮 v3.1 — FOURTH-DOWN HELPER: ADVICE, NOT AUTOPILOT.** Six rules checked in order, each a real
     piece of football reasoning (last minute behind → go, or kick if three actually ties · last minute
