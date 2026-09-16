@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.6 — cache-buster is `?v=149` in `index.html`.
+- **Version:** v3.7 — cache-buster is `?v=150` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -193,6 +193,44 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     fullscreen request either fails or fights their own control — that one class switches the whole
     feature off for the portal copy. ⚠️ **iPhone Safari has no fullscreen API at all** (iPad and
     computers do), so `fsSupported()` says no rather than failing silently.
+
+  - **💥 v3.7 — HITS YOU CAN FEEL (`src/bighit.js`, Max's "aggressive physics" note, 2026-09-16).** NOT a
+    draft-board pick — one of four idea screenshots Max sent. ⚠️ **Most of that screenshot was already
+    in the game** and the check is why this is the only part that got built: heavy rain and thick snow
+    are `weather.js` (seven kinds, with real fumble/catch/FG effects), night games already dim the
+    stadium, and the players are already big-headed chibis with helmets and face masks. The one real
+    gap was the hitting. Screen shake existed but fired **only on `gain <= 1`**, so a defender could
+    run you down after a twelve-yard gain and the game said nothing at all — the best-looking plays
+    were the quietest. And there was **no tackle sound anywhere in the game**: sound.js knew a
+    touchdown fanfare and nothing about a collision.
+  - **💥 THE GRADE IS A V, NOT A LINE, AND THAT IS REAL FOOTBALL.** The hardest hits happen at BOTH
+    ends of a play — a sack or a stuff is a defender meeting you in the hole (1.00 / 0.90); a
+    chase-down after a long run is a defender catching you at FULL SPEED, so the curve climbs back to
+    0.85 by twenty yards. The ordinary five-yard wrap-up is the **quietest** thing on the chart
+    (0.38–0.45) because it is the thing that happens most. "More yards = bigger hit" gets the middle
+    of the play wrong; "fewer yards = bigger" makes the best run of the game land like nothing.
+    `grade()` is a pure function of a plain object, same shape as `TDFourth.advise()` and
+    `TDClock.advise()`.
+  - **💥 THE SOUND IS TWO SOUNDS, AND THE MIX IS THE WHOLE JOB.** `TDSound.hit(force)` = a THUMP whose
+    pitch **slides down as it dies** (that drop is what an ear reads as "heavy" — a tone that holds
+    its pitch is a beep) plus a burst of the already-baked hi-hat noise pushed through a **lowpass**,
+    which keeps the rumble and throws away the hiss: shoulder pads, not a snake. ⚠️ **Peak volume
+    0.085, deliberately UNDER the 0.10–0.12 the stings use** — a sting fires a few times a game, this
+    fires forty times, so it has to sit under the music rather than on top of it.
+  - **⚠️ TWO CAMERA KICKS ON ONE TACKLE READ AS A STUTTER, NOT A HIT.** bighit.js computes its own
+    kick from the grade, so reusing `TDJuice.bigHit()` for the dust would have shaken the screen
+    twice. juice.js therefore grew **`turf()`** — the same spray, no kick. ⚠️ Anything else that wants
+    particles at a collision should use `turf()` and do its own camera work, or use `bigHit()` and do
+    neither; never both.
+  - **🐛 AND THE SAME BUG SHAPE FOR THE THIRD TIME IN THREE FEATURES: `p.gain || 0`.** That turned "I
+    wasn't told what happened" into "he was buried for no gain" — 0.9, the second-loudest hit in the
+    game — so any caller that forgot the field got a maximum crunch on every single play. **A missing
+    value is not a zero.** `grade()` now returns 0 unless handed a real finite number. Same family as
+    v3.1's `last` flag and v3.6's period check: *derive it, or refuse to guess — never let a falsy
+    default stand in for a fact you were not told.*
+  - **♿ REDUCE MOTION TURNS OFF THE CAMERA KICK ONLY.** The crunch and the turf still play: sound and
+    dust are not motion sickness, and switching the whole feature off would take feedback away from
+    exactly the players who most need a play to be legible.
 
   - **⏱️ v3.6 — SPIKE IT & KNEEL IT (Round 12, pick ③, `src/clockplay.js`).** The two plays where the
     POINT of the play is the clock, and they are OPPOSITES — which is the whole lesson. 🏈 SPIKE costs
