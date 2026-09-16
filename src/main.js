@@ -1615,11 +1615,22 @@ function endPlay(result, customMsg) {
     // Announcer call-outs for how the run/tackle ended.
     if (result === 'tackle') {
       const gain = spot - G.losYards;
-      // 💥 A puff of turf and a small screen-kick where the hit landed — but
-      // only on hits worth feeling (a sack, or a run that got stuffed), so
-      // ordinary tackles don't rattle the screen on every single play.
-      if (window.TDJuice && G.ballCarrier && gain <= 1) {
-        TDJuice.bigHit(G.scene, G.ballCarrier.s.x, G.ballCarrier.s.y);
+      // 💥 THE HIT (bighit.js) — a crunch you can hear, a camera kick and a
+      // spray of turf, all scaled to how hard the tackle actually was.
+      // ⚠️ THIS USED TO FIRE ONLY ON `gain <= 1`, which meant a defender could
+      // run you down after a twelve-yard gain and the game said nothing at
+      // all — the best-looking plays were the quietest. bighit.js grades every
+      // tackle instead (hardest at BOTH ends: a sack, or a chase-down at full
+      // speed; quietest in the ordinary middle).
+      // Without the module this is exactly the line it always was.
+      if (G.ballCarrier) {
+        if (window.TDHit) {
+          TDHit.tackle(G.scene, G.ballCarrier.s.x, G.ballCarrier.s.y, {
+            gain: gain, sack: (G.ballCarrier === offense[0] && gain < 0),
+          });
+        } else if (window.TDJuice && gain <= 1) {
+          TDJuice.bigHit(G.scene, G.ballCarrier.s.x, G.ballCarrier.s.y);
+        }
       }
       if (G.ballCarrier === offense[0] && gain < 0) sayComment(pick(['SACKED!', 'Got him!', 'Down he goes!']));
       else if (gain >= 15) {

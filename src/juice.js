@@ -125,11 +125,27 @@
     });
   }
 
+  // ---- 🌱 TURF ONLY, NO CAMERA KICK --------------------------------------
+  // The same spray bigHit throws, without the shake. 💥 bighit.js (v3.7) works
+  // out its OWN camera kick from how hard the tackle was, so if it called
+  // bigHit() for the dust the screen would kick twice on one tackle — and two
+  // kicks a frame apart read as a stutter, not as a hit. `amount` is 0…1 and
+  // just scales how much turf flies.
+  function turf(scene, x, y, amount) {
+    if (!scene) return;
+    const a = Math.max(0, Math.min(1, amount == null ? 1 : amount));
+    spray(scene, x, y, {
+      count: Math.round(5 + 11 * a), colors: [0xdfe9d8, 0xbfd4b4, 0x8fae86],
+      dist: 30 + 30 * a, size: 4 + 2 * a, ms: 360 + 140 * a,
+      spin: false, fall: 14, round: true, shrink: true
+    });
+  }
+
   // ---- 🙌 A CATCH or a TAKEAWAY ------------------------------------------
   function pickup(scene, x, y) {
     if (!scene) return;
     ring(scene, x, y, 0x2ee6ff, 54, 360);
   }
 
-  window.TDJuice = { touchdown, bigHit, pickup };
+  window.TDJuice = { touchdown, bigHit, turf, pickup };
 })();

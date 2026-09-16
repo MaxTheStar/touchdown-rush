@@ -75,6 +75,56 @@
     src.start(when);
   }
 
+  // ---- 💥 THE CRUNCH — a tackle you can HEAR ----------------------------
+  // Until v3.7 a defender could flatten you and the game said nothing at all.
+  // A real hit is two sounds at once, so this is built the same way:
+  //   1. a THUMP  — a low tone that drops in pitch as it dies. That fast drop
+  //                 is what your ear reads as "something heavy just landed";
+  //                 a tone that holds its pitch sounds like a beep instead.
+  //   2. a CRUNCH — a burst of static (the same baked noise the hi-hat uses)
+  //                 pushed through a LOWPASS filter, which keeps the low
+  //                 rumble and throws away the hiss: shoulder pads, not a snake.
+  //
+  // `force` is 0…1 and everything scales off it — louder, lower and longer for
+  // a big hit. ⚠️ It is CLAMPED: main.js works force out from the play, and a
+  // stray number here would either be silent or blow the mix apart.
+  //
+  // ⚠️ THE MIX IS THE WHOLE JOB. These fire on nearly every play, so they have
+  // to sit UNDER the music rather than on top of it. Peak volume is 0.085 —
+  // below the 0.10–0.12 the stings use, because a sting happens a few times a
+  // game and this happens forty times.
+  function hit(force) {
+    if (!started || !ctx) return;
+    const f = Math.max(0, Math.min(1, force || 0));
+    const t0 = ctx.currentTime + 0.01;
+
+    // 1. the thump — pitch slides down as it fades (heavy, not beepy)
+    const osc = ctx.createOscillator();
+    const og  = ctx.createGain();
+    osc.type = 'triangle';
+    const hz = 108 - 30 * f;                       // a harder hit lands LOWER
+    osc.frequency.setValueAtTime(hz, t0);
+    osc.frequency.exponentialRampToValueAtTime(hz * 0.45, t0 + 0.13 + 0.07 * f);
+    og.gain.setValueAtTime(0.030 + 0.055 * f, t0);
+    og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15 + 0.10 * f);
+    osc.connect(og); og.connect(master);
+    osc.start(t0); osc.stop(t0 + 0.30);
+
+    // 2. the crunch — static with the hiss filtered off = pads colliding
+    if (noiseBuf) {
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+      src.playbackRate.value = 0.75 + 0.35 * (1 - f);   // big hits = slower, chunkier
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 900 + 1700 * f;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.020 + 0.050 * f, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09 + 0.06 * f);
+      src.connect(lp); lp.connect(g); g.connect(master);
+      src.start(t0);
+    }
+  }
+
   // ---- The drummer/conductor -------------------------------------------
   // Every 80ms we peek a little ahead and book the next few notes at exact
   // times on the audio clock (like a conductor reading ahead in the score) —
@@ -170,5 +220,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUp);
   else wireUp();
 
-  window.TDSound = { start, setMode, sting, toggle };
+  window.TDSound = { start, setMode, sting, hit, toggle };
 })();
