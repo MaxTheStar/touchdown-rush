@@ -194,6 +194,25 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     feature off for the portal copy. ⚠️ **iPhone Safari has no fullscreen API at all** (iPad and
     computers do), so `fsSupported()` says no rather than failing silently.
 
+  - **🔬 HOW TO ASK "IS THIS BUTTON ON SCREEN?" WITHOUT GETTING A CONFIDENT WRONG ANSWER.** Closing out
+    v3.8 I chased a suspected bug in the ⏱️ clock button and got **three false readings in a row** —
+    each one looked like a real product bug and none of them was. `_verify.js` now exports
+    `vis(id)` / `sane()` / `awake()` so this cannot happen again. The three traps, all still live:
+    ① **`offsetParent === null` DOES NOT MEAN HIDDEN — it is always null for `position: fixed`**, which
+    is *every* in-game control here (`#dpad`, `#actions`, `#ingame-ctrls`, `#btn-power`, `#btn-clock`).
+    A visibility helper built on it reports the entire on-field UI as hidden. Walk the ancestors for
+    `display:none` instead. ② **A HIDDEN PREVIEW PANE reports `innerWidth` 0 and every rect 0×0**, and
+    at zero width even `#dpad` computes to `display:none` — so measurements taken then are not just
+    imprecise, they are *inverted*. Wake the pane (screenshot / `resize_window`) and check
+    `innerWidth > 0` before believing any geometry. ③ **STALE GAME STATE between tool calls**:
+    `startGameWithTeam()` opens with `if (G.state !== 'menu') return;`, so calling `kickoffToDrive()`
+    after a game has ended **does nothing at all** and leaves `body.kicking` hiding every control —
+    which reads exactly like the bug you were hunting. ⚠️ **ALWAYS ASSERT A KNOWN-GOOD BASELINE FIRST**
+    (`sane()` = the D-pad and action pad are up mid-play). A test that cannot see the things that are
+    definitely there cannot be trusted about the thing you are actually asking about.
+  - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
+    Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
   - **📊 v3.8 — SELF-SCOUTING (Round 12, pick ④, `src/selfscout.js`).** 📋 The Scouting Report pointed
     the other way: what YOU call, how often, and who you keep throwing to. ⚠️ **It inherits scout.js's
     rule — THE REPORT HAS TO BE TRUE.** The counts printed on the card ARE the counts `callPlay()`
