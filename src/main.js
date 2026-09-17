@@ -1699,9 +1699,32 @@ function endPlay(result, customMsg) {
   //
   // Note it needs a timeout to throw, which is also why the ⏱️ Two-Minute Drill
   // (no timeouts at all) can never offer one — that falls out on its own.
-  if (window.TDFlag && TDFlag.offered({
-        result: result, spot: spot, next: next, down: G.down,
-        los: G.losYards, fd: G.firstDownYards, timeouts: G.timeouts })) {
+  const call = {
+    result: result, spot: spot, next: next, down: G.down,
+    los: G.losYards, fd: G.firstDownYards, timeouts: G.timeouts,
+  };
+
+  // 🟨 PENALTIES (penalty.js) — the REFEREE's yellow flag, asked FIRST.
+  //
+  // ⚠️ THE ORDER OF THESE TWO BLOCKS IS LOAD-BEARING. Both features park the
+  // game with `G.deadUntil = MAX_SAFE_INTEGER` and both replace `G.next`, so
+  // if they ever fired on the same play you would get two panels on top of
+  // each other, two callbacks racing for the same variable, and a dead-ball
+  // timer only one of them would release — a game frozen solid. The `return`
+  // below is what makes that impossible.
+  //
+  // It is also just correct football: you do not argue the spot on a play that
+  // a penalty has already wiped off the board.
+  if (window.TDPenalty && TDPenalty.offered(call)) {
+    G.deadUntil = Number.MAX_SAFE_INTEGER;     // hold here until you answer
+    TDPenalty.ask(ruling => {
+      if (ruling && ruling.next) G.next = ruling.next;
+      G.deadUntil = G.scene.time.now + 1000;   // let the game breathe, then play on
+    });
+    return;
+  }
+
+  if (window.TDFlag && TDFlag.offered(call)) {
     G.deadUntil = Number.MAX_SAFE_INTEGER;     // hold here until you answer
     TDFlag.ask(verdict => {
       if (verdict && verdict.next) G.next = verdict.next;
@@ -2688,6 +2711,11 @@ function redPlayEnd(result, customMsg, byYou) {
   }
   if (byYou) sayComment(pick(['YOU made the stop!', 'What a tackle!', 'Big hit!']));
 
+  // 🟨 The down as it stood BEFORE this play counted — penalty.js needs it,
+  // because "the penalty wipes out the play" means rebuilding the down from
+  // where it started, not patching up where it finished.
+  const pre = { spot: G.cpu.spot, togo: G.cpu.togo, down: G.cpu.down };
+
   G.cpu.spot = spot;
   G.cpu.togo -= gain;
   if (G.cpu.spot >= 100) { cpuDriveEnd('touchdown'); return; }   // (safety net)
@@ -2695,6 +2723,27 @@ function redPlayEnd(result, customMsg, byYou) {
   // Downs count on EVERY play, complete or not — just like yours.
   if (G.cpu.togo <= 0) { G.cpu.down = 1; G.cpu.togo = 10; msg = 'THEIR FIRST DOWN'; }
   else G.cpu.down++;
+
+  // 🟨 PENALTIES ON THEIR DRIVE (penalty.js). No panel and no question here —
+  // you don't coach their offense, so there is nothing to accept or decline.
+  // It still has to HAPPEN, though: a referee who only ever flagged one team
+  // is a bug you would feel long before you could prove it.
+  //
+  // ⚠️ Note this runs BEFORE the turnover-on-downs check below, which is the
+  // whole reason `turnover` is passed in: holding on their guard after they
+  // failed on 4th down is a flag YOU would decline, so penalty.js declines it
+  // for you and the ball stays yours.
+  if (window.TDPenalty) {
+    const flag = TDPenalty.cpuPlay({
+      spot: pre.spot, togo: pre.togo, down: pre.down,
+      turnover: G.cpu.down > 4,
+      them: G.oppTeam ? G.oppTeam.abbr : 'THEM',
+    });
+    if (flag) {
+      G.cpu.spot = flag.spot; G.cpu.down = flag.down; G.cpu.togo = flag.togo;
+      msg = flag.msg;
+    }
+  }
 
   if (G.cpu.down > 4) {
     if (window.TDSound) TDSound.sting('td');
@@ -3580,6 +3629,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.fakeKick = false;
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
+  if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
