@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.0 — cache-buster is `?v=153` in `index.html`.
+- **Version:** v4.1 — cache-buster is `?v=154` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -154,7 +154,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
     or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
     ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🟨 Penalties **v3.9 ✅** ·
-    ⑥⏰ Hurry-Up Offense **v4.0 ✅** · ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
+    ⑥⏰ Hurry-Up Offense **v4.0 ✅** · ⑦🔥 Momentum **v4.1 ✅** · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
@@ -212,6 +212,36 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     definitely there cannot be trusted about the thing you are actually asking about.
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
+  - **🔥 v4.1 — MOMENTUM (Round 12, pick ⑦, `src/momentum.js`, no save).** A swing meter from −100
+    (they're rolling) through 0 to +100 (you are), top-centre under the 🎡 buff-pill lane.
+  - **⚠️ THE BOARD'S WARNING *IS* THE FEATURE: "whoever is ahead gets better and runs away with it."**
+    That is the obvious way to build a momentum meter and it is wrong — it is a machine for turning
+    close games into blowouts. Four brakes, all MEASURED: ① **it never reads the scoreboard** to earn
+    momentum (big plays, first downs, sacks, takeaways — things you DID); ② it **decays 0.88 a play**,
+    so you cannot bank it; ③ ⚠️ **gains scale DOWN when you are ahead and UP when you are behind**
+    (losses invert) — the one place the score is read, and it is used to damp the leader, never to
+    reward them; ④ the effect is **±4% with a dead zone below ±30**, under crowd.js's ±6%.
+  - **🔥 AND THE INVERSION IS PROVEN, NOT ASSERTED.** Six big plays while **21 ahead → +21**; level
+    → **+54**; **21 behind → +86**. Six sacks while 21 ahead → −71, while 21 behind → only −18. And
+    the cleanest number of the lot: a side **winning 49–0 cannot max the meter at all (73)**, while a
+    side **losing 49–0 can (100)**. A takeaway LURCHES rather than nudges (−70 → −36 in one play),
+    which is the swing-back the chart asked for.
+  - **🐛 THE BUG: THE METER WAS HALF A LIE.** The first cut used `Math.max(0, tilt())` in all three
+    effect functions, so momentum only ever HELPED you — the blue half of the meter sat there saying
+    "they're rolling" while changing precisely nothing. ⚠️ **That is the same failure 📋 scout.js and
+    📊 selfscout.js are written to avoid: a readout that doesn't predict the game is worse than no
+    readout**, because it teaches Max to ignore what the game tells him. Now signed and symmetric —
+    verified ±0.04 catch/arm and their offense ×0.96 / ×1.04, with the dead zone still silent.
+  - **⚠️ IT STACKS WITH THE HOME CROWD AND THAT WAS CHECKED:** a maxed stadium (−6%) plus a full
+    meter is **−9.76% to their offense**, which is more than any single system gives. It needs a rare
+    confluence (maxed stands + hot streak + big occasion + a pinned meter that is decaying the whole
+    time), but it is the number to watch if anything else is ever folded in here.
+  - **🔥 WIRING:** three guarded main.js hooks (`endPlay` → `play()`, `cpuDriveEnd` → `theirDrive()`,
+    `beginGame` → `newGame()`) plus two fold-ins in shop.js's `gloveBoost`/`armAccuracy` and one in
+    the defense sim beside the crowd — the same route 🎡 TDSpin and ⚡ TDPowerup already take for a
+    live buff. ⚠️ Overlap was tested against `#hud`'s CHILDREN (it is a zero-width container) and
+    against a force-shown `#buff-pill`: no collisions at 375×812.
 
   - **⏰ v4.0 — THE HURRY-UP OFFENSE (Round 12, pick ⑥, `src/hurry.js`).** The ⏱️ Two-Minute Drill
     (v1.87) gave Max the *situation*; this gives him the *tools*. ⚠️ **The lever is the huddle, not a
