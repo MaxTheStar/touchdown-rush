@@ -243,6 +243,11 @@
   const hsSpeed = () => (window.TDHouse ? window.TDHouse.speedMult() : 1);   // 💨 Turbo Mode house rule
   const blSpeed = () => (window.TDBall ? window.TDBall.speedMult() : 1);    // 🔥 the Flame ball runs hot
   const puCatch = () => (window.TDPowerup ? window.TDPowerup.catchAdd()  : 0);
+  // 🔥 MOMENTUM (momentum.js) — a live, swinging buff, folded in exactly where
+  // 🎡 the spin and ⚡ the power-ups already are. Worth at most 4% at a full
+  // meter and exactly 0 inside its dead band, which is most of most games.
+  const moCatch = () => (window.TDMomentum ? window.TDMomentum.catchAdd() : 0);
+  const moArm   = () => (window.TDMomentum ? window.TDMomentum.armAdd()   : 0);
   const hsCatch = () => (window.TDHouse ? window.TDHouse.catchAdd()  : 0);   // 🧲 Sticky Hands house rule
   const blCatch = () => (window.TDBall ? window.TDBall.catchAdd()   : 0);   // 🌙 the Night Glow ball is easy to spot
   const auCatch = () => (window.TDAudible ? window.TDAudible.catchAdd() : 0); // 🗣️ you read the defense right this snap
@@ -312,7 +317,7 @@
   //    A 🎡 catch buff (Sticky Hands / Turbo / God Mode) piles on top.
   function gloveBoost() {
     const extra = spinCatch() + puCatch() + gpCatch() + stCatch() + chCatch() + hsCatch() + blCatch()
-                + auCatch();
+                + auCatch() + moCatch();
     const v = clampPerk(0.02 * gear.gloves + extra, -0.30);
     return { catchBonus: v, dropCut: v };
   }
@@ -334,7 +339,7 @@
   // 🎯 Cannon arm: how much we CUT the chance a contested pass is intercepted.
   // Level 10 = 0.5 (half as many picks). main.js multiplies its INT chance by (1 - this).
   //    🎡 A "safe throw" buff (Sure Hands / God Mode) pushes this to 1 = no picks.
-  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm() + blArm() + trArm(), -0.50); }
+  function armAccuracy() { const a = 0.05 * gear.arm; return clampPerk(1 - (1 - a) * (1 - spinSafeThrow()) + gpArm() + stArm() + blArm() + trArm() + moArm(), -0.50); }
 
   // 🧥 All-weather gear: how much you SHRUG OFF the weather (0 = full effect, 0.8
   // at level 10). main.js/kick.js blend a weather multiplier back toward 1.0 by this,

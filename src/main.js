@@ -1710,6 +1710,17 @@ function endPlay(result, customMsg) {
     los: G.losYards, fd: G.firstDownYards, timeouts: G.timeouts,
   };
 
+  // 🔥 MOMENTUM (momentum.js) — which way the game is swinging. ⚠️ It is handed
+  // what HAPPENED, never the scoreboard's verdict on it: the whole point of
+  // that file is that momentum is earned on the field, because a meter that
+  // read the score would just make whoever is ahead better and turn every game
+  // into a blowout (the warning printed on Max's chart for this pick).
+  if (window.TDMomentum) TDMomentum.play({
+    result: result, spot: spot, los: G.losYards, next: next, down: G.down,
+    sack: (result === 'tackle' && G.ballCarrier === offense[0] && spot < G.losYards),
+    my: G.score, opp: G.oppScore,
+  });
+
   // 🟨 PENALTIES (penalty.js) — the REFEREE's yellow flag, asked FIRST.
   //
   // ⚠️ THE ORDER OF THESE TWO BLOCKS IS LOAD-BEARING. Both features park the
@@ -2804,6 +2815,9 @@ function defenseNextPlay() {
 // (Their touchdown counts 7 — the try after is automatic for the computer.)
 function cpuDriveEnd(kind, customMsg) {
   if (!G.cpu) return;
+  // 🔥 MOMENTUM — how their drive ended is one of the biggest swings in the
+  // game. A takeaway does not nudge the meter, it lurches it.
+  if (window.TDMomentum) TDMomentum.theirDrive(kind);
   freezeEveryone();
   G.state = 'dwait';                 // hold everything while the banner lands
   const abbr = G.oppTeam.abbr;
@@ -2923,7 +2937,11 @@ const DefenseSim = (function () {
     // into G.oppOff, so the live game and this sim can never disagree about how
     // loud it is. ×1 when the stands are empty or this file is missing.
     const crowd = (window.TDCrowd && TDCrowd.cpuPowMult) ? TDCrowd.cpuPowMult() : 1;
-    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop) * crowd;
+    // 🔥 …and MOMENTUM, the other live tilt on their offense. Capped at 4%,
+    // under the crowd's 6%, and zero inside the meter's dead band — so most of
+    // most games this is exactly 1 and nothing here changes at all.
+    const mo = (window.TDMomentum && TDMomentum.cpuPowMult) ? TDMomentum.cpuPowMult() : 1;
+    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop) * crowd * mo;
     const wxCatch  = window.TDWeather ? TDWeather.catchMult()  : 1;
     const wxFumble = window.TDWeather ? TDWeather.fumbleMult() : 1;
     const hawk = (window.TDShop && TDShop.hawkBoost) ? TDShop.hawkBoost() : 0;  // 🖐 Ball Hawk: more takeaways
@@ -3637,6 +3655,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
   if (window.TDHurry) TDHurry.newGame();        // ⏰ back to the huddle
+  if (window.TDMomentum) TDMomentum.newGame();   // 🔥 the meter starts level
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
