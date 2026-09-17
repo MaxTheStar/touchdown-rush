@@ -1682,13 +1682,19 @@ function endPlay(result, customMsg) {
 
   // Run some game-clock off for this play (an incomplete stops the clock, so
   // less time comes off; a score/turnover is a quick whistle).
+  // ⏰ HURRY-UP (hurry.js) turns 32 seconds into 16 — those 32 are the play
+  // PLUS the huddle, and the no-huddle is the huddle being skipped. ⚠️ Only
+  // this branch: an incomplete already stopped the clock, so there is no
+  // huddle left in its 12 seconds to skip.
   advanceClock(result === 'incomplete' ? TIME_INCOMPLETE
              : (result === 'touchdown' || result === 'interception') ? TIME_SCORE_PLAY
-             : TIME_RUN_PLAY);
+             : (window.TDHurry ? TDHurry.runSecs(TIME_RUN_PLAY) : TIME_RUN_PLAY));
 
   G.next = next;
   G.state = 'dead';
-  G.deadUntil = G.scene.time.now + 1600;
+  // …and going fast has to LOOK fast, or the mode is a number you're told
+  // about rather than something you can feel.
+  G.deadUntil = G.scene.time.now + (window.TDHurry ? TDHurry.deadMs(1600) : 1600);
   showBanner(msg, big);
 
   // 🚩 COACH'S CHALLENGE — was the referee right about that one? flag.js decides
@@ -3630,6 +3636,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
+  if (window.TDHurry) TDHurry.newGame();        // ⏰ back to the huddle
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
@@ -4179,12 +4186,19 @@ function setupPlay(next) {
   // right call from here? It answers "no" almost every down and shows nothing.
   // ⚠️ Pass null on 4th down: that down has its own panel, and a clock play
   // there would just hand the ball over.
-  if (window.TDClock) TDClock.update(G.down === 4 ? null : {
+  const clockCtx = {
     down: G.down, quarter: G.quarter, clock: G.clock,
     my: G.score, opp: G.oppScore, spot: Math.round(G.losYards),
     quarters: NUM_QUARTERS, overtime: G.overtime,
     stopped: G.clockStopped,
-  });
+  };
+  if (window.TDClock) TDClock.update(G.down === 4 ? null : clockCtx);
+  // ⏰ HURRY-UP OFFENSE (hurry.js) — the same question one level up: not "is
+  // this the play?" but "is this the TEMPO?". It gets the context on 4th down
+  // too, because the no-huddle is about the whole drive rather than this one
+  // snap — and because `update` is also what switches the mode back OFF once
+  // the situation that justified it has passed.
+  if (window.TDHurry) TDHurry.update(clockCtx);
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
 
