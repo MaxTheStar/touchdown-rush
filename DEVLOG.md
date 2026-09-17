@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.9 — cache-buster is `?v=152` in `index.html`.
+- **Version:** v4.0 — cache-buster is `?v=153` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -153,8 +153,8 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     this game has never had.** Every pick was grepped for first and the check was unusually clean —
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
     or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
-    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🚩 Penalties **v3.9 ✅** ·
-    ⑥⏰ Hurry-Up Offense · ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
+    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🟨 Penalties **v3.9 ✅** ·
+    ⑥⏰ Hurry-Up Offense **v4.0 ✅** · ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
@@ -212,6 +212,44 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     definitely there cannot be trusted about the thing you are actually asking about.
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
+  - **⏰ v4.0 — THE HURRY-UP OFFENSE (Round 12, pick ⑥, `src/hurry.js`).** The ⏱️ Two-Minute Drill
+    (v1.87) gave Max the *situation*; this gives him the *tools*. ⚠️ **The lever is the huddle, not a
+    new play.** `advanceClock` takes 32 seconds off an ordinary run because those 32 are the play PLUS
+    the huddle before it — so the no-huddle is simply **32 → 16**, twice the snaps out of the same
+    clock, which is exactly what the real thing buys you.
+  - **⏰ AND IT DELIBERATELY DOES NOTHING ON AN INCOMPLETE.** That one already stops the clock (12s,
+    not 32), so there is no huddle inside it to skip. Verified across all four play results: only the
+    running-clock play changes. A real and slightly surprising piece of football — throwing it away
+    already saved you the time the hurry-up is trying to save.
+  - **⚠️ THE BALANCE TRAP, AND THE GATE THAT STOPS IT.** Switch this on in Q1 and you simply get more
+    plays than the other team every quarter, forever — more plays is more points, and it would not
+    look like a bug, it would look like the game got easy. So it lives behind the SAME gate as ⏱️
+    Spike & Kneel: **not in overtime, only in a period whose ending costs something (the half or the
+    game), only when behind or tied, only with 17–96 seconds left.** Swept **3,648 quarter × score ×
+    clock combinations: 0 rule violations**, and it appears in **Q2 and Q4 only**. ⚠️ The period is
+    derived from `quarter` inside the file — that is v3.1/v3.6's bug and it is not coming back.
+  - **⏰ IT TURNS ITSELF OFF, WHICH IS THE PART THAT WOULD HAVE ROTTED.** `update()` re-checks the gate
+    at every line of scrimmage, so taking the lead, reaching half time, running the clock out or going
+    to overtime all switch it off with nothing else having to remember to. All five verified.
+  - **⏰ THE TRADE-OFF IS ONE CSS RULE.** Going fast means no standing at the line thinking, so
+    `body.hurry` hides 🗣️ audible, 🧩 formation and 🎩 trick — three of the four things you would do
+    there, and honest football rather than an invented penalty. Doing it in CSS means it cannot drift
+    out of sync with the mode and costs main.js nothing.
+  - **🐛 THE BUG: "YOU CANNOT SEE IT" IS NOT "YOU CANNOT PRESS IT".** `update()` runs from `setupPlay`,
+    which is YOUR play — so through the other team's drive the button kept whatever it last showed.
+    The big `#defense-sim` panel (z-index 40) covers it, which is exactly why this looked fine; but
+    the defensive states where that panel is NOT up left a live button setting the tempo for a snap
+    that was not yours. Fixed inside hurry.js with a state check on the tap (`presnap` / `dead` /
+    `decision` are yours, nothing else is) — verified refused in `dsim`/`dpresnap`/`dlive`/`ddead`/
+    `live`/`kickoff` and still working at the line. ⚠️ **`#btn-clock` has shipped with the same shape
+    since v3.6** — it is a one-shot play rather than a mode, so it matters less there, but the pattern
+    is worth knowing.
+  - **⏰ WHERE IT LIVES:** left edge, stacked under ⏱️ `#btn-clock` (7px gap, measured — they genuinely
+    can both be up: hurry to the line, then spike to stop the clock). **No new button in
+    `#ingame-ctrls`** — that row is built for four and the v1.44/45 portrait pain is why. The CPU's
+    drive is untouched: it is simulated a play at a time rather than snapped, so there is no huddle
+    in it to skip.
 
   - **🟨 v3.9 — PENALTIES (Round 12, pick ⑤, `src/penalty.js`/`tdr-penalty`).** The referee has
     stood in the offensive backfield every down since the game was born and has never once thrown
