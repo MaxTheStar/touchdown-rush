@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.8 — cache-buster is `?v=151` in `index.html`.
+- **Version:** v3.9 — cache-buster is `?v=152` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -153,7 +153,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     this game has never had.** Every pick was grepped for first and the check was unusually clean —
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
     or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
-    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🚩 Penalties ·
+    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🚩 Penalties **v3.9 ✅** ·
     ⑥⏰ Hurry-Up Offense · ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
@@ -212,6 +212,55 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     definitely there cannot be trusted about the thing you are actually asking about.
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
+  - **🟨 v3.9 — PENALTIES (Round 12, pick ⑤, `src/penalty.js`/`tdr-penalty`).** The referee has
+    stood in the offensive backfield every down since the game was born and has never once thrown
+    a flag. Now he does. ⚠️ **THE FLAG IS YELLOW AND THE CHALLENGE FLAG IS RED** — that is the real
+    rule, and it is how you tell 🟨 penalty.js apart from 🚩 flag.js at a glance.
+  - **🟨 THE POINT OF THE FEATURE IS THE CHOICE, NOT THE YARDS.** When the foul is on the DEFENSE
+    you accept or decline, and the panel prints BOTH answers as down-and-distance — "1ST & 10 at
+    the 29" against "2ND & 18 at the 16" — because comparing them IS the lesson. Declining is
+    often right: five penalty yards are worth nothing when you just ran for twenty. Same philosophy
+    as the 🧮 Fourth-Down Helper — show the reasoning, let the coach coach. A flag on YOU has no
+    panel at all, because there is no decision to make: the other coach takes whichever is worse
+    for you, and `worth()` computes it.
+  - **🟨 THE BOARD PRINTED A WARNING ON THIS PICK AND IT WAS THE RIGHT WARNING** — "penalties that
+    fire too often stop being football." So the rate is MEASURED, not felt: **6.4% of eligible
+    plays, one flag every ~16 plays, 1.5 a game** over a 12,000-play sweep, with the CPU's drive
+    independently at 6.5%. Four brakes hold it there: a base chance, a **cooldown** (verified 0
+    back-to-back flags in 9,600 plays), a **per-game cap of 4** (verified never exceeded), and a
+    list of plays the referee simply swallows his whistle on.
+  - **🟨 THE "NO MISERY" RULES, WHICH ARE DELIBERATE AND NOT OVERSIGHTS.** ⚠️ **A flag NEVER wipes
+    out a touchdown** — real football allows it, this game does not. No flags on interceptions or
+    any turnover either. And **a penalty on YOU can never happen on 4th down**, while the defense
+    can still be flagged there: the asymmetry always favours the player, on purpose.
+  - **🟨 HALF-THE-DISTANCE IS IMPLEMENTED, AND IT IS WHAT STOPS THE RULEBOOK BEING A SCORING
+    MACHINE.** A 15-yard flag on their 4 gives you the 3, not six points; a 10-yard holding call on
+    your own 3 moves you to the 1.5, not a safety. Verified at both ends and on the CPU's side too
+    (a penalty at their 97 spots at 99, never 100).
+  - **🐛 THE BUG WAS ON THE HALF OF THE FEATURE NOBODY WOULD HAVE PLAY-TESTED: their drive.**
+    `cpuPlay()` fired flags on the CPU's offense with no idea whether the play had just ended their
+    drive — so **holding on their guard AFTER they failed on 4th down handed them a free replay of
+    the down and took the ball back off you.** In real football that is the easiest decline a coach
+    ever makes. Fixed by passing `turnover` in from `redPlayEnd` and swallowing the whistle;
+    verified 0 flags-on-them across 4,000 rolls in that exact spot. ⚠️ **It was never going to show
+    up in a play-test** — it needs a 4th-down stop and a 7.5% roll on the same snap.
+  - **⚠️ THE OTHER THING THAT HAD TO BE RIGHT: IT MUST NEVER RUN WITH THE COACH'S CHALLENGE.** Both
+    hook the same three lines of `endPlay`, both park the game with `deadUntil = MAX_SAFE_INTEGER`,
+    and both replace `G.next` — two panels stacked, two callbacks racing, and a dead-ball timer only
+    one of them would ever release. `endPlay` asks the penalty FIRST and **`return`s**, so the
+    challenge is unreachable on a flagged play. That is also correct football: you do not argue the
+    spot on a play a penalty already wiped off the board.
+  - **🟨 `redPlayEnd` GETS THE PRE-PLAY DOWN, NOT THE POST-PLAY ONE.** "The penalty wipes out the
+    play" means rebuilding the down from where it STARTED — hand `cpuPlay()` the finished numbers
+    and a flag on a play that had just earned a first down becomes 1st & 20 instead of a replayed
+    2nd & 17. Verified exact: back 10 from their 45 on 2nd & 7 → 2nd & 17 from the 35.
+  - **🧪 TESTING NOTE WORTH KEEPING: RESTORING `localStorage` DOES NOT UNDO A SWEEP.** The 12,000-play
+    frequency run snapshotted and restored `tdr-penalty` around itself — and the save came back
+    **polluted anyway (1,479 phantom flags)**, because the module holds its state in a closure
+    variable and writes that copy back on the next `save()`. ⚠️ **A module with an in-memory cache
+    can only be reset by RELOADING THE PAGE.** Anything that sweeps a feature's real save has to
+    clear the key and reload, not save/restore around it.
 
   - **📊 v3.8 — SELF-SCOUTING (Round 12, pick ④, `src/selfscout.js`).** 📋 The Scouting Report pointed
     the other way: what YOU call, how often, and who you keep throwing to. ⚠️ **It inherits scout.js's
