@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v3.7 — cache-buster is `?v=150` in `index.html`.
+- **Version:** v3.8 — cache-buster is `?v=151` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -153,8 +153,8 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     this game has never had.** Every pick was grepped for first and the check was unusually clean —
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
     or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
-    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting · ⑤🚩 Penalties · ⑥⏰ Hurry-Up Offense ·
-    ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
+    ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🚩 Penalties ·
+    ⑥⏰ Hurry-Up Offense · ⑦🔥 Momentum · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
@@ -193,6 +193,34 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     fullscreen request either fails or fights their own control — that one class switches the whole
     feature off for the portal copy. ⚠️ **iPhone Safari has no fullscreen API at all** (iPad and
     computers do), so `fsSupported()` says no rather than failing silently.
+
+  - **📊 v3.8 — SELF-SCOUTING (Round 12, pick ④, `src/selfscout.js`).** 📋 The Scouting Report pointed
+    the other way: what YOU call, how often, and who you keep throwing to. ⚠️ **It inherits scout.js's
+    rule — THE REPORT HAS TO BE TRUE.** The counts printed on the card ARE the counts `callPlay()`
+    asks about when the defense picks its plan, and the counts the man-coverage cushion asks about
+    when a DB lines up over your favourite receiver. A card that said "you throw to #2 too much" and
+    changed nothing would teach Max to ignore his own coaches.
+  - **📊 THREE THINGS KEEP IT FROM BEING UNFAIR, and the board warned about exactly this.**
+    ① **Minimum sample** — nothing is read until 12 plays; you cannot be "predictable" after handing
+    off twice. ② **Hard cap** — 100% predictable buys the defense at most **+0.12 blitz chance and 7px
+    of cushion** (24 → 17), against a base blitz of 0.15 normal / 0.30 hard. Verified across all 21
+    run/pass mixes. ③ **A rolling window of the last 20 calls**, which is the one that makes it a GAME
+    rather than a punishment: 20 straight runs reads 1.00, ten passes later it is 0.00, ten more and
+    you are readable **the other way**. Being read is something you fix at halftime, like a real coach,
+    not a state you get stuck in. ⚠️ Career totals are saved and shown, but **only the rolling window
+    ever touches play** — a career of 400 runs must not haunt a game you came out throwing in.
+  - **🐛 MEASUREMENT CAUGHT THE BALANCE BUG THE BOARD PREDICTED: ON EASY IT INVENTED A BLITZ.** Easy
+    sets `blitzOdds = 0` **on purpose** — "easy = mostly tight man, no blitz" is a promise to a new
+    player — and self-scouting was pushing that to 0.12 because you ran the ball a lot. Now a
+    difficulty that says there is no pressure doesn't get overruled; on easy the read expresses itself
+    through COVERAGE instead, which is where easy mode nearly always is anyway. ⚠️ **Anything else
+    that ever adds to a difficulty knob has to ask the same question: is this knob zero ON PURPOSE?**
+  - **🐛 …AND A SAVE-KEY BUG CAUGHT WHILE IT WAS STILL FREE.** `TDStats.shared.store()` **adds the
+    `tdr-` prefix itself** (`stats.js`: `localStorage.setItem('tdr-' + key, …)`), so `KEY =
+    'tdr-selfscout'` was writing to **`tdr-tdr-selfscout`**. Every other module passes a BARE name
+    (`'quests'` → `tdr-quests`). ⚠️ **This is only ever free to fix before a feature ships** — a save
+    key that has been released cannot be renamed without wiping what players saved under it, which is
+    the same rule that keeps this repo named touchdown-rush. New modules: pass the bare name.
 
   - **💥 v3.7 — HITS YOU CAN FEEL (`src/bighit.js`, Max's "aggressive physics" note, 2026-09-16).** NOT a
     draft-board pick — one of four idea screenshots Max sent. ⚠️ **Most of that screenshot was already
