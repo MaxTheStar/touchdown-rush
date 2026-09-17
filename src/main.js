@@ -872,6 +872,9 @@ function canHandOff() {
 // behind the line — that's why we don't touch G.hasPassed here.
 function handOff() {
   if (!canHandOff()) return;          // too far away? no handoff.
+  // 📊 SELF-SCOUTING — that is a RUN on your card. Counted AFTER the guard on
+  // purpose: a hand-off the game refused was never a play call.
+  if (window.TDSelf) TDSelf.call('run', null, G.formation);
   const rb = offense[1];
   G.ballCarrier = rb;
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
@@ -884,6 +887,10 @@ function handOff() {
 function throwTo(num) {
   const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === num);
   if (!wr || wr === G.ballCarrier) return;   // can't throw the ball to yourself!
+
+  // 📊 SELF-SCOUTING — a PASS, and WHO you threw it to. Same rule as the run:
+  // only once the throw is really happening.
+  if (window.TDSelf) TDSelf.call('pass', num, G.formation);
 
   G.hasPassed = true;
   G.state = 'pass';
@@ -1163,8 +1170,21 @@ function callPlay() {
   const d = G.difficulty;
   const zoneOdds  = d === 'easy' ? 0.15 : d === 'hard' ? 0.55 : 0.42;
   const blitzOdds = d === 'easy' ? 0.0  : d === 'hard' ? 0.30 : 0.15;
+  // 📊 SELF-SCOUTING (selfscout.js) — and here is where the card stops being a
+  // card. Run the ball over and over and they crowd the line; throw it every
+  // down and they drop off and cover instead. ⚠️ Capped at ±0.12 inside
+  // selfscout.js, needs 12 plays before it reads anything at all, and only
+  // your last 20 calls count — so mixing it up really does shake them off.
+  // Without the module this is exactly the pair of lines it always was.
+  // ⚠️ AND IT MUST NEVER INVENT A BLITZ ON EASY. `blitzOdds` is 0 on easy on
+  // purpose — "easy = mostly tight man, no blitz" is a promise made to a new
+  // player, and a feature that quietly starts sending linebackers at them
+  // because they ran the ball a lot would break it. If this difficulty says
+  // there is no pressure, self-scouting does not get a vote; it still shows up
+  // in COVERAGE (the cushion below), which on easy is nearly always man.
+  const selfBlitz = (blitzOdds > 0 && window.TDSelf) ? TDSelf.blitzShift() : 0;
   G.coverage = Math.random() < zoneOdds ? 'zone' : 'man';
-  G.blitz    = Math.random() < blitzOdds;
+  G.blitz    = Math.random() < Phaser.Math.Clamp(blitzOdds + selfBlitz, 0, 0.6);
   G.passTarget = null;
 }
 
@@ -1414,8 +1434,12 @@ function updateDefense(elapsed) {
         ty = Math.min((th ? th.s.y : G.losY) - 26, G.losY - 92);
       } else {
         // Man: stay glued to your receiver, on the goal side (just above him).
+        // 📊 SELF-SCOUTING: if you keep going back to the same man, HIS defender
+        // plays him tighter — the cushion shrinks from 24px toward 17px. The
+        // other two open up to pay for it, which is the way out of the read.
         const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === d.cover);
-        if (wr) { tx = wr.s.x; ty = wr.s.y - 24; }
+        const cush = window.TDSelf ? TDSelf.cushion(d.cover) : 24;
+        if (wr) { tx = wr.s.x; ty = wr.s.y - cush; }
         else { tx = carrier.x; ty = carrier.y; }
       }
     }
@@ -3458,6 +3482,11 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.bossGame = !!(opp && opp.boss);   // 👑 is this a fight against the Maxwell boss team?
   G.rivalGame = !!isRival;            // 😈 is this a grudge match against your Rival Nemesis?
   G.drillGame = !!isDrill;            // ⏱️ is this a Two-Minute Drill? (see drill.js)
+  // 📊 SELF-SCOUTING — a fresh sheet. What you called LAST week is not what
+  // this week's defense is watching, and starting a game already "read" would
+  // be a punishment you never earned in it. Career totals are kept; only the
+  // rolling window is wiped.
+  if (window.TDSelf) TDSelf.reset();
   G.allStarGame = !!isAllStar;        // 🌟 is this the All-Star Game? (see allstar.js)
 
   // 🎲 HOUSE RULES — silly football, EXHIBITION GAMES ONLY. A season, playoff,
