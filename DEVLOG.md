@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.2 — cache-buster is `?v=155` in `index.html`.
+- **Version:** v4.3 — cache-buster is `?v=156` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -212,6 +212,41 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     definitely there cannot be trusted about the thing you are actually asking about.
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
+  - **🏁 Round 13 — "The Game Day Board" (drawn 2026-09-17, right after Round 12 swept).** Artifact
+    `50618cb0-d796-44a4-96cc-c729da1a2878`. ⚠️ **Max reversed the stop order again** — "if it's swept,
+    then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
+    **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
+    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys · ③🙋 Punt Returns & Fair Catch ·
+    ④⏳ The Play Clock · ⑤🔇 Silent Count · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
+    ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
+    kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
+    existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
+    and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **🪙 v4.3 — THE COIN TOSS (Round 13, pick ①, `src/toss.js`, no save).** ⚠️ **The point is the
+    SECOND choice, not the first.** Calling heads is a 50/50 guess; what matters is that winning it
+    lets you ⚡ TAKE THE BALL or ⏳ DEFER — and deferring is what nearly every real NFL team does and
+    what a nine-year-old has never heard of. Get a stop after deferring and you can end the first half
+    with the ball AND start the second with it. The pick is a lesson wearing a coin costume.
+  - **🪙 IT WAS NEARLY FREE, AND AN OLD COMMENT PROVED IT.** All four halftime sites already said
+    `startBreak('half', startCpuDrive)` under a comment reading *"you fielded the game-opening
+    kickoff, so the OTHER team gets the ball to start the second half"*. That sentence contained an
+    ASSUMPTION — *you* fielded the opening kick — which was simply always true. The toss just makes it
+    conditional via a new `secondHalfKick()`; the clock, quarter and drive logic are untouched.
+    Verified both ways, plus that removing the module returns the old behaviour exactly.
+  - **🪙 IT CHAINS ONTO 📋 THE SCOUTING REPORT'S GATE** (`pregame(cb)` → return true to hold the
+    kickoff, call back when done). Order is coaches → captains → football, and `G.state` stays 'menu'
+    behind both cards so nothing runs underneath. ⚠️ Skipped for the ⏱️ drill, 🌟 All-Star, 🎲 house
+    games and a half-time takeover — a toss in front of a practice field is ceremony, not football.
+  - **🐛 THE BUG WAS NOT IN THE FEATURE, IT WAS IN HOW I TESTED IT — AND IT IS THE ONE THE DEVLOG
+    ALREADY WARNS ABOUT.** The toss card never appeared and `TDToss.pregame` was provably never
+    called, which looked exactly like a broken gate. The cause: I added `toss.js` but **did not bump
+    the `?v=` cache-buster**, so the browser served the NEW toss.js beside the **cached OLD main.js**
+    that had no toss chain in it. ⚠️ **A changed `src/` file behind an unchanged `?v=` serves stale.**
+    `fetch(url, {cache:'reload'})` on the changed files, then reload, and it worked first time.
+  - **🧪 `secondHalfKick()` was testable only because main.js is a CLASSIC SCRIPT** — its top-level
+    functions are globals, so the rule could be checked directly from the console instead of playing
+    to half time (the harness still cannot drive the `dsim` defence state past a boundary).
 
   - **🛡 v4.2 — PASS PROTECTION (Round 12, pick ⑧ — THE LAST, `src/protect.js`, no save).** The
     offensive mirror of 🛡️ Call Your Own Defense: three schemes, each a real trade. 🛡 **MAX PROTECT**
