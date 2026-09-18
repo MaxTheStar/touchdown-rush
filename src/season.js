@@ -83,6 +83,26 @@
     return null;
   }
 
+  // 👕 WHO IS AT HOME — the answer this schedule has always contained and never
+  // been asked for. `divisionRoundRobin` builds the second half of the season by
+  // flipping every pairing (`[a, b]` → `[b, a]`), so the FIRST team in a pair is
+  // the home team. `pairFor` above loops over both slots and returns the other
+  // one, which is exactly what threw that order away.
+  //
+  // Called with no arguments it answers for YOUR next game, which is what
+  // homeaway.js wants. Returns 'home', 'away', or null when there is no season.
+  function homeAway(week, abbr) {
+    if (!S) return null;
+    const w = week || S.week;
+    const me = abbr || S.you;
+    const pairs = S.schedule[w - 1] || [];
+    for (const [a, b] of pairs) {
+      if (a === me) return 'home';
+      if (b === me) return 'away';
+    }
+    return null;
+  }
+
   // ---- Auto-playing the OTHER teams' games -------------------------------
   // A quick pretend game. Stronger teams (higher hidden "power") tend to score
   // more, but there's plenty of luck — upsets happen, just like real football.
@@ -268,8 +288,9 @@
     for (let w = 1; w <= REG_WEEKS; w++) {
       const opp = pairFor(w, S.you);
       const res = S.results.find(r => r.week === w);
-      let cls = 'se-up', top = 'vs ' + opp, sub = 'WK ' + w;
-      if (res) { cls = res.win ? 'se-w' : 'se-l'; top = (res.win ? 'W ' : 'L ') + res.ys + '-' + res.os; sub = 'vs ' + opp; }
+      const at = homeAway(w, S.you) === 'away' ? '@' : 'vs';   // 👕 home & away, at last
+      let cls = 'se-up', top = at + ' ' + opp, sub = 'WK ' + w;
+      if (res) { cls = res.win ? 'se-w' : 'se-l'; top = (res.win ? 'W ' : 'L ') + res.ys + '-' + res.os; sub = at + ' ' + opp; }
       else if (S.phase === 'regular' && w === S.week) { cls = 'se-now'; sub = 'NEXT'; }
       chips += `<div class="se-wk ${cls}"><div class="se-wk-t">${top}</div><div class="se-wk-s">${sub}</div></div>`;
     }
@@ -343,6 +364,7 @@
 
   // ---- What the rest of the game may use ---------------------------------
   window.TDSeason = {
+    homeAway,                   // 👕 'home' | 'away' for a week (defaults to yours, this week)
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
     hasSeason: () => !!load(),  // is a season in progress?

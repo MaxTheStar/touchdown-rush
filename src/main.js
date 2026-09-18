@@ -3569,6 +3569,11 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.oppTeam = opp;
   G.seasonGame = !!isSeason;
   G.playoffGame = !!isPlayoff;        // 🏆 is this a Playoff Tournament game? (see playoffs.js)
+  // 👕 HOME OR AWAY (homeaway.js) — asked ONCE, here, and stashed. Everything
+  // else reads this flag rather than re-deriving it, so the jersey you are
+  // wearing and the crowd you are hearing can never disagree. ⚠️ It has to come
+  // after the two flags above, because those are what it asks about.
+  G.awayGame = !!(window.TDHome && TDHome.decide());
   // 🎃 SEASON EVENTS happen all by themselves: if today falls inside an event's
   // week, EVERY game you start is that event — themed field, sky and bonus.
   G.eventGame = !!(window.TDEvents && TDEvents.begin());
@@ -3687,7 +3692,10 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDGameStats) TDGameStats.newGame(); // ⭐ a fresh stat book for this game
 
   // Paint both teams onto their players.
-  makeChibiTexture(G.scene, 'blue', G.team.jersey, G.team.helmet);
+  // 👕 …in the road whites if this is an away game (homeaway.js keeps your
+  // helmet in your own colours so you never lose track of who you are).
+  const myKit = (window.TDHome ? TDHome.kitFor(G.team) : G.team);
+  makeChibiTexture(G.scene, 'blue', myKit.jersey, myKit.helmet);
   makeChibiTexture(G.scene, 'red',  G.oppTeam.jersey, G.oppTeam.helmet);
   for (const o of offense) o.s.setTexture('blue');
   for (const d of defense) d.s.setTexture('red');

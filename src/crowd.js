@@ -48,6 +48,10 @@
   const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
   const MAX_TILT = 0.06;    // the most the crowd can ever cost their offense
+  // 👕 …and what a HOSTILE crowd costs YOU on the road (homeaway.js). ⚠️ Half
+  // the home ceiling on purpose: the road should be a headwind you can feel,
+  // not a tax. A kid losing away from home should lose to the other team.
+  const AWAY_TILT = 0.03;
   const STAD_MAX = 18;      // stadium.js: 18 upgrades bought = a full house
   const STREAK_MAX = 6;     // a six-game run has the place as loud as it gets
 
@@ -71,6 +75,7 @@
     try { g = window.__td && __td.G; } catch (e) {}
     if (!g) return false;
     if (g.drillGame || g.allStarGame) return false;      // practice field · neutral site
+    if (g.awayGame) return false;                       // 👕 these are not your seats
     try { if (window.TDHouse && TDHouse.live && TDHouse.live()) return false; } catch (e) {}
     return true;
   }
@@ -123,12 +128,21 @@
   // ---- what the game asks for --------------------------------------------
   // main.js's beginGame folds this into G.oppOff, beside the coach and the Wall.
   // ×1 with no stadium and no streak — the untouched game.
-  function oppOffMult() { return 1 - MAX_TILT * noise(); }
+  // 👕 ON THE ROAD THE CROWD IS AGAINST YOU. `stands()` already returns false
+  // away from home, so `noise()` is 0 and the home tilt vanishes on its own —
+  // but "no help" is not the same as "a hostile stadium", so the sign flips.
+  function oppOffMult() {
+    if (window.TDHome && TDHome.away()) return 1 + AWAY_TILT;
+    return 1 - MAX_TILT * noise();
+  }
 
   // …and the 1-player defense sim multiplies its cpuPow by this, so a loud house
   // makes them worse on the tap-to-progress drives too. Same number, so the two
   // paths can never disagree about how loud it is.
-  function cpuPowMult() { return 1 - MAX_TILT * noise(); }
+  function cpuPowMult() {
+    if (window.TDHome && TDHome.away()) return 1 + AWAY_TILT;
+    return 1 - MAX_TILT * noise();
+  }
 
   // ---- the readout, inside the 🏟 STADIUM screen --------------------------
   // A "what if" version for the menu, where there is no live game to read: it
