@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.4 — cache-buster is `?v=158` in `index.html`.
+- **Version:** v4.5 — cache-buster is `?v=159` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,12 +217,46 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `50618cb0-d796-44a4-96cc-c729da1a2878`. ⚠️ **Max reversed the stop order again** — "if it's swept,
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
-    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT ·
+    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** ·
     ④⏳ The Play Clock · ⑤🔇 Silent Count · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **🙋 v4.5 — PUNT RETURNS & THE MUFFED PUNT (Round 13, pick ③, `src/puntreturn.js`, no save).**
+    ⚠️ **UNTIL NOW A PUNT WAS A KICKOFF.** When they punted, `takeYourBall()` called `startKickoff()` —
+    same deep boot, same wall of coverage, same "RETURN IT!". A punt differs in three ways that all
+    matter and are all now real: **it is shorter** (fielded at your own 26–48, not your own 8, so the
+    return starts with real field position and less room), **the gunners are already there** (two
+    sprinted down while it hung; the rest are still coming), and therefore **you may say no** — 🙋
+    FAIR CATCH ends it the instant you touch it.
+  - **🙋 THE FAIR CATCH IS ONLY A DECISION BECAUSE OF THE MUFF, AND VICE VERSA.** Catch it with a
+    gunner on top of you and you can drop it — and a muffed punt is a **LIVE BALL** either team can
+    fall on. *Free yards, or the chance of handing them the ball.* ⚠️ Build one without the other and
+    you have built nothing: a fair catch with no risk to avoid is just a worse return, and a muff with
+    no fair catch is bad luck happening *to* you. The dials, all measured: **a muff is never random**
+    (`muffChance()` is 0 beyond 95px — caught in space you will never drop it, and it is monotonic, so
+    closer is never safer), **a fair catch is 100% safe by construction** (`catchThePunt` returns on
+    `G.puntFair` *before* the muff check exists), **a muff is not an automatic turnover** (the same
+    `OFF_RECOVER_CHANCE` your fumbles use), and the ceiling is **34%** even on your chest.
+  - **🙋 IT REUSES THE `kickoff` STATE ON PURPOSE**, so `controlReturner`, `updateKickoffCoverage`,
+    `checkKickoffTackle` and the replay recorder all work here untouched; `G.puntPlay` is the only
+    thing that tells the two apart. ⚠️ `#btn-faircatch` must **not** inherit
+    `body.returning { display:none }` the way the pre-snap buttons do — a punt return *is* a return,
+    so that rule would hide the button at the only moment it is meant to exist.
+  - **🐛 THE BUG I WROTE AND CAUGHT BEFORE SHIPPING:** `startPuntReturn()` calls `startKickoff()` for
+    the setup it needs — but `startKickoff` also fires **its own ball tween**, which landed underneath
+    the punt, set `koLive` early and shouted "RETURN IT!" over a ball still in the air. `startKickoff`
+    now takes an explicit **`asPunt`** flag that skips the kick itself. ⚠️ Reusing a function for its
+    side effects means auditing *all* of them, not just the ones you wanted.
+  - **⚠️ THERE ARE NOW **TWO** CARDS BETWEEN THE MENU AND THE KICKOFF, AND IT LOOKS EXACTLY LIKE A
+    HANG.** `beginGame` holds the game behind `TDScout.pregame(…, afterScout)` → `TDToss.pregame(
+    openingPlay)` → kickoff. Tapping only 🏈 LET'S PLAY hands off to the **coin toss**, which holds it
+    again, so the state sits on `'menu'`. I spent a while treating this as a v4.5 regression before
+    proving `startKickoff()` itself was fine and finding the second gate. ⚠️ **`#toss-panel` is NOT a
+    `.ov`**, so an overlay sweep does not see it either — which is what made it invisible to the
+    check. `_verify.js`'s `clearGates()` now walks BOTH gates and `finishGates()` closes the toss.
+
   - **👕 v4.4 — HOME & AWAY JERSEYS (Round 13, pick ②, `src/homeaway.js`, no save).** ⚠️ **MAX'S OWN
     IDEA**, asked for mid-Round-12 and parked when full screen jumped the queue: *"wear different
     jerseys depending on which game it is, and the jerseys should matter."* The second half of that
