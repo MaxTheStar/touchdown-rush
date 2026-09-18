@@ -2817,7 +2817,7 @@ function defenseNextPlay() {
   if (G.overtime && G.score !== G.oppScore) { endGame(); return; }
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
-  if (t === 'halftime') { startBreak('half', startCpuDrive); return; }  // they receive the 2nd-half kick (real rules)
+  if (t === 'halftime') { startBreak('half', secondHalfKick()); return; }  // 🪙 whoever did NOT get the opening kick
   if (t === 'qbreak')   { startBreak('q', setupDefensePlay); return; }  // the drive carries across Q1/Q3
 
   // 4th down: they usually kick — a field goal in range, a punt if not.
@@ -2881,7 +2881,7 @@ function finishCpuDrive() {
   if (G.overtime && G.score !== G.oppScore) { endGame(); return; }  // sudden death
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
-  if (t === 'halftime') { G.turnoverSpotYou = null; startBreak('half', startCpuDrive); return; }  // they get the 2nd-half kick
+  if (t === 'halftime') { G.turnoverSpotYou = null; startBreak('half', secondHalfKick()); return; }  // 🪙 see secondHalfKick
   if (t === 'qbreak')   { startBreak('q', takeYourBall); return; }
   takeYourBall();
 }
@@ -3040,7 +3040,7 @@ const DefenseSim = (function () {
     // Settle the quarter/half clock at this play boundary (like defenseNextPlay).
     const t = tickPeriodAtBoundary();
     if (t === 'gameover') { panel(false); endGame(); return; }
-    if (t === 'halftime') { panel(false); startBreak('half', startCpuDrive); return; }  // 2nd half: they receive
+    if (t === 'halftime') { panel(false); startBreak('half', secondHalfKick()); return; }  // 🪙 see secondHalfKick
     if (t === 'qbreak')   { panel(false); startBreak('q', () => { if (G.cpu) { G.state = 'dsim'; panel(true); render(); } }); return; }
     // 4th down: they decide — usually kick (FG in range / punt), sometimes go for it.
     if (G.cpu.down === 4 && !G.cpu.goFor) {
@@ -3677,6 +3677,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDHurry) TDHurry.newGame();        // ⏰ back to the huddle
   if (window.TDMomentum) TDMomentum.newGame();   // 🔥 the meter starts level
   if (window.TDProtect) TDProtect.newGame();     // 🛡 back to ⚖️ balanced protection
+  if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
@@ -3741,8 +3742,32 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   // update() returns early on 'menu', so nothing runs behind it). With the
   // module missing, or the card switched off, it returns false and we kick off
   // exactly as before.
-  if (window.TDScout && TDScout.pregame(G.team, G.oppTeam, startKickoff)) return;
-  startKickoff();   // the game opens with a kickoff for you to return
+  // 🪙 THE COIN TOSS (toss.js) chains onto the back of the report: coaches
+  // first, then the captains at midfield, then football. ⚠️ `openingPlay` is
+  // the ONLY place that decides who starts with the ball — with toss.js absent
+  // it is `startKickoff()`, exactly as it always was.
+  const openingPlay = () => {
+    if (window.TDToss && TDToss.theyReceive()) { startCpuDrive(); return; }
+    startKickoff();   // the game opens with a kickoff for you to return
+  };
+  const afterScout = () => {
+    if (window.TDToss && TDToss.pregame(openingPlay)) return;   // holds until you call it
+    openingPlay();
+  };
+  if (window.TDScout && TDScout.pregame(G.team, G.oppTeam, afterScout)) return;
+  afterScout();
+}
+
+// 🪙 WHO GETS THE BALL AFTER HALF TIME — the whole mechanical consequence of
+// the coin toss, in one function.
+//
+// ⚠️ ALL FOUR HALFTIME SITES USED TO SAY `startCpuDrive` FLAT OUT, under a
+// comment explaining that you had fielded the opening kickoff so they get this
+// one. That was true for as long as you ALWAYS fielded the opening kickoff.
+// Defer, and it is simply the other way round — so the rule is unchanged, it
+// just asks who actually received rather than assuming.
+function secondHalfKick() {
+  return (window.TDToss && TDToss.youReceiveSecondHalf()) ? startKickoff : startCpuDrive;
 }
 
 // ---- Season mode drives the game through here (see src/season.js) ---------
@@ -4089,10 +4114,11 @@ function startNextPlay() {
   if (t === 'gameover') { endGame(); return; }
 
   if (t === 'halftime') {
-    // REAL FOOTBALL RULES at the half: you fielded the game-opening kickoff, so the
-    // OTHER team gets the ball to start the second half — and a drive never
+    // REAL FOOTBALL RULES at the half: whoever did NOT field the game-opening
+    // kickoff gets the ball to start the second half — and a drive never
     // carries across halftime (whatever you had going is over).
-    startBreak('half', startCpuDrive);
+    // 🪙 Which team that is now depends on the coin toss (see secondHalfKick).
+    startBreak('half', secondHalfKick());
     return;
   }
   if (t === 'qbreak') {
