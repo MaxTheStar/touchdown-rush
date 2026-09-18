@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.1 — cache-buster is `?v=154` in `index.html`.
+- **Version:** v4.2 — cache-buster is `?v=155` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -154,7 +154,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     **penalties existed ONLY as 🧠 trivia answers**, and there is no spike, kneel, hurry-up, momentum
     or home-field edge anywhere in the code. Order: ①📣 Home Crowd **v3.0 ✅** · ②🧮 Fourth-Down Helper **v3.1 ✅** ·
     ③⏱️ Spike It & Kneel It **v3.6 ✅** · ④📊 Self-Scouting **v3.8 ✅** · ⑤🟨 Penalties **v3.9 ✅** ·
-    ⑥⏰ Hurry-Up Offense **v4.0 ✅** · ⑦🔥 Momentum **v4.1 ✅** · ⑧🛡 Pass Protection. ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
+    ⑥⏰ Hurry-Up Offense **v4.0 ✅** · ⑦🔥 Momentum **v4.1 ✅** · ⑧🛡 Pass Protection **v4.2 ✅** — **🎉 ROUND 12 SWEPT 8/8.** ⚠️ **④ and ⑧ are deliberate mirrors of Round 11** (Self-Scouting points 📋 the
     Scouting Report back at you; Pass Protection is 🛡️ Call Your Own Defense from the other side).
     ⚠️ **⑤ Penalties and ⑦ Momentum carry a warning printed on the chart** — penalties that fire too
     often stop being football, and momentum that only rewards whoever is ahead turns every game into
@@ -212,6 +212,35 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     definitely there cannot be trusted about the thing you are actually asking about.
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
+  - **🛡 v4.2 — PASS PROTECTION (Round 12, pick ⑧ — THE LAST, `src/protect.js`, no save).** The
+    offensive mirror of 🛡️ Call Your Own Defense: three schemes, each a real trade. 🛡 **MAX PROTECT**
+    keeps the back in — four blockers, a longer pocket, but no route to him and **no hand-off** (you
+    cannot give the ball to a man blocking a linebacker for you). ⚖️ **BALANCED** is what the game has
+    always done. 🏃 **FIVE OUT** releases everybody: routes 10% quicker, pocket 32% weaker.
+  - **🛡 THE WHOLE POCKET IS TWO FUNCTIONS**, which is smaller than you would expect: `updateLine()`
+    slides each 'OL' in front of the nearest unclaimed rusher, and `nearBlocker(d)` slows any rusher
+    within BLOCK_DIST. So this file only had to make the back COUNT in both, and bend `rushSlow`.
+  - **⚠️ AND `rushSlow` POINTS THE OTHER WAY TO YOUR INSTINCT** — it is the speed a BLOCKED rusher
+    KEEPS, so SMALLER is a STRONGER pocket. 🛡 max multiplies it to 0.72, 🏃 five-out to 1.32, ⚖️
+    balanced to exactly 1. Getting that backwards would have made every scheme do the opposite of its
+    label in a way almost impossible to see on screen, so it is asserted in the tests by direction,
+    not by value.
+  - **🛡 VERIFIED BEHAVIOURALLY, NOT JUST ARITHMETICALLY.** Snapped the same down under each scheme and
+    watched the back: on ⚖️ BALANCED he runs **12 yards downfield, 151px from the nearest rusher**; on
+    🛡 MAX PROTECT he comes **up to the line and sits on one, 10px away**. `blocking()` names only the
+    back, and releases him the moment the ball is thrown or handed off — otherwise a max-protect back
+    would stand there blocking nobody while his team-mate ran.
+  - **🛡 IT COSTS ZERO NEW SCREEN SPACE** — the three buttons live INSIDE the 🗣️ audible panel, which
+    is where a protection call belongs in real football anyway. ⚠️ `#pp-row` is a **sibling** of
+    `#aud-body`, never a child: audible.js rewrites that body's innerHTML on every render and anything
+    of ours inside it would be wiped the first time Max opened the panel (verified it survives a
+    re-render). ⚠️ **A nice accident falls out of the location:** ⏰ the hurry-up hides the 🗣️ button,
+    so during a no-huddle you cannot change protection either — which is exactly right.
+  - **🛡 THE SCHEME IS STICKY**, unlike the defensive call: a defensive call is one play, protection is
+    a SCHEME teams live in, and making a nine-year-old re-pick it every down would turn a good idea
+    into a chore. Resets to ⚖️ BALANCED each game — and because balanced is a perfect no-op, a game
+    where Max never touches this plays byte-identically to v4.1.
 
   - **🔥 v4.1 — MOMENTUM (Round 12, pick ⑦, `src/momentum.js`, no save).** A swing meter from −100
     (they're rolling) through 0 to +100 (you are), top-centre under the 🎡 buff-pill lane.
