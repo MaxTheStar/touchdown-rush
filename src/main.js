@@ -338,6 +338,13 @@ const G = {
   deadUntil: 0,
   next: null,           // where the next play starts, decided when a play ends
   kickKind: 'fg',       // what kind of kick is on screen: 'fg' | 'punt' | 'xp' (extra point)
+  // 🙋 PUNT RETURNS (puntreturn.js) — a punt reuses the 'kickoff' state, so
+  // these are what tell the two apart.
+  lastDriveEnd: null,   // how THEIR drive ended ('punt' means you return it)
+  puntPlay: false,      // is the return on screen right now a PUNT return?
+  puntFair: false,      // did you wave for the fair catch?
+  puntMuffed: false,    // did you drop it? (the ball is live)
+  puntSpot: 0,          // the yard line this punt came down on
   pendingXP: false,     // just scored a TD? then the extra-point/2-pt choice comes next
   twoPtTry: false,      // 🏈 a two-point conversion play is live (reach the end zone = +2)
   banner: null,
@@ -2838,6 +2845,10 @@ function cpuDriveEnd(kind, customMsg) {
   // 🔥 MOMENTUM — how their drive ended is one of the biggest swings in the
   // game. A takeaway does not nudge the meter, it lurches it.
   if (window.TDMomentum) TDMomentum.theirDrive(kind);
+  // 🙋 PUNT RETURNS — remember HOW this drive ended. Until now every ending
+  // handed you a kickoff, so a punt and an opening kickoff were the same event.
+  // They are not, and `takeYourBall` is the one place that can tell them apart.
+  G.lastDriveEnd = kind;
   freezeEveryone();
   G.state = 'dwait';                 // hold everything while the banner lands
   const abbr = G.oppTeam.abbr;
@@ -2893,6 +2904,11 @@ function takeYourBall() {
     const s = G.turnoverSpotYou; G.turnoverSpotYou = null;
     document.body.classList.remove('returning');
     setupPlay({ los: s, down: 1, fd: Math.min(s + 10, 100) });
+  } else if (G.lastDriveEnd === 'punt' && window.TDPunt) {
+    // 🙋 THEY PUNTED — so this is a PUNT RETURN, with a fair catch on offer and
+    // a muff to be afraid of. Without puntreturn.js this falls through to the
+    // kickoff it always was.
+    startPuntReturn();
   } else {
     startKickoff();
   }
@@ -3585,6 +3601,9 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   // be a punishment you never earned in it. Career totals are kept; only the
   // rolling window is wiped.
   if (window.TDSelf) TDSelf.reset();
+  // 🙋 no stale punt state into a fresh game
+  G.lastDriveEnd = null; G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
+  if (window.TDPunt) TDPunt.hide();
   G.allStarGame = !!isAllStar;        // 🌟 is this the All-Star Game? (see allstar.js)
 
   // 🎲 HOUSE RULES — silly football, EXHIBITION GAMES ONLY. A season, playoff,
@@ -3887,7 +3906,12 @@ window.TDGame = {
 // Get tackled → your drive starts at that spot. Reach the endzone → return TD!
 // (Only the returner is your guy on the field; the rest wait for the drive.)
 // ============================================================
-function startKickoff() {
+// `asPunt` is passed by startPuntReturn: it wants everything this function sets
+// up EXCEPT the kick itself, because a punt has its own flight, its own landing
+// spot and its own banner. ⚠️ Without this flag the kickoff's tween still fires
+// underneath the punt, sets koLive early and shouts "RETURN IT!" over the top
+// of a ball that has not arrived yet.
+function startKickoff(asPunt) {
   G.state = 'kickoff';
   G.koLive = false;                          // the ball is in the air first
   G.replay = [];                             // start a fresh film reel for the return
@@ -3924,11 +3948,136 @@ function startKickoff() {
   ballFollow = false;
   ball.setPosition(266, 680).setVisible(true);
   G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
+  if (!asPunt) {
+    G.scene.tweens.add({
+      targets: ball, x: 266, y: 1014, duration: 650, ease: 'Sine.In',
+      onComplete: () => { ballFollow = true; G.koLive = true; showBanner('RETURN IT!', false); }
+    });
+  }
+  updateHUD();
+}
+
+// ============================================================
+// 🙋 A PUNT RETURN — the same machine as a kickoff, with three real differences
+// ------------------------------------------------------------
+// It deliberately REUSES the 'kickoff' state, so `controlReturner`,
+// `updateKickoffCoverage`, `checkKickoffTackle` and the replay recorder all
+// work here untouched. `G.puntPlay` is the only thing that says which one this
+// is — and it is what makes the fair catch and the muff possible.
+// ============================================================
+function startPuntReturn() {
+  startKickoff(true);        // everything a return needs, MINUS the kick itself
+  G.puntPlay = true;
+  G.koLive = false;          // the ball is still in the air — no running yet
+
+  // 1. IT IS SHORTER. You field it in your own end of the field, not on the
+  //    goal line, so the return starts with real field position.
+  const spot = TDPunt.catchSpot();
+  const y = yardsToY(spot);
+  place(offense[0], 266, y);
+  G.puntSpot = spot;
+
+  // 2. THE GUNNERS ARE ALREADY THERE. Two of them sprinted down while the ball
+  //    was in the air and are nearly on top of you; the rest are still coming.
+  place(defense[0], 210, y - 70);
+  place(defense[1], 322, y - 74);
+  for (let i = 2; i < defense.length; i++) place(defense[i], 60 + i * 80, y - 210);
+
+  // 3. YOU MAY SAY NO. The button is only up while the ball is falling.
+  ballFollow = false;
+  ball.setPosition(266, y - 330).setVisible(true);
+  G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
+  showBanner('PUNT — FIELD IT!', false);
+  TDPunt.show(fairCatchPunt);
   G.scene.tweens.add({
-    targets: ball, x: 266, y: 1014, duration: 650, ease: 'Sine.In',
-    onComplete: () => { ballFollow = true; G.koLive = true; showBanner('RETURN IT!', false); }
+    targets: ball, x: 266, y: y - 6, duration: 900, ease: 'Sine.In',
+    onComplete: catchThePunt
   });
   updateHUD();
+}
+
+// You waved for it. The play is over the instant it arrives: no return, no
+// tackle, and NO MUFF — the safe option has to actually be safe.
+function fairCatchPunt() {
+  if (!G.puntPlay || G.koLive) return;        // too late once you are running
+  G.puntFair = true;
+  sayComment(pick(['Fair catch.', 'He waves it off!', 'Calls for the fair catch.']));
+}
+
+// The ball has arrived. Three ways this goes: a fair catch, a muff, or a return.
+function catchThePunt() {
+  if (!G.puntPlay) return;
+  TDPunt.hide();
+  const c = G.ballCarrier.s;
+
+  // A fair catch ends it here, safely, wherever you are standing.
+  if (G.puntFair) {
+    ballFollow = true;
+    finishPuntAt(Math.round(yardsFromOwnGoal(c.y)), '🙋 FAIR CATCH');
+    return;
+  }
+
+  // Otherwise: how close is the nearest gunner? That — and ONLY that — decides
+  // whether you can drop it. Caught in space, you never will.
+  let near = Infinity;
+  for (const d of defense) {
+    const dist = Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y);
+    if (dist < near) near = dist;
+  }
+  if (Math.random() < TDPunt.muffChance(near)) { muffThePunt(); return; }
+
+  ballFollow = true;
+  G.koLive = true;
+  showBanner('RETURN IT!', false);
+}
+
+// 💥 MUFFED IT. The ball is LIVE — this is the moment the fair catch existed to
+// avoid. Mirrors fumble()'s shape (bounce, suspense, resolve) but cannot use it:
+// `resolveFumble` finishes through `endPlay`, and a punt has no down yet.
+function muffThePunt() {
+  freezeEveryone();
+  G.state = 'fumble';
+  G.puntMuffed = true;
+  showBanner('MUFFED IT!!!', true);
+  sayComment(pick(['He dropped it!', 'MUFFED! The ball is loose!', "He couldn't handle it!"]));
+  if (window.TDSound) TDSound.sting('stuff');
+  ballFollow = false;
+  const c = G.ballCarrier.s;
+  const bx = Phaser.Math.Clamp(c.x + Phaser.Math.Between(-40, 40), 12, FIELD_WIDTH - 12);
+  G.scene.tweens.add({ targets: ball, x: bx, y: c.y + Phaser.Math.Between(-26, 34), duration: 480, ease: 'Bounce.Out' });
+  G.scene.time.delayedCall(1100, resolveMuff);
+}
+
+// Who fell on it? The same coin flip your own fumbles get — a muff is the worst
+// moment in the game and it still must not be an automatic turnover.
+function resolveMuff() {
+  const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);
+  if (Math.random() < OFF_RECOVER_CHANCE) {
+    ballFollow = true;
+    finishPuntAt(spot, 'YOU FELL ON IT!');
+  } else {
+    // They recovered — their ball, right here, and you are on defense again.
+    G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
+    G.turnoverSpotCpu = Phaser.Math.Clamp(100 - spot, 1, 99);
+    freezeEveryone();
+    showBanner('THEY RECOVERED IT!', true);
+    if (window.TDSound) TDSound.sting('lose');
+    G.state = 'dwait';
+    G.scene.time.delayedCall(1500, startCpuDrive);
+  }
+}
+
+// Settle a punt that ended without a return: spot the ball, first and ten.
+function finishPuntAt(spot, msg) {
+  G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
+  TDPunt.hide();
+  freezeEveryone();
+  advanceClock(TIME_KICKOFF);
+  const s = Phaser.Math.Clamp(Math.round(spot), 1, 99);
+  G.next = { los: s, down: 1, fd: Math.min(s + 10, 100) };
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1400;
+  showBanner(msg, false);
 }
 
 // Drive the returner (movement only — no passing on a kickoff). Swipe-dash works here too.
@@ -3975,6 +4124,10 @@ function checkKickoffTackle() {
 // Tackled! Start a normal 1st-&-10 drive from wherever you were brought down.
 function endKickoffReturn() {
   freezeEveryone();
+  // 🙋 a punt return ends through here too — clear its flags so the next
+  // kickoff is a kickoff again.
+  G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
+  if (window.TDPunt) TDPunt.hide();
   G.pickSix = false;            // if this was an interception return, it's over now
   advanceClock(TIME_KICKOFF);   // the kickoff + return took a few seconds
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(G.ballCarrier.s.y)), 1, 99);
