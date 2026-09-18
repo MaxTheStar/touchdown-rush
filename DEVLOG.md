@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.3 — cache-buster is `?v=156` in `index.html`.
+- **Version:** v4.4 — cache-buster is `?v=158` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,12 +217,41 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `50618cb0-d796-44a4-96cc-c729da1a2878`. ⚠️ **Max reversed the stop order again** — "if it's swept,
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
-    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys · ③🙋 Punt Returns & Fair Catch ·
+    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT ·
     ④⏳ The Play Clock · ⑤🔇 Silent Count · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **👕 v4.4 — HOME & AWAY JERSEYS (Round 13, pick ②, `src/homeaway.js`, no save).** ⚠️ **MAX'S OWN
+    IDEA**, asked for mid-Round-12 and parked when full screen jumped the queue: *"wear different
+    jerseys depending on which game it is, and the jerseys should matter."* The second half of that
+    sentence is the point — a white shirt that only looks different is a costume.
+  - **👕 THE GAME ALREADY KNEW WHO WAS HOME AND WAS THROWING IT AWAY.** `divisionRoundRobin` builds
+    the second half of the season by flipping every pairing (`[a,b]` → `[b,a]`), so the FIRST team in
+    a pair has always been the home team — and the schedule screen has said "(division rivals, home &
+    away)" in its caption this whole time. But `pairFor()` only answered "who do I play?", looping
+    over both slots and returning the other one, which dropped the order on the floor. A new
+    `homeAway()` reads it. **Verified on a real season: 3 home, 3 away, weeks 4–6 the exact mirror of
+    1–3, same opponent each time (LAR/NYG/BUF → LAR/NYG/BUF).** The schedule chips now say `@`.
+  - **👕 ON THE ROAD:** white jersey (helmet stays YOUR colour so you never lose track of who you
+    are), **no 📣 home crowd** — those are your seats, your streak, your stadium, and none of them
+    travelled — and a **hostile crowd instead: +3% to their offense**. ⚠️ Deliberately HALF the home
+    ceiling of 6%: the road should be a headwind you can feel, not a tax. A kid losing away should
+    lose to the other team, not to a multiplier. ⚠️ Season games only — a quick game, a 👑 boss game
+    and the 🏆 playoffs are all HOME, so everything tuned before this file needs no re-tuning.
+  - **🐛 THE BUG: THE KIT COLOURS ARE INTS, NOT CSS STRINGS.** `AWAY_JERSEY` was written `'#eef2f7'`,
+    but every kit colour in this game is a Phaser colour int (`G.team.jersey` for Seattle is **8772**,
+    i.e. 0x002244) and `makeChibiTexture` hands it straight to `graphics.fillStyle()`. So the white
+    kit **silently did nothing**: the away flag was right, the crowd was right, the schedule said `@`
+    — and the players ran out in their home shirts. Fixed to `0xEEF2F7`.
+  - **🧪 AND THE TEST THAT CAUGHT IT MATTERS AS MUCH AS THE FIX.** A screenshot showed the wrong
+    shirts but could not say why, and **sampling a pixel out of the texture was useless** — the
+    shoulder pads are drawn under a dark rim, a shading pass and a white sheen, so both teams sampled
+    to the same muddy grey. ⚠️ **Wrap the painter instead**: `makeChibiTexture` is a global (main.js
+    is a classic script), so recording its arguments answers the question exactly — away paints
+    15659767, home paints 8772, helmet identical in both.
+
   - **🪙 v4.3 — THE COIN TOSS (Round 13, pick ①, `src/toss.js`, no save).** ⚠️ **The point is the
     SECOND choice, not the first.** Calling heads is a 50/50 guess; what matters is that winning it
     lets you ⚡ TAKE THE BALL or ⏳ DEFER — and deferring is what nearly every real NFL team does and
