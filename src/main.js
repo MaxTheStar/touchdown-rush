@@ -863,6 +863,10 @@ function controlP2Defender(d) {
 // across the field). Shared by the HAND button and the H key.
 function canHandOff() {
   if (G.state !== 'live' || G.ballCarrier !== offense[0] || G.hasPassed) return false;
+  // 🛡 PASS PROTECTION — you cannot hand the ball to a man who is currently
+  // blocking a linebacker for you. On 🛡 MAX PROTECT the back is a blocker, and
+  // that is the real price of the scheme: a longer pocket, but no run to him.
+  if (window.TDProtect && TDProtect.blocking(offense[1])) return false;
   return Phaser.Math.Distance.Between(
     offense[0].s.x, offense[0].s.y, offense[1].s.x, offense[1].s.y) <= HANDOFF_DIST;
 }
@@ -1223,10 +1227,14 @@ function updateReceivers(elapsed) {
     if (o.role !== 'WR' && o.role !== 'RB') continue;
     if (o === G.ballCarrier) continue; // once caught / handed the ball, the player drives
     if (o === starMan) continue;       // 🌟 in Superstar Mode YOU run this man's route
+    // 🛡 a back who stayed in to block is not running a route at all.
+    if (window.TDProtect && TDProtect.blocking(o)) continue;
 
     const depth = o.startY - o.s.y; // yards upfield since the snap
     const side = sideOf(o);
     let { vx, vy } = routeVelocity(o, depth, side);
+    // 🛡 🏃 FIVE OUT gets everybody off the line quicker; the others are ×1.
+    if (window.TDProtect) { const rm = TDProtect.routeMult(); vx *= rm; vy *= rm; }
 
     // 🧠 WORK OPEN — if a defender is crowding him, the receiver slides toward
     // the open grass (away from that defender) to shake free. Just a nudge, so
@@ -1332,7 +1340,11 @@ function routePath(o) {
 function updateLine() {
   const qb = offense[0].s;
   const rushers = defense.filter(d => d.role === 'DL');
-  const linemen = offense.filter(o => o.role === 'OL' && o !== G.ballCarrier);
+  // 🛡 PASS PROTECTION (protect.js) — on MAX PROTECT the running back stays in,
+  // so the line is four men instead of three. ⚖️ BALANCED adds nobody, which is
+  // exactly what this line did before the file existed.
+  const linemen = offense.filter(o =>
+    (o.role === 'OL' || (window.TDProtect && TDProtect.blocking(o))) && o !== G.ballCarrier);
   const claimed = new Set();
 
   for (const ol of linemen) {
@@ -1356,6 +1368,12 @@ function updateLine() {
 // ============================================================
 // DEFENSE — rush the QB, cover receivers, chase the ball
 // ============================================================
+// 🛡 PASS PROTECTION — how much the chosen scheme bends the pocket.
+// ⚠️ THIS MULTIPLIES `rushSlow`, WHICH IS THE SPEED A BLOCKED RUSHER KEEPS —
+// so SMALLER is a STRONGER pocket. 🛡 max protect returns 0.72, 🏃 five out
+// returns 1.32, and ⚖️ balanced (the default) returns exactly 1.
+function ppRush() { return window.TDProtect ? TDProtect.rushSlowMult() : 1; }
+
 function updateDefense(elapsed) {
   const carrier = G.ballCarrier.s;
   const qbHasBall = G.ballCarrier === offense[0] && !G.hasPassed;
@@ -1405,13 +1423,13 @@ function updateDefense(elapsed) {
       tx = offense[0].s.x; ty = offense[0].s.y;
       // ...unless an offensive lineman is blocking them. How slowed depends on
       // difficulty (easy = a strong pocket, hard = rushers push through faster).
-      if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow;
+      if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush();
     } else if (d.role === 'LB') {
       if (G.blitz && d === defense[2]) {
         // 🔥 BLITZ — this linebacker shoots the gap and chases the QB (and gets
         // slowed if a lineman picks him up, same as the down linemen).
         tx = offense[0].s.x; ty = offense[0].s.y;
-        if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow;
+        if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush();
       } else if (G.coverage === 'zone') {
         // Zone: sit in the short middle and jump the nearest crosser.
         const th = nearestThreatInBand(175, 358);
@@ -1484,7 +1502,9 @@ function dbZone(d) {
 
 function nearBlocker(d) {
   for (const o of offense) {
-    if (o.role !== 'OL') continue;
+    // 🛡 …and a back who stayed in to block counts as a blocker, or he would
+    // slide in front of a rusher and slow nobody down.
+    if (o.role !== 'OL' && !(window.TDProtect && TDProtect.blocking(o))) continue;
     if (Phaser.Math.Distance.Between(o.s.x, o.s.y, d.s.x, d.s.y) < BLOCK_DIST) return true;
   }
   return false;
@@ -3656,6 +3676,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
   if (window.TDHurry) TDHurry.newGame();        // ⏰ back to the huddle
   if (window.TDMomentum) TDMomentum.newGame();   // 🔥 the meter starts level
+  if (window.TDProtect) TDProtect.newGame();     // 🛡 back to ⚖️ balanced protection
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
   if (window.TDProgress) TDProgress.startGame(); // 📈 fresh "XP this game" + remember our level
@@ -4218,6 +4239,7 @@ function setupPlay(next) {
   // snap — and because `update` is also what switches the mode back OFF once
   // the situation that justified it has passed.
   if (window.TDHurry) TDHurry.update(clockCtx);
+  if (window.TDProtect) TDProtect.newPlay();   // 🛡 keep the protection row in sync
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
 
