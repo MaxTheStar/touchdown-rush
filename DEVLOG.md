@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.6 — cache-buster is `?v=162` in `index.html`.
+- **Version:** v4.7 — cache-buster is `?v=163` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,11 +218,51 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
     ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** ·
-    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
+    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **🔇 v4.7 — THE SILENT COUNT (Round 13, pick ⑤, `src/silent.js`, no save).** The pick the last
+    three were building towards: 📣 the crowd (v3.0), 👕 home-and-away (v4.4) and ⏳ the play clock
+    (v4.6) all meet here. ⚠️ **CROWD NOISE HAD ONLY EVER POINTED ONE WAY** — crowd.js tilts THEIR
+    offense and hands them a flat +3% on the road, but nothing in eleven rounds ever made noise cost
+    YOU anything at the line, which is the one thing a hostile crowd is actually famous for.
+    **On the road the noise takes two things:** ⏳ **TIME** — the play clock is **11 seconds instead
+    of 15**, because the call takes longer to get in. *This is the half you feel every down, and it is
+    what makes the other half bite:* a shorter clock means you reach the red more often, and the red
+    is the only place a false start lives, so the two compound with no third effect bolted on.
+    🏃 **CALM** — the false-start chance **doubles**.
+    **🔇 THE SILENT COUNT is the answer:** snap on a look, not a call. Chance drops to **0.45× —
+    below even the home rate**, because a line watching the ball genuinely is the calmest a line ever
+    gets. ⚠️ **THE COST IS A PASSING COST ONLY, and that is worth knowing before tuning it.** It rides
+    on main.js's `ppRush()`, which `updateDefense` reads **inside the `qbHasBall` branch** — the moment
+    the ball is handed off or thrown, everyone switches to PURSUE_SPEED and the number stops applying.
+    So going silent makes your POCKET worse and does nothing to a running play. Narrower than the real
+    football version, but it is the honest description of what the code does, and it makes the trade
+    cleaner: **silent is cheapest on the downs you were going to run anyway.**
+    ⚠️ **"SPICIER, NEVER UNFAIR" IS HELD IN CODE, NOT BY PICKING NICE NUMBERS.** `playclock.fullSecs()`
+    CLAMPS whatever silent.js asks for to at least `DANGER_AT + 5`, so there are **always five seconds
+    in which a snap is completely safe**. That floor lives in playclock.js ON PURPOSE — a number wrong
+    in silent.js cannot reach through and make the road unfair. Swept with 0/1/3/9/11/15/99/−4/NaN:
+    every one lands in [9, 15].
+    ⚠️ **`chanceAt()` STAYED PURE.** v4.6 left it as a pure function of one argument specifically so
+    this pick would be small; everything situational multiplies on in the new `liveChance()`. That is
+    why ⑤ cost playclock.js five lines.
+    **Where the switch lives:** a row in the 🗣️ AUDIBLE panel beside 🛡 pass protection — `#sc-row`,
+    a **sibling** of `#aud-body` (audible.js rewrites that body's innerHTML every render; protect.js
+    learned this in v4.2). `#ingame-ctrls` is full at four buttons and ⏳ the play clock already had to
+    shorten its own label to fit beside them, so there is no room up there at all. ⚠️ **And opening
+    that panel PAUSES the play clock**, which is why it is a safe place to put a decision.
+    ⚠️ **IT SAYS ONE SENTENCE, ONCE A GAME** (the first road line of scrimmage points at the 🗣️
+    button). A feature buried in a panel a nine-year-old has to go looking for is a feature nobody
+    finds. crowd.js says nothing because it happens every down; this happens once.
+    **Verified:** every getter exactly neutral at home (`noiseMult` 1, `clockSecs(15)` 15, `rushMult`
+    1, the row renders to empty, and `set(true)` is refused outright) so a home game plays precisely
+    as it did before the file existed; road-shouting 0.300 > home 0.150 > road-silent 0.068 at 2.0s;
+    the clock reads 11 on three consecutive road downs and the call is sticky across them; the row
+    renders two ≥40px taps that do not run a play; the panel with BOTH rows fits 375×812 at 353×676
+    with 68px to spare; 0 console errors.
   - **⏳ v4.6 — THE PLAY CLOCK (Round 13, pick ④, `src/playclock.js`, no save).** ⚠️ **THESE ARE THE
     TWO PENALTIES v3.9 DELIBERATELY LEFT OUT.** 🟨 `penalty.js` hooks `endPlay` and judges plays that
     actually RAN, so it could never call the two fouls that happen in the silence BEFORE the snap:
