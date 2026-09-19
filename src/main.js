@@ -676,7 +676,26 @@ function update(time, delta) {
 
   if (G.state === 'presnap') {
     freezeEveryone();
-    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) snap(time);
+    // ⏳ THE PLAY CLOCK (playclock.js) — the second clock on the scoreboard.
+    //
+    // ⚠️ THE HIKE IS READ FIRST, AND THAT ORDER IS THE WHOLE RULE. Both things
+    // want the same frame: the clock wants to expire on it, and you want to
+    // snap on it. Ticking first meant that pressing HIKE on the exact frame
+    // the clock ran out got you a DELAY OF GAME anyway — you beat the clock and
+    // were penalised for it. Reading the tap first hands every tie to the
+    // player, which is both the kind thing and the correct call: a snap that
+    // got away before zero is a legal snap.
+    //
+    // So: if you hiked, the clock never gets asked. If you didn't, it counts
+    // down, and reaching zero calls DELAY OF GAME through presnapFoul (which
+    // leaves G.state === 'dead', so nothing below this branch can run on it).
+    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) {
+      // One question before the ball moves: did your line jump? A FALSE START
+      // means this snap never happens at all.
+      if (!(window.TDPlayClock && TDPlayClock.judgeSnap())) snap(time);
+    } else if (window.TDPlayClock) {
+      TDPlayClock.tick(time);
+    }
     updateBall();
     updateHUD();
     return;
@@ -731,6 +750,7 @@ function update(time, delta) {
 function snap(time) {
   G.state = 'live';
   if (window.TDClock) TDClock.hide();   // ⏱️ the ball is gone: no spiking it now
+  if (window.TDPlayClock) TDPlayClock.stop();   // ⏳ …and nothing left to be late for
   G.snapTime = time;
   G.hasPassed = false;
   G.replay = [];              // start a fresh film reel for this play
@@ -2041,6 +2061,11 @@ function callTimeout() {
   G.clockStopped = true;
   sayComment('Timeout! The clock stops.');
   showBanner('⏱ TIMEOUT  ·  ' + G.timeouts + ' left', false);
+  // ⏳ …and it buys you a brand-new play clock, which is the REAL reason coaches
+  // burn one at the line. Called here rather than inside playclock.js so the
+  // rule lives where the timeout is spent (playclock.js ignores it unless a
+  // clock is actually running, so calling it mid-play is harmless).
+  if (window.TDPlayClock) TDPlayClock.reset();
   updateTimeoutBtn();
 }
 
@@ -2092,8 +2117,35 @@ function runClockPlay(play) {
   }
 
   freezeEveryone();
+  if (window.TDPlayClock) TDPlayClock.stop();   // ⏳ the down is over — no clock to beat
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1100;   // a shorter beat than a real play: nothing happened
+  updateHUD();
+}
+
+// ⏳ A FOUL BEFORE THE SNAP (playclock.js) — DELAY OF GAME or a FALSE START.
+// playclock.js has already worked out which one it is and exactly where the
+// ball ends up (five yards back, half the distance honoured, same down); this
+// just performs it, the same way runClockPlay performs a spike.
+//
+// ⚠️ IT DOES NOT TOUCH THE GAME CLOCK. Nothing was played — no huddle, no
+// snap, no tackle — so there is no time to charge anyone for. That also means
+// `startNextPlay` will find G.clock unchanged and roll nothing over, which is
+// why this can safely hand the ball straight back to the ordinary dead-ball
+// machinery instead of needing a path of its own.
+//
+// ⚠️ AND THE DOWN DOES NOT ADVANCE. Both of these fouls replay the down, which
+// is the real rule and also the reason this penalty can never take the ball
+// away from you however many times it happens.
+function presnapFoul(foul) {
+  if (!foul || G.gameOver) return;
+  sayComment(foul.shout);
+  showBanner('🟨 ' + foul.name + '  ·  -' + foul.yards, false);
+  if (window.TDSound) TDSound.sting('lose');
+  freezeEveryone();
+  G.next = foul.next;
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1700;   // long enough to read the flag
   updateHUD();
 }
 
@@ -3701,6 +3753,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDHurry) TDHurry.newGame();        // ⏰ back to the huddle
   if (window.TDMomentum) TDMomentum.newGame();   // 🔥 the meter starts level
   if (window.TDProtect) TDProtect.newGame();     // 🛡 back to ⚖️ balanced protection
+  if (window.TDPlayClock) TDPlayClock.newGame(); // ⏳ fresh play clock, fresh flag count
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
@@ -4472,6 +4525,9 @@ function setupTouchButtons() {
   // ⏱️ SPIKE IT / KNEEL IT — clockplay.js owns the tap and hands back the play
   // it decided on; runClockPlay just performs it.
   if (window.TDClock) TDClock.setup(runClockPlay);
+  // ⏳ THE PLAY CLOCK — same deal: playclock.js decides WHICH foul and where it
+  // leaves the ball, and presnapFoul just performs it.
+  if (window.TDPlayClock) TDPlayClock.setup(presnapFoul);
   bindTapEl('btn-formation', cycleFormation);
   bindTapEl('btn-trick', callTrick);
   bindTapEl('open-howto', () => { if (window.TDTour) { TDTour.reset(); TDTour.start('menu', true); } });  // 🎓 replay ALL tutorials
