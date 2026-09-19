@@ -1399,7 +1399,14 @@ function updateLine() {
 // ⚠️ THIS MULTIPLIES `rushSlow`, WHICH IS THE SPEED A BLOCKED RUSHER KEEPS —
 // so SMALLER is a STRONGER pocket. 🛡 max protect returns 0.72, 🏃 five out
 // returns 1.32, and ⚖️ balanced (the default) returns exactly 1.
-function ppRush() { return window.TDProtect ? TDProtect.rushSlowMult() : 1; }
+function ppRush() {
+  let m = window.TDProtect ? TDProtect.rushSlowMult() : 1;
+  // 🔇 …and a SILENT COUNT line moves when it SEES the ball rather than when it
+  // hears the call, so it is a beat late and that beat belongs to the rush.
+  // This is the entire cost of going silent (src/silent.js).
+  if (window.TDSilent) m *= TDSilent.rushMult();
+  return m;
+}
 
 function updateDefense(elapsed) {
   const carrier = G.ballCarrier.s;
@@ -3754,6 +3761,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDMomentum) TDMomentum.newGame();   // 🔥 the meter starts level
   if (window.TDProtect) TDProtect.newGame();     // 🛡 back to ⚖️ balanced protection
   if (window.TDPlayClock) TDPlayClock.newGame(); // ⏳ fresh play clock, fresh flag count
+  if (window.TDSilent) TDSilent.newGame();       // 🔇 back on the call
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
@@ -4480,6 +4488,7 @@ function setupPlay(next) {
   // the situation that justified it has passed.
   if (window.TDHurry) TDHurry.update(clockCtx);
   if (window.TDProtect) TDProtect.newPlay();   // 🛡 keep the protection row in sync
+  if (window.TDSilent) TDSilent.newPlay();     // 🔇 …and the snap-count row beside it
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
 

@@ -114,11 +114,10 @@
 // ------------------------------------------------------------
 // 🔇 WHAT PICK ⑤ WILL WANT FROM THIS FILE
 // ------------------------------------------------------------
-// The Silent Count is the next pick on the board, and it is this file plus
-// 📣 the crowd plus 👕 home-and-away. When it arrives it wants ONE thing:
-// `chanceAt()` multiplied by a road-noise factor, with the silent count
-// dividing it back down in exchange for a slower start. It is deliberately
-// left as a pure function of one argument so that is a small change.
+// ✅ BUILT as pick ⑤ (`src/silent.js`, v4.7). It plugs in at exactly two
+// points and nowhere else: `liveChance()` multiplies `chanceAt()` by its
+// `noiseMult()`, and `fullSecs()` asks it how long the clock is. `chanceAt`
+// itself stayed pure, which is why that was a five-line change.
 // ============================================================
 (function () {
   'use strict';
@@ -198,6 +197,32 @@
     const s = Math.max(0, Math.min(FULL, +secs || 0));
     if (s >= DANGER_AT) return 0;
     return FS_MAX * (1 - s / DANGER_AT);
+  }
+
+  // The chance that actually gets rolled, once the situation has its say.
+  // ⚠️ `chanceAt` ABOVE STAYS PURE, and that is deliberate: the curve has to be
+  // sweepable without a game, a stadium or a road trip. Everything situational
+  // is multiplied on HERE instead, which is where 🔇 the silent count plugs in
+  // (crowd noise makes your line jumpy; going silent calms it right down).
+  function liveChance(secs) {
+    let c = chanceAt(secs);
+    try { if (window.TDSilent) c *= TDSilent.noiseMult(); } catch (e) {}
+    return c < 0 ? 0 : c > 1 ? 1 : c;
+  }
+
+  // How long a fresh play clock is. Fifteen at home — and 🔇 silent.js shortens
+  // it on the road, because the call takes longer to get in through the noise.
+  //
+  // ⚠️ AND IT IS CLAMPED HERE, NOT THERE. Whatever anybody else asks for, there
+  // must always be at least five seconds in which a snap is COMPLETELY safe,
+  // because the moment the whole clock sits inside the danger window the road
+  // stops being spicy and starts being unfair. A hard floor in this file means
+  // no future caller can take that away by getting a number wrong.
+  function fullSecs() {
+    let s = FULL;
+    try { if (window.TDSilent) s = TDSilent.clockSecs(FULL); } catch (e) {}
+    if (!(s > 0)) s = FULL;
+    return Math.max(DANGER_AT + 5, Math.min(FULL, s));
   }
 
   // ⚠️ HALF THE DISTANCE TO THE GOAL. Five yards back from your own 6 is not
@@ -287,7 +312,7 @@
 
     if (!running) {                  // a new line of scrimmage
       running = true;
-      left = FULL;
+      left = fullSecs();
       lastTime = time;
       paint();
       return;
@@ -340,7 +365,7 @@
     if (snaps <= 1) return null;                     // never on your first snap
     if (wasLast) return null;                        // never two in a row
     if (fsThisGame >= FS_PER_GAME) return null;      // the per-game cap
-    if (Math.random() >= chanceAt(left)) return null;
+    if (Math.random() >= liveChance(left)) return null;
 
     const packet = foulPacket('falsestart');
     if (!packet) return null;
@@ -358,14 +383,14 @@
   // whole reason the timeout button is now worth pressing at the line.
   function reset() {
     if (!running) return;
-    left = FULL;
+    left = fullSecs();
     parked = false;
     delays = 0;
     paint();
   }
 
   function newGame() {
-    running = false; left = FULL; lastTime = 0;
+    running = false; left = fullSecs(); lastTime = 0;
     parked = false; delays = 0;
     fsThisGame = 0; fsLast = false; snaps = 0;
     hide();
@@ -377,6 +402,8 @@
     tick, judgeSnap, stop, reset, newGame, setup,
     // pure rules, exposed so they can be swept without playing a down
     chanceAt, spotAfter, stepBack,
+    // …and the situational versions the game actually rolls against
+    liveChance, fullSecs,
     FULL, WARN_AT, DANGER_AT, FS_MAX, FS_PER_GAME, YARDS,
     // a window into the live state, for the test harness
     _state: () => ({ running, left, parked, delays, fsThisGame, fsLast, snaps }),
