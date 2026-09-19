@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.5 — cache-buster is `?v=159` in `index.html`.
+- **Version:** v4.6 — cache-buster is `?v=162` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,11 +218,62 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
     ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** ·
-    ④⏳ The Play Clock · ⑤🔇 Silent Count · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
+    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **⏳ v4.6 — THE PLAY CLOCK (Round 13, pick ④, `src/playclock.js`, no save).** ⚠️ **THESE ARE THE
+    TWO PENALTIES v3.9 DELIBERATELY LEFT OUT.** 🟨 `penalty.js` hooks `endPlay` and judges plays that
+    actually RAN, so it could never call the two fouls that happen in the silence BEFORE the snap:
+    ⏳ delay of game and 🏃 false start. This is that missing half of the rulebook, and it hooks the one
+    place penalty.js cannot reach — the `presnap` branch of `update()`. They can never collide:
+    penalty.js parks a play that has ENDED, this parks one that has not STARTED, so unlike 🟨 vs
+    🚩 the Coach's Challenge no sequencing was needed.
+    **The clock is 15 REAL seconds** (the game clock doesn't run between plays — `advanceClock` only
+    fires when a play ends) and it **PAUSES whenever any `.ov` panel is open, during 🎓 the tour, and
+    in a hidden tab**. That pause is not a courtesy, it is the feature: opening 🗣️ AUDIBLES to read
+    four play descriptions is not dawdling, and a play clock that punished you for using the rest of
+    the game would be a bug wearing a rulebook.
+    ⚠️ **A FALSE START IS ONLY POSSIBLE IN THE LAST 4 SECONDS**, rising from 0 at 4.0s to 30% at 0.0s.
+    That shape IS the balance: if it could happen on any snap the lesson would be "snap immediately",
+    which would quietly delete 🗣️ audibles, 🧩 formations, 🎩 tricks and 🛡 protection — four features
+    that live in exactly the seconds it would be telling you to skip. **Eleven of the fifteen seconds
+    are completely safe.** Brakes in the penalty.js spirit: never on 4th down (the heartbreak rule),
+    never two in a row, never on your first snap of a game, at most two a game.
+    ⚠️ **AND IT GIVES ⏱ TIMEOUT A REASON TO EXIST AT THE LINE** for the first time since v1.7 — a
+    timeout buys a fresh play clock, which is precisely why real coaches burn one there.
+    ⚠️ **A DELAY NEVER COSTS THE DOWN** (5 yards, replay it — the real rule), half-the-distance is
+    honoured, and **two delays in a row with nobody there PARKS the clock** rather than walking the
+    team backwards forever on an iPad left on the sofa.
+    **TWO BUGS FOUND IN VERIFICATION.** ① **THE TIE FRAME.** The first cut ticked the clock before
+    reading the hike, so pressing HIKE on the exact frame it expired still gave you a delay of game —
+    you beat the clock and were penalised for it. The tap is read first now and **every tie goes to
+    the player**; a snap that got away before zero is a legal snap. ② **A 375px COLLISION.** Under
+    430px `#ingame-ctrls` drops to y104 with its buttons starting at x84, and "⏳ 14 PLAY CLOCK" is
+    103px wide — it ran straight under ⏱ TIMEOUT. That is the v1.44/45 status-bar pain exactly. The
+    words now drop under 430px and the ⏳ hourglass carries the meaning alone (41px, 31px of daylight).
+    ⚠️ **AND THE STALE-CACHE TRAP BIT AGAIN, EXACTLY AS IN v4.3.** The tie-frame fix tested as still
+    broken for three rounds because the browser was serving a CACHED `index.html` whose script tags
+    still said `?v=160` — the fix was on disk and not on the page. **Bumping `?v=` does not help if the
+    HTML itself is cached: load `index.html?cb=<something new>` to force it.** Checking
+    `document.querySelector('script[src*="main.js"]').getAttribute('src')` is the two-second way to
+    know which build you are actually testing, and it should be the FIRST thing checked when a fix
+    "doesn't work".
+    ⚠️ **AND `document.hidden` IS TRUE IN THE PREVIEW PANE** even at 1280px with real rects — so the
+    clock correctly refused to run at all, which read exactly like a dead feature. Patch it with
+    `Object.defineProperty(document,'hidden',{get:()=>false})` to simulate a foregrounded tab.
+    **Verified:** 24 pure-rule assertions (the chance curve is 0 outside the danger window and rises
+    monotonically inside it; a 1..99 sweep proves a pre-snap penalty can never reach yard 0, so it can
+    never hand them a safety; the down never advances); the clock drains at real time and freezes for
+    both pre-snap panels; delay of game lands the exact spot/down/marker with the **game clock
+    untouched**; the false start fires with the ball never snapped and all six brakes hold; the
+    cooldown and the per-game cap hold; the walk-away park works and you can still just play from it;
+    80 modules on one cache-buster, 56 overlays all fitting portrait, no sideways scroll, 0 console
+    errors.
+    🔇 **WHAT PICK ⑤ WANTS FROM THIS FILE:** `chanceAt()` is a pure function of one argument on
+    purpose — the Silent Count multiplies it by road noise and divides it back down in exchange for a
+    slower start. That is deliberately a small change.
   - **🙋 v4.5 — PUNT RETURNS & THE MUFFED PUNT (Round 13, pick ③, `src/puntreturn.js`, no save).**
     ⚠️ **UNTIL NOW A PUNT WAS A KICKOFF.** When they punted, `takeYourBall()` called `startKickoff()` —
     same deep boot, same wall of coverage, same "RETURN IT!". A punt differs in three ways that all
