@@ -71,6 +71,11 @@ const OFF_RECOVER_CHANCE = 0.5;  // ...and your team dives on its own fumble hal
 const RECOVER_DIST  = 26;    // close enough to fall on it
 const LOOSE_MS      = 4200;  // the scramble cannot run forever
 const LOOSE_CHASERS = 3;     // how many gunners dive for it (all 7 = hopeless)
+// Where a muffed punt ends up, measured from the returner. ⚠️ MUFF_MIN MUST STAY
+// WELL OUTSIDE RECOVER_DIST — see muffThePunt for the bug that happened when it
+// wasn't, and why the ball now squirts PAST you instead of dropping at your feet.
+const MUFF_MIN      = RECOVER_DIST + 20;   // 46px — you always have to take steps
+const MUFF_MAX      = 64;                  // ~6 yards — far enough to be a race, not a marathon
 
 // ---- Kicking — on 4th down you can try a field goal or punt ----
 // A field goal is worth 3 points. How far is the kick? From where the ball
@@ -4116,8 +4121,33 @@ function muffThePunt() {
   if (window.TDSound) TDSound.sting('stuff');
   ballFollow = false;
   const c = G.ballCarrier.s;
-  const bx = Phaser.Math.Clamp(c.x + Phaser.Math.Between(-40, 40), 12, FIELD_WIDTH - 12);
-  G.scene.tweens.add({ targets: ball, x: bx, y: c.y + Phaser.Math.Between(-26, 34), duration: 480, ease: 'Bounce.Out' });
+  // ⚠️ THE BALL SQUIRTS PAST YOU — IT NEVER LANDS AT YOUR FEET, AND THAT WAS A
+  // REAL BUG. v4.8 dropped it anywhere in an 80×60 box centred ON the returner,
+  // and a lot of that box is inside RECOVER_DIST (26px). Measured on the real
+  // punt with the real game loop and nobody touching anything: the returner got
+  // it back 5 times out of 7, and all 5 were INSTANT — the ball landed 6–25px
+  // away, `updateLooseBall` found him already on top of it on its first frame,
+  // and the "scramble" lasted zero frames. Max asked to "run for it and get the
+  // ball back", and most of the time nobody ran at all. (v4.8's own notes said
+  // "stand still and they take it" — true only in a test that placed the ball
+  // by hand, well away from the player. The real landing spot never did.)
+  //
+  // So now it keeps going the way a real muff does. The punt was coming DOWN
+  // the screen at you; it hits your hands and pops out with that momentum —
+  // PAST you, into a fan pointing at your own goal line, and therefore AWAY
+  // from the gunners who were bearing down from upfield. And it always goes at
+  // least MUFF_MIN (46px), so you have to take real steps to fall on it.
+  //
+  // ⚠️ WHY PAST YOU AND NOT A RANDOM DIRECTION: a ball that squirted UPFIELD
+  // would land between the gunners, who would have it before a nine-year-old
+  // could move a thumb — a race you lose before it starts is just a coin flip
+  // with extra steps, which is the thing this whole feature exists to remove.
+  // Past you, the race is fair and it is decided by one thing: did you go?
+  const ang = Phaser.Math.DegToRad(Phaser.Math.Between(25, 155));   // 90° = straight down
+  const far = Phaser.Math.Between(MUFF_MIN, MUFF_MAX);
+  const bx = Phaser.Math.Clamp(c.x + Math.cos(ang) * far, 12, FIELD_WIDTH - 12);
+  const by = c.y + Math.sin(ang) * far;
+  G.scene.tweens.add({ targets: ball, x: bx, y: by, duration: 480, ease: 'Bounce.Out' });
 
   // 🏃 …and now GO GET IT. This used to be a `delayedCall` into a coin flip,
   // which is where Max's idea was only half-built: the ball was called "live"
