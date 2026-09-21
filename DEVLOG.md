@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.8 — cache-buster is `?v=164` in `index.html`.
+- **Version:** v4.9 — cache-buster is `?v=165` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -223,6 +223,38 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **🏃 v4.9 — …AND NOW THE BALL SQUIRTS PAST YOU, SO YOU REALLY HAVE TO RUN (`main.js` only).**
+    ⚠️ **v4.8 MADE THE RACE REAL, BUT MOST OF THE TIME NOBODY RAN.** It still dropped the ball anywhere
+    in an 80×60 box centred **on** the returner — and **43% of that box is inside `RECOVER_DIST`**
+    (26px). On those landings `updateLooseBall` found him already standing on it on its very first
+    frame, and the "scramble" lasted zero frames. Measured on the REAL punt, driven by the REAL game
+    loop, with nobody touching anything: **recovered 5 times in 7, all 5 instant** (landed 6–25px away).
+    v4.8's own notes said *"stand still and they take it"* — true only in its test, which placed the
+    ball by hand with the nearest gunner 212px away. In a real punt the gunners start 70–95px away.
+    **The fix:** the ball keeps going the way a real muff does. The punt was coming down the screen at
+    you, so it pops out **past** you with that momentum — a 25°–155° fan toward your own goal line,
+    away from the gunners — and always at least `MUFF_MIN` = `RECOVER_DIST + 20` = 46px (max 64, ~6
+    yards). ⚠️ **Not a random direction, on purpose:** a ball squirting upfield lands between the
+    gunners, and a race you lose before a nine-year-old can move a thumb is a coin flip with extra
+    steps — the exact thing this feature exists to remove.
+    **Swept over every landing spot (2,489 per difficulty), gunner starts taken from
+    `startPuntReturn`:** never touch → **0 recoveries on easy, medium AND hard**; start pushing within
+    **0.73s (easy) / 0.69s (medium) / 0.67s (hard)** of "MUFFED IT!!!" → you win it on ANY landing
+    (typical landing: 0.91 / 0.86 / 0.83s). A kid reacting to the banner (~0.3–0.5s) always gets it
+    back; one who daydreams loses it. **The real-loop trials agree with the model to ~30ms** (medium:
+    300 / 700 / 850ms reactions all won, 1000ms lost, never-touch lost 3/3). The ordinary FUMBLE
+    bounce (~line 1609) is deliberately untouched — it isn't part of Max's request.
+  - **🧪 THREE MORE HARNESS TRAPS, ALL FOUND WHILE CHECKING THIS.** ① **When the preview pane is
+    VISIBLE, Phaser's REAL loop runs** (`loop.frame` advances on its own at 60fps) — and `_verify.js`'s
+    `RUN` steps the scene AGAIN on top of it, so timers, tweens and physics all run ~2× fast. The
+    harness assumes a hidden pane. **When visible, don't pump: just wait on `requestAnimationFrame`
+    and let the real loop drive** — that is also simply the most faithful test there is. ② **Stepping
+    the scene on SYNTHETIC time freezes every tween** (3.87's TweenManager keys off the real loop), so a
+    punt flight never lands. ③ **The pane flips between visible and hidden on its own**, which pauses
+    the real loop mid-trial and silently corrupts wall-clock reaction timing — one "win" came out of
+    exactly that. When the pane can't be trusted, **finish with an analytic sweep of the real geometry**
+    and use the measured trials as the check on the model, not as the whole answer.
+
   - **🏃 v4.8 — THE MUFF IS NOW A REAL SCRAMBLE (finishes Round 13 pick ③, `main.js` only).**
     ⚠️ **THIS WAS MAX'S OWN REQUEST AND IT HAD BEEN HALF-BUILT FOR THREE VERSIONS.** He asked for it
     on 2026-09-17: *"can you make it so you can actually miss the punt? Or you can catch it but you
