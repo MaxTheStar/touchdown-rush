@@ -67,6 +67,10 @@ const LOOSE_BALL_DIST  = 34;   // this close to a bad throw's landing = you can 
 // ---- Fumbles — a big tackle can knock the ball loose ----
 const FUMBLE_CHANCE      = 0.12; // this often, a tackle pops the ball out
 const OFF_RECOVER_CHANCE = 0.5;  // ...and your team dives on its own fumble half the time
+// 🏃 A LOOSE BALL you can actually chase (a muffed punt — see updateLooseBall).
+const RECOVER_DIST  = 26;    // close enough to fall on it
+const LOOSE_MS      = 4200;  // the scramble cannot run forever
+const LOOSE_CHASERS = 3;     // how many gunners dive for it (all 7 = hopeless)
 
 // ---- Kicking — on 4th down you can try a field goal or punt ----
 // A field goal is worth 3 points. How far is the kick? From where the ball
@@ -598,6 +602,7 @@ function update(time, delta) {
   if (G.carrierRing) {
     const showRing = (G.state === 'live' || G.state === 'pass'
                    || G.state === 'dlive' || G.state === 'dpass'
+                   || G.state === 'loose'
                    || (G.state === 'kickoff' && G.koLive));
     G.carrierRing.setVisible(showRing);
     if (showRing && G.ballCarrier) G.carrierRing.setPosition(G.ballCarrier.s.x, G.ballCarrier.s.y);
@@ -702,6 +707,13 @@ function update(time, delta) {
   }
 
   // KICKOFF RETURN: catch the kick, then run it back through the coverage team.
+  // 🏃 A LOOSE BALL after a muffed punt — a real race, not a dice roll.
+  if (G.state === 'loose') {
+    updateLooseBall(time);
+    updateBall(); updateHUD();
+    return;
+  }
+
   if (G.state === 'kickoff') {
     if (!G.koLive) { freezeEveryone(); updateHUD(); return; }  // ball still in the air
     controlReturner();          // you drive the returner with arrows / the D-pad
@@ -1126,7 +1138,7 @@ function passToNearest(worldX, worldY) {
 // clashes with tap-to-pass (which only fires while you CAN pass).
 // ============================================================
 function isRunning() {
-  return (G.state === 'live' && !canPass()) || (G.state === 'kickoff' && G.koLive);
+  return (G.state === 'live' && !canPass()) || G.state === 'loose' || (G.state === 'kickoff' && G.koLive);
 }
 
 // Turn a finished swipe into a dash (long) or a quick cut (short). dx/dy are the
@@ -4106,16 +4118,93 @@ function muffThePunt() {
   const c = G.ballCarrier.s;
   const bx = Phaser.Math.Clamp(c.x + Phaser.Math.Between(-40, 40), 12, FIELD_WIDTH - 12);
   G.scene.tweens.add({ targets: ball, x: bx, y: c.y + Phaser.Math.Between(-26, 34), duration: 480, ease: 'Bounce.Out' });
-  G.scene.time.delayedCall(1100, resolveMuff);
+
+  // 🏃 …and now GO GET IT. This used to be a `delayedCall` into a coin flip,
+  // which is where Max's idea was only half-built: the ball was called "live"
+  // in the comments and then settled by `Math.random()` while everybody stood
+  // frozen. He asked to "run for it and get the ball back", so the ball is now
+  // genuinely loose and you chase it. Let the bounce land first, then unfreeze.
+  G.scene.time.delayedCall(520, () => {
+    if (G.state !== 'fumble' || !G.puntMuffed) return;   // something else settled it
+    G.state = 'loose';
+    G.looseUntil = G.scene.time.now + LOOSE_MS;
+    // Only the men with a real chance give chase — the whole coverage team
+    // converging would be hopeless, and unreadable on a phone.
+    G.looseChasers = nearestDefenders(ball.x, ball.y, LOOSE_CHASERS);
+    showBanner('GET IT!!!', true);
+  });
 }
 
-// Who fell on it? The same coin flip your own fumbles get — a muff is the worst
-// moment in the game and it still must not be an automatic turnover.
-function resolveMuff() {
+// The `n` defenders closest to a point — used to pick who dives for a loose ball.
+function nearestDefenders(x, y, n) {
+  return defense
+    .map(d => ({ d: d, dist: Phaser.Math.Distance.Between(d.s.x, d.s.y, x, y) }))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, n)
+    .map(e => e.d);
+}
+
+// ============================================================
+// 🏃 THE SCRAMBLE FOR A LOOSE BALL
+// ------------------------------------------------------------
+// The ball is on the turf and nobody owns it. You drive your returner with the
+// D-pad exactly as you would on a return; the nearest gunners run at the BALL
+// rather than at you. First man to reach it falls on it.
+//
+// ⚠️ THERE IS NO RANDOMNESS LEFT IN HERE AT ALL, and that is the point. A muff
+// was already the unluckiest moment in the game — deciding the recovery with a
+// second coin flip on top made it a thing that HAPPENED to you twice. Now it is
+// a race you can win, and the reason you win it is that you got there first.
+//
+// ⚠️ IT STILL CANNOT HANG. If nobody reaches the ball before LOOSE_MS the pile
+// is settled by who is actually closest — still not a dice roll, just the same
+// question answered early.
+// ============================================================
+function updateLooseBall(time) {
+  const me = G.ballCarrier.s;
+  controlReturner();                       // your legs, your D-pad
+
+  // The chasers run at the ball, not at you.
+  for (const d of defense) {
+    if (G.looseChasers && G.looseChasers.indexOf(d) === -1) { d.s.setVelocity(0, 0); continue; }
+    if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
+    steer(d.s, ball.x, ball.y, diff().koCover);
+  }
+
+  // Did anyone get there? You are checked FIRST — on a tie at the same pixel
+  // the ball goes to the player, which is the friendly way to break it.
+  if (Phaser.Math.Distance.Between(me.x, me.y, ball.x, ball.y) < RECOVER_DIST) {
+    resolveMuff(true); return;
+  }
+  for (const d of defense) {
+    if (G.looseChasers && G.looseChasers.indexOf(d) === -1) continue;
+    if (Phaser.Math.Distance.Between(d.s.x, d.s.y, ball.x, ball.y) < RECOVER_DIST) {
+      resolveMuff(false); return;
+    }
+  }
+
+  // Out of time: closest man wins the pile.
+  if (time >= G.looseUntil) {
+    let best = Phaser.Math.Distance.Between(me.x, me.y, ball.x, ball.y), mine = true;
+    for (const d of defense) {
+      if (G.looseChasers && G.looseChasers.indexOf(d) === -1) continue;
+      const dist = Phaser.Math.Distance.Between(d.s.x, d.s.y, ball.x, ball.y);
+      if (dist < best) { best = dist; mine = false; }
+    }
+    resolveMuff(mine);
+  }
+}
+
+// Who fell on it? ⚠️ THIS IS NO LONGER A COIN FLIP — `byYou` comes from the
+// scramble above, i.e. from who actually reached the ball. A muff is the worst
+// moment in the game, and it must not be an automatic turnover OR a dice roll.
+function resolveMuff(byYou) {
+  G.looseChasers = null;
+  freezeEveryone();
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);
-  if (Math.random() < OFF_RECOVER_CHANCE) {
+  if (byYou) {
     ballFollow = true;
-    finishPuntAt(spot, 'YOU FELL ON IT!');
+    finishPuntAt(spot, 'YOU GOT IT BACK!');
   } else {
     // They recovered — their ball, right here, and you are on defense again.
     G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
