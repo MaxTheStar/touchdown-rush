@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.7 — cache-buster is `?v=163` in `index.html`.
+- **Version:** v4.8 — cache-buster is `?v=164` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,12 +217,41 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `50618cb0-d796-44a4-96cc-c729da1a2878`. ⚠️ **Max reversed the stop order again** — "if it's swept,
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
-    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** ·
+    ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** (finished in **v4.8** — see below) ·
     ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **🏃 v4.8 — THE MUFF IS NOW A REAL SCRAMBLE (finishes Round 13 pick ③, `main.js` only).**
+    ⚠️ **THIS WAS MAX'S OWN REQUEST AND IT HAD BEEN HALF-BUILT FOR THREE VERSIONS.** He asked for it
+    on 2026-09-17: *"can you make it so you can actually miss the punt? Or you can catch it but you
+    drop it, **and you have to run for it and get the ball back**?"* v4.5 built the miss and the drop
+    beautifully — and then settled the loose ball with `Math.random() < OFF_RECOVER_CHANCE` while
+    every player stood frozen. The file's own comments called it "a **LIVE BALL**"; it wasn't one.
+    The chart showed ③ as ✅ the whole time, which is exactly how a half-built idea disappears.
+  - **🏃 WHAT IT DOES NOW.** The bounce lands (480ms), then the game enters a new `'loose'` state:
+    you drive your returner with the D-pad, the **three** nearest gunners run at the BALL rather than
+    at you, and the first man within `RECOVER_DIST` (26px) falls on it. ⚠️ **There is no randomness
+    left in the path at all** — a muff was already the unluckiest moment in the game, and deciding
+    the recovery with a second coin flip on top made it something that happened to you *twice*. Now
+    it is a race you win by getting there. ⚠️ Only 3 of the 7 chase: all seven converging is both
+    hopeless and unreadable on a phone. ⚠️ It cannot hang — after `LOOSE_MS` (4.2s) the pile goes to
+    whoever is **actually closest**, which is the same question answered early, not a dice roll.
+  - **🐛 THE BUG WAS IN MY TEST, AND IT PASSED CONVINCINGLY BEFORE IT WAS RIGHT.** Staging a loose
+    ball by hand, I set the positions and the state but forgot `ballFollow = false` — which the real
+    `muffThePunt` does. So `updateBall()` glued the ball **to my own player** every frame: the
+    "race" was the ball chasing me, I won it from 170px away without pressing anything, and both
+    scenarios reported `byYou: true`. ⚠️ **A staged state must reproduce EVERY flag the real entry
+    point sets, not just the interesting ones.** With `ballFollow` fixed: run for it and you recover
+    at 24px while the nearest gunner is still 212px away; stand still and they take it.
+  - **🧪 TWO HARNESS TRAPS COST MORE TIME THAN THE FEATURE.** (1) A **stale `delayedCall`** from a
+    previous scenario (`delayedCall(1500, startCpuDrive)`) fired during the next test and dragged the
+    game into `dsim` — a clean reload per scenario is not optional. (2) `G.scene.time.now` read
+    13652 right after the call while `update()` was being handed `time=50478`, so a deadline computed
+    from the wrong clock can expire instantly. Verified the right way by **counting frames inside
+    `updateLooseBall`**: 51 live frames with `expired=false`, then a real resolution.
+
   - **🔇 v4.7 — THE SILENT COUNT (Round 13, pick ⑤, `src/silent.js`, no save).** The pick the last
     three were building towards: 📣 the crowd (v3.0), 👕 home-and-away (v4.4) and ⏳ the play clock
     (v4.6) all meet here. ⚠️ **CROWD NOISE HAD ONLY EVER POINTED ONE WAY** — crowd.js tilts THEIR
