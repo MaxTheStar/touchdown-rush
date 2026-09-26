@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.9 — cache-buster is `?v=165` in `index.html`.
+- **Version:** v4.10 — cache-buster is `?v=166` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,11 +218,60 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
     ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** (finished in **v4.8** — see below) ·
-    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages · ⑦📈 Win Probability ·
+    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages **v4.10 ✅** · ⑦📈 Win Probability ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **🧑‍🤝‍🧑 v4.10 — PERSONNEL PACKAGES (Round 13, pick ⑥, `src/personnel.js`, no save).** The first
+    HARD one on the board, and the one the two previous sessions kept tripping over: it was built as
+    modules on a branch on 2026-09-21, parked unwired because another session owned `main.js`, and
+    only wired up now. Rebased onto v4.9 clean, then finished, verified and squashed to one commit.
+    **What it is:** the game has always put the same seven men on the field for every snap of every
+    game — a QB, a back, two receivers, three linemen. 🧩 Formations move those seven AROUND; this
+    changes WHICH men are out there. ⚖️ **REGULAR** is the game exactly as it was (every question
+    `main.js` asks answers "no change", so the default play is byte-for-byte the old one). 🙌 **3 WIDE**
+    sits your back down and brings the 🏥 bench receiver on in the slot. 🧱 **HEAVY** sits receiver #2
+    down and plays your **TIGHT END** — roster slot 4, who has existed since your first draft and had
+    **never taken a snap**, because the field only had room for seven and none of those seven was his.
+    **The prices are real and they are the point:** 3 WIDE has nobody to hand to (`canHandOff` refuses),
+    🛡 MAX PROTECT quietly plays as ⚖️ BALANCED because its tighter pocket came from that fourth
+    blocker, and an empty backfield draws more pressure. HEAVY loses your second receiver — the tight
+    end is a step slower and doesn't shake himself open — and pays you back on the ground.
+  - **⚠️ A SUBSTITUTE HAS TO BE A REAL MAN EVERYWHERE THE GAME KEEPS SCORE, or the promise is a lie.**
+    Four files each ask `TDPersonnel.subAt(spot)` — "is somebody different standing here?" — and get
+    `null` on ⚖️ REGULAR, which is what keeps the default untouched: ⭐ `traits.js` runs HIS trait
+    (verified: a SPEEDSTER sub moves `speedFor(3)` 1.02 → 1.10, a BRUISER moves `stiffFor(3)` 0 → 0.18),
+    📊 `gamestats.js` gives him his own box-score line and lets him win ⭐ Player of the Game (**the
+    bench receiver won it in testing**), and 🌟 `nicknames.js` shouts his name ("THE FRIDGE FINDS THE
+    END ZONE!"). ⚠️ **Nothing is written to your saved roster.** 🏥 injuries.js really does swap a
+    stand-in into a slot because an injury lasts games; a personnel change lasts a few plays, and
+    saving it every down would leave your back on the bench for good if the game closed mid-drive.
+  - **⚠️ `place` AND `steer` WERE MAIN.JS-ONLY, AND personnel.js CALLS BOTH.** Lining a substitute up
+    (`place`) and walking the tight end to his block (`steer`) threw `TypeError` on the very first
+    snap. They are on the `__td` bridge now. **`__td` is not just a debug handle — it is the bridge
+    every add-on drives the field through**, so a helper an add-on calls has to be listed there.
+  - **📐 MEASURED, NOT HOPED (real loop, medium, the harness's own game).** The pile: **6/6** QB sneaks
+    out of 🧱 HEAVY pushed **+1.5 yds** (`-1.5 → 0.0` every time), **0/6** out of ⚖️ REGULAR. Stopped
+    **0.8 yds short** of the goal → pushed in for **six points**; **2.2 short** → still short; the same
+    sneak out of REGULAR is marked where he fell. Blitz rate over 600 play calls: **27.2% ⚖️ → 38.2% 🙌
+    → 29.8% 🧱**. The 💡 nudge speaks **once** a game ("💡 3rd & 9: try 🙌 3 WIDE in 🗣️") and is silent
+    the second time. A possession change puts back **both** the package and the name tags.
+    ⚠️ **AND ONE CLAIM DID NOT SURVIVE THE MEASUREMENT.** The module's comment promised *"from the 2,
+    that step is a touchdown."* It isn't: a straight-ahead sneak is stopped ~1.5 yds **behind** the
+    line, so the push only restores the line — from the 2 it scores **0/6**. The push scores when you
+    are stopped within a yard and a half of the goal, which is a different and smaller promise. The
+    comment now says what was measured. **A comment that overstates is a bug with a longer fuse:
+    nobody tests it, and Max reads these.**
+  - **🧪 TWO HARNESS TRAPS, BOTH OF WHICH GAVE CONFIDENT WRONG ANSWERS FIRST.** ① **`choose()` is
+    refused unless `G.state === 'presnap'`** — a staged test that flips packages after setting
+    `state = 'live'` silently keeps the FIRST package for every later case, which made ⚖️ REGULAR look
+    like it pushed the pile. Reset the state before every switch. ② **10 goal-line trials came back
+    identical (`spot: 90`, both packages) because the game had slipped into `qbreak`** and no play ever
+    snapped. ⚠️ **ASSERT THE PLAY ACTUALLY WENT LIVE** (`live`/`handed` flags) — a trial that quietly
+    does nothing reports as cleanly as one that works. Also: a scripted runner who takes the hand-off
+    standing still is tackled at his spawn spot for **-8 yds**; hold the D-pad from the hand-off on.
+
   - **🏃 v4.9 — …AND NOW THE BALL SQUIRTS PAST YOU, SO YOU REALLY HAVE TO RUN (`main.js` only).**
     ⚠️ **v4.8 MADE THE RACE REAL, BUT MOST OF THE TIME NOBODY RAN.** It still dropped the ball anywhere
     in an 80×60 box centred **on** the returner — and **43% of that box is inside `RECOVER_DIST`**
