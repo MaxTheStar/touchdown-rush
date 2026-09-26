@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.10 — cache-buster is `?v=166` in `index.html`.
+- **Version:** v4.11 — cache-buster is `?v=167` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,11 +218,46 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     then build a new board, upload it, and start working on it" — so the autopilot is RUNNING again.
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
     ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** (finished in **v4.8** — see below) ·
-    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages **v4.10 ✅** · ⑦📈 Win Probability ·
+    ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages **v4.10 ✅** · ⑦📈 Win Probability **v4.11 ✅** ·
     ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **📈 v4.11 — WIN PROBABILITY (Round 13, pick ⑦, `src/winprob.js`, no save).** The broadcast
+    number, and 🔥 Momentum's opposite: momentum is what you have DONE, this is what is LEFT.
+    **⚠️ THE WARNING ON THE CHART WAS THE FEATURE** — *"a number that flatters you is worse than no
+    number"* — so nothing in it is invented. It thinks with **the league's own engine** (season.js:
+    42% of drives score, 62% of those are touchdowns) and **adds up every way the rest of the game
+    can go, drive by drive, exactly**.
+    ⚠️ **THE FIRST CUT USED A BELL CURVE AND IT WAS NOT HONEST ENOUGH.** Football scores are lumpy —
+    0, 3 or 7 — and with one drive left "expected margin, give or take" is nonsense: either they
+    score or they don't. An exact convolution costs a few thousand sums, only runs when the situation
+    changes, and makes symmetry **exact to 0** instead of approximately right.
+    ⚠️ **ONE CONSTANT IS MEASURED, NOT BORROWED, AND IT MATTERED MORE THAN THE MATHS.** The league
+    assumes six drives a side = a drive every 50 seconds. A drive you actually PLAY takes **83
+    seconds** (timed over real possessions with an in-page autopilot), because a single run costs 32
+    seconds of clock. So a game holds about **seven** drives, not twelve — the difference between
+    calling a one-score fourth quarter a coin flip and telling you to hurry. The split is deliberate:
+    **the clock is mechanical and was measured; how often a drive scores depends on how good you
+    are, and there the league's own 42% is the fairest assumption available.**
+    ⚠️ **AND NOBODY KNOWS HOW MANY DRIVES ARE LEFT, SO IT DOESN'T PRETEND TO.** Drives ran 23–139
+    seconds, so ten minutes might hold six possessions or nine. Averaging over that uncertainty
+    **cut the worst calibration error from 3.7 points to 1.5** — the model had been surer than it had
+    any right to be. It also killed a rounding artefact that made the number JUMP as the clock slid
+    past a boundary (2 drives left at 0:41, 1 at 0:39); the biggest one-second move with nothing
+    happening is now **0.41%**.
+    📐 **Calibration, 20,000 simulated games / 160,000 predictions:** every band within **1.5 points**
+    (60–70% says 65.2%, really won 63.7%). Possession is worth 55/45 at kickoff and 99/87 up seven
+    with a minute left. **Three refusals:** never 0% while the clock runs (clamped 1–99% — telling a
+    nine-year-old he cannot win with a minute left is unkind *and* untrue); **never speaks** (v2.8 was
+    spent emptying a full announcer bar, so a swing flashes on the number instead — count the voices
+    already talking); and never lurches without football happening.
+    ⚠️ **`style.display = ''` DOES NOT SHOW AN ELEMENT** whose stylesheet says `display:none` — it
+    hands it back to the stylesheet. The row rendered its text, reported 0×0, and looked for all the
+    world like a CSS bug. 375×812: the row is 54px at x12–66, the buttons start at **x84**, and ⏳ the
+    play clock ends at y121 against this row's y124 — the same collision the play clock documented,
+    measured rather than assumed. Afterwards it draws 🎢 "How the game was won" in the 📊 Box Score.
+
   - **🧑‍🤝‍🧑 v4.10 — PERSONNEL PACKAGES (Round 13, pick ⑥, `src/personnel.js`, no save).** The first
     HARD one on the board, and the one the two previous sessions kept tripping over: it was built as
     modules on a branch on 2026-09-21, parked unwired because another session owned `main.js`, and
