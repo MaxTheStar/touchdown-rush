@@ -830,6 +830,11 @@ function runSpeed() {
   // Every other bonus here is team-wide; this one is deliberately not — a
   // 🚀 Speedster is fast when HE has the ball and nobody else is.
   if (window.TDTraits) s *= TDTraits.speedFor(offense.indexOf(G.ballCarrier));
+  // 😮‍💨 …and times how much gas he has left (src/gastank.js). This is the only
+  // one that can only ever make you SLOWER, and it is deliberately gentle: a
+  // completely empty tank costs 6%, which trims your 11px cushion over a
+  // chasing defender without erasing it. A full tank returns exactly 1.
+  if (window.TDGas) s *= TDGas.speedMult();
   return s;
 }
 
@@ -2125,6 +2130,10 @@ function callTimeout() {
   // rule lives where the timeout is spent (playclock.js ignores it unless a
   // clock is actually running, so calling it mid-play is harmless).
   if (window.TDPlayClock) TDPlayClock.reset();
+  // 😮‍💨 …and your team gets its breath back, which is the OTHER real reason a
+  // coach burns one (src/gastank.js). Same argument as the play clock above:
+  // the rule lives where the timeout is spent.
+  if (window.TDGas) TDGas.timeout();
   updateTimeoutBtn();
 }
 
@@ -3207,6 +3216,11 @@ const DefenseSim = (function () {
 // ============================================================
 function startBreak(kind, resume) {
   G.state = 'qbreak';
+  // 😮‍💨 The end of a quarter is a rest, and it has to be said HERE. gastank.js
+  // ticks from `updateHUD`, and `updateHUD` does not run while a break screen is
+  // up — a "if we're in qbreak, refill" check inside that file measured ZERO
+  // ticks and would have sat there looking like it worked (src/gastank.js).
+  if (window.TDGas) TDGas.timeout();
   G.breakResume = resume;
   G.breakReadyAt = G.scene.time.now + BREAK_MIN_MS;
   freezeEveryone();
@@ -3827,6 +3841,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDSilent) TDSilent.newGame();       // 🔇 back on the call
   if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
   if (window.TDWin) TDWin.newGame();             // 📈 a fresh 50/50 and an empty swing chart
+  if (window.TDGas) TDGas.newGame();             // 😮‍💨 …and a full tank
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
@@ -5089,6 +5104,10 @@ function updateHUD() {
   // right place to ask. ⚠️ It runs EVERY FRAME: winprob.js compares the
   // situation with the last one and does nothing at all unless it changed.
   if (window.TDWin) TDWin.update();
+  // 😮‍💨 …and the same deal for the gas tank: it empties while you run, fills in
+  // the huddle, and keeps its own clock because Phaser's delta cannot be
+  // trusted across a modal (src/gastank.js).
+  if (window.TDGas) TDGas.tick();
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
