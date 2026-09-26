@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=166" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=166" />
+  <link rel="icon" type="image/png" href="favicon.png?v=167" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=167" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=166" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=167" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=166" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=167" />
   <style>
     html, body {
       margin: 0;
@@ -152,6 +152,51 @@
     body.menu #playclock,
     body.kicking #playclock,
     body.returning #playclock { display: none !important; }
+    /* ---- 📈 WIN PROBABILITY (src/winprob.js) --------------------------
+       The last row of the top-left stack, under ⏳ the play clock. ⚠️ SAME
+       COLLISION, SAME ANSWER: below 430px the in-game buttons start at x84, so
+       this row is built to end well before that — an icon, three characters and
+       a 44px bar, with no word label anywhere to grow it. Green while you are
+       favoured, red while you are not, so the colour says it before the number
+       does. The little +14 that flashes beside it is a SWING: it appears only
+       when the number moves 7 points or more, and fades on its own. */
+    #winprob {
+      /* +114, not +110: ⏳ the play clock above it is 23px tall from +88, so
+         +110 put this row's first pixel inside the last one of that one. */
+      top: calc(max(10px, env(safe-area-inset-top)) + 114px);
+      left: max(12px, env(safe-area-inset-left));
+      display: none; white-space: nowrap; color: #dfe6f2;
+    }
+    #winprob #wp-ic { font-size: 11px; margin-right: 3px; opacity: .9; }
+    #winprob b { font-size: 15px; line-height: 1; }
+    #winprob.good b { color: #7bd88f; }
+    #winprob.bad  b { color: #ff9b8f; }
+    #winprob u {
+      text-decoration: none; font-size: 10px; font-weight: 800; margin-left: 4px;
+      opacity: 0; transition: opacity .25s ease;
+    }
+    #winprob u.up   { color: #7bd88f; opacity: 1; }
+    #winprob u.down { color: #ff9b8f; opacity: 1; }
+    #wp-bar {
+      width: 44px; height: 4px; margin-top: 3px; border-radius: 3px;
+      background: rgba(255,138,138,0.55); overflow: hidden;
+    }
+    #wp-fill { display: block; height: 100%; width: 50%; background: #7bd88f; transition: width .35s ease; }
+    @media (prefers-reduced-motion: reduce) { #wp-fill, #winprob u { transition: none; } }
+    /* The same "no stale number" rule the play clock follows: the menu, a kick
+       and a return all take the game away from you, so the readout goes too. */
+    body.menu #winprob,
+    body.kicking #winprob,
+    body.returning #winprob { display: none !important; }
+
+    /* 📈 …and the swing chart it draws afterwards, inside the 📊 Box Score. */
+    .wp-chart { margin: 4px 0 2px; }
+    .wp-chart svg { width: 100%; height: 92px; display: block; border-radius: 7px; }
+    .wp-legend {
+      display: flex; justify-content: space-between; margin-top: 5px;
+      font: 700 10px Arial; color: #8fb0d8; letter-spacing: .04em;
+    }
+
     /* 💡 The in-play hint ("TAP a receiver to throw…") used to sit 92px off the
        bottom — right ON TOP of the controls. The D-pad is three 62px rows plus
        gaps (198px tall) sitting 20px up, so its top edge is 218px from the
@@ -3981,6 +4026,11 @@
          two rows up; and it is `display:none` until playclock.js turns it on at
          the line, so most of the game this row is not there at all. -->
     <div id="playclock"><span id="pc-ic">⏳</span><b id="pc-num">15</b><i id="pc-lab">PLAY CLOCK</i></div>
+    <!-- 📈 WIN PROBABILITY (src/winprob.js) — the broadcast number, and the
+         bottom of this stack. It is the narrowest row here on purpose; see the
+         collision note in the CSS. -->
+    <div id="winprob"><span id="wp-ic">📈</span><b id="wp-num">50%</b><u id="wp-delta"></u>
+      <div id="wp-bar"><i id="wp-fill"></i></div></div>
     <div id="hud-help"></div>
   </div>
 
@@ -5036,87 +5086,88 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=166"></script>
-  <script src="src/sound.js?v=166"></script>
-  <script src="src/shop.js?v=166"></script>
-  <script src="src/spin.js?v=166"></script>
-  <script src="src/challenges.js?v=166"></script>
-  <script src="src/quests.js?v=166"></script>
-  <script src="src/progress.js?v=166"></script>
-  <script src="src/streak.js?v=166"></script>
-  <script src="src/achievements.js?v=166"></script>
-  <script src="src/trophy.js?v=166"></script>
-  <script src="src/records.js?v=166"></script>
-  <script src="src/road.js?v=166"></script>
-  <script src="src/roadtrip.js?v=166"></script>
-  <script src="src/cards.js?v=166"></script>
-  <script src="src/stadium.js?v=166"></script>
-  <script src="src/ranked.js?v=166"></script>
-  <script src="src/halftime.js?v=166"></script>
-  <script src="src/uniform.js?v=166"></script>
-  <script src="src/powerup.js?v=166"></script>
-  <script src="src/arcade.js?v=166"></script>
-  <script src="src/trivia.js?v=166"></script>
-  <script src="src/nemesis.js?v=166"></script>
-  <script src="src/weather.js?v=166"></script>
-  <script src="src/season.js?v=166"></script>
-  <script src="src/playoffs.js?v=166"></script>
-  <script src="src/film.js?v=166"></script>
-  <script src="src/celebration.js?v=166"></script>
-  <script src="src/juice.js?v=166"></script>
-  <script src="src/gamestats.js?v=166"></script>
-  <script src="src/sportspage.js?v=166"></script>
-  <script src="src/press.js?v=166"></script>
-  <script src="src/staff.js?v=166"></script>
-  <script src="src/chemistry.js?v=166"></script>
-  <script src="src/boxscore.js?v=166"></script>
-  <script src="src/field.js?v=166"></script>
-  <script src="src/ball.js?v=166"></script>
-  <script src="src/mascot.js?v=166"></script>
-  <script src="src/poster.js?v=166"></script>
-  <script src="src/house.js?v=166"></script>
-  <script src="src/allstar.js?v=166"></script>
-  <script src="src/leaders.js?v=166"></script>
-  <script src="src/traits.js?v=166"></script>
-  <script src="src/awards.js?v=166"></script>
-  <script src="src/rebrand.js?v=166"></script>
-  <script src="src/draft.js?v=166"></script>
-  <script src="src/training.js?v=166"></script>
-  <script src="src/injuries.js?v=166"></script>
-  <script src="src/flag.js?v=166"></script>
-  <script src="src/freeagency.js?v=166"></script>
-  <script src="src/gameplan.js?v=166"></script>
-  <script src="src/playbook.js?v=166"></script>
-  <script src="src/createplayer.js?v=166"></script>
-  <script src="src/nicknames.js?v=166"></script>
-  <script src="src/special.js?v=166"></script>
-  <script src="src/events.js?v=166"></script>
-  <script src="src/dynasty.js?v=166"></script>
-  <script src="src/ads.js?v=166"></script>
-  <script src="src/tour.js?v=166"></script>
-  <script src="src/concession.js?v=166"></script>
-  <script src="src/kick.js?v=166"></script>
-  <script src="src/drill.js?v=166"></script>
-  <script src="src/scout.js?v=166"></script>
-  <script src="src/simgame.js?v=166"></script>
-  <script src="src/audible.js?v=166"></script>
-  <script src="src/defcall.js?v=166"></script>
-  <script src="src/superstar.js?v=166"></script>
-  <script src="src/crowd.js?v=166"></script>
-  <script src="src/fourth.js?v=166"></script>
-  <script src="src/clockplay.js?v=166"></script>
-  <script src="src/bighit.js?v=166"></script>
-  <script src="src/selfscout.js?v=166"></script>
-  <script src="src/penalty.js?v=166"></script>
-  <script src="src/hurry.js?v=166"></script>
-  <script src="src/momentum.js?v=166"></script>
-  <script src="src/protect.js?v=166"></script>
-  <script src="src/puntreturn.js?v=166"></script>
-  <script src="src/toss.js?v=166"></script>
-  <script src="src/homeaway.js?v=166"></script>
-  <script src="src/playclock.js?v=166"></script>
-  <script src="src/silent.js?v=166"></script>
-  <script src="src/personnel.js?v=166"></script>
-  <script src="src/main.js?v=166"></script>
+  <script src="src/stats.js?v=167"></script>
+  <script src="src/sound.js?v=167"></script>
+  <script src="src/shop.js?v=167"></script>
+  <script src="src/spin.js?v=167"></script>
+  <script src="src/challenges.js?v=167"></script>
+  <script src="src/quests.js?v=167"></script>
+  <script src="src/progress.js?v=167"></script>
+  <script src="src/streak.js?v=167"></script>
+  <script src="src/achievements.js?v=167"></script>
+  <script src="src/trophy.js?v=167"></script>
+  <script src="src/records.js?v=167"></script>
+  <script src="src/road.js?v=167"></script>
+  <script src="src/roadtrip.js?v=167"></script>
+  <script src="src/cards.js?v=167"></script>
+  <script src="src/stadium.js?v=167"></script>
+  <script src="src/ranked.js?v=167"></script>
+  <script src="src/halftime.js?v=167"></script>
+  <script src="src/uniform.js?v=167"></script>
+  <script src="src/powerup.js?v=167"></script>
+  <script src="src/arcade.js?v=167"></script>
+  <script src="src/trivia.js?v=167"></script>
+  <script src="src/nemesis.js?v=167"></script>
+  <script src="src/weather.js?v=167"></script>
+  <script src="src/season.js?v=167"></script>
+  <script src="src/playoffs.js?v=167"></script>
+  <script src="src/film.js?v=167"></script>
+  <script src="src/celebration.js?v=167"></script>
+  <script src="src/juice.js?v=167"></script>
+  <script src="src/gamestats.js?v=167"></script>
+  <script src="src/sportspage.js?v=167"></script>
+  <script src="src/press.js?v=167"></script>
+  <script src="src/staff.js?v=167"></script>
+  <script src="src/chemistry.js?v=167"></script>
+  <script src="src/boxscore.js?v=167"></script>
+  <script src="src/field.js?v=167"></script>
+  <script src="src/ball.js?v=167"></script>
+  <script src="src/mascot.js?v=167"></script>
+  <script src="src/poster.js?v=167"></script>
+  <script src="src/house.js?v=167"></script>
+  <script src="src/allstar.js?v=167"></script>
+  <script src="src/leaders.js?v=167"></script>
+  <script src="src/traits.js?v=167"></script>
+  <script src="src/awards.js?v=167"></script>
+  <script src="src/rebrand.js?v=167"></script>
+  <script src="src/draft.js?v=167"></script>
+  <script src="src/training.js?v=167"></script>
+  <script src="src/injuries.js?v=167"></script>
+  <script src="src/flag.js?v=167"></script>
+  <script src="src/freeagency.js?v=167"></script>
+  <script src="src/gameplan.js?v=167"></script>
+  <script src="src/playbook.js?v=167"></script>
+  <script src="src/createplayer.js?v=167"></script>
+  <script src="src/nicknames.js?v=167"></script>
+  <script src="src/special.js?v=167"></script>
+  <script src="src/events.js?v=167"></script>
+  <script src="src/dynasty.js?v=167"></script>
+  <script src="src/ads.js?v=167"></script>
+  <script src="src/tour.js?v=167"></script>
+  <script src="src/concession.js?v=167"></script>
+  <script src="src/kick.js?v=167"></script>
+  <script src="src/drill.js?v=167"></script>
+  <script src="src/scout.js?v=167"></script>
+  <script src="src/simgame.js?v=167"></script>
+  <script src="src/audible.js?v=167"></script>
+  <script src="src/defcall.js?v=167"></script>
+  <script src="src/superstar.js?v=167"></script>
+  <script src="src/crowd.js?v=167"></script>
+  <script src="src/fourth.js?v=167"></script>
+  <script src="src/clockplay.js?v=167"></script>
+  <script src="src/bighit.js?v=167"></script>
+  <script src="src/selfscout.js?v=167"></script>
+  <script src="src/penalty.js?v=167"></script>
+  <script src="src/hurry.js?v=167"></script>
+  <script src="src/momentum.js?v=167"></script>
+  <script src="src/protect.js?v=167"></script>
+  <script src="src/puntreturn.js?v=167"></script>
+  <script src="src/toss.js?v=167"></script>
+  <script src="src/homeaway.js?v=167"></script>
+  <script src="src/playclock.js?v=167"></script>
+  <script src="src/silent.js?v=167"></script>
+  <script src="src/personnel.js?v=167"></script>
+  <script src="src/winprob.js?v=167"></script>
+  <script src="src/main.js?v=167"></script>
 </body>
 </html>

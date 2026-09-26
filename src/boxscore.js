@@ -89,6 +89,10 @@
         tile(t.total, 'total yards') + tile(t.rushYds, 'rushing') + tile(t.recYds, 'receiving') +
         tile(t.td, 'touchdowns') + tile(t.fg, 'field goals') + tile(t.takeaway, 'takeaways') +
       `</div>` +
+      // 📈 the swing chart (winprob.js) — how the game was actually won, which
+      // is a better story than any column of numbers. Returns '' when there is
+      // no line worth drawing, and then this section simply isn't here.
+      (window.TDWin ? TDWin.chartHTML() : '') +
       // player lines
       `<div class="bx-sec">🏈 Offense</div><div class="bx-rows">${off}</div>` +
       `<div class="bx-sec">🛡 Defense</div><div class="bx-rows">${def}</div>`;

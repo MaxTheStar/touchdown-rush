@@ -573,7 +573,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -3276,6 +3276,10 @@ function endGame() {
   if (G.state === 'gameover') return;   // the whistle only blows once
   G.gameOver = true;
   G.state = 'gameover';
+  // 📈 Finish the swing chart on the REAL result, not on wherever the last snap
+  // left the estimate — the line has to end at 100% or 0% or the 📊 box score
+  // would show a game that was never quite won (src/winprob.js).
+  if (window.TDWin) TDWin.gameEnded(G.score, G.oppScore);
   if (window.TDSound) TDSound.sting(G.score > G.oppScore ? 'win' : 'lose');
   // 🪙 the game check: +25 for a win, +5 for a good try (before the FINAL
   // screen is built, so it can show everything you earned today).
@@ -3822,6 +3826,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDPlayClock) TDPlayClock.newGame(); // ⏳ fresh play clock, fresh flag count
   if (window.TDSilent) TDSilent.newGame();       // 🔇 back on the call
   if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
+  if (window.TDWin) TDWin.newGame();             // 📈 a fresh 50/50 and an empty swing chart
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
@@ -5078,6 +5083,12 @@ function updateHUD() {
 
   // The game clock + quarter (Q2 · 3:45), top-right.
   if (hud.clock) hud.clock.setText(G.team ? `${quarterLabel()} · ${formatClock(G.clock)}` : '');
+
+  // 📈 WIN PROBABILITY (winprob.js) — this is the one function that already
+  // knows the score, the clock, the down and who has the ball, so it is the
+  // right place to ask. ⚠️ It runs EVERY FRAME: winprob.js compares the
+  // situation with the last one and does nothing at all unless it changed.
+  if (window.TDWin) TDWin.update();
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
