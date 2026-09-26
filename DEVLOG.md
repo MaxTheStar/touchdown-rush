@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.11 — cache-buster is `?v=167` in `index.html`.
+- **Version:** v4.12 — cache-buster is `?v=168` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -219,10 +219,35 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     **Theme: game day itself** — the hour before kickoff and the moments between whistles. Order:
     ①🪙 Coin Toss **v4.3 ✅** · ②👕 Home & Away Jerseys **v4.4 ✅** · ③🙋 Punt Returns & the MUFFED PUNT **v4.5 ✅** (finished in **v4.8** — see below) ·
     ④⏳ The Play Clock **v4.6 ✅** · ⑤🔇 Silent Count **v4.7 ✅** · ⑥🧑‍🤝‍🧑 Personnel Packages **v4.10 ✅** · ⑦📈 Win Probability **v4.11 ✅** ·
-    ⑧😮‍💨 The Gas Tank. ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
+    ⑧😮‍💨 The Gas Tank **v4.12 ✅** — **🎉 ROUND 13 SWEPT 8/8 (2026-09-25).** ⚠️ **The grep check killed two ideas**: blocked kicks (v1.28 already gives the
     kick game a rusher who can block one) and kick returns (`startKickoff`/`controlReturner` have
     existed for ages — which is exactly what makes the PUNT return a clean gap). ⚠️ **⑤ depends on ②
     and ④** — it needs to know you are on the road and needs a snap count to be silent about.
+  - **😮‍💨 v4.12 — THE GAS TANK (Round 13, pick ⑧ — THE LAST, `src/gastank.js`, no save).** Your
+    runner used to be exactly as fast on his fortieth carry as his first.
+    ⚠️ **RANKED LAST BECAUSE IT TOUCHES SPEED, AND SPEED IS WHAT EVERYTHING ELSE ALREADY TOUCHES** —
+    👟 cleats, 🎡 the spin, ⚡ power-ups, 🎓 the plan, 🎓 staff, 🧑‍🤝‍🧑 chemistry, 🎲 house rules, 🌈 ball
+    skins and ⭐ traits. It folds in at the SAME single place they do (`runSpeed` → `TDShop.speedMult`)
+    rather than inventing a ninth path, and a full tank returns **exactly 1**.
+    ⚠️ **THE SAFE SIZE OF THE PENALTY WAS A MEASUREMENT, NOT A FEELING: you run at 205 and a defender
+    CHASING you runs at 194.** The whole cushion is ELEVEN pixels a second, so the obvious "10% when
+    tired" would have ended every long run with you being reeled in from behind — which does not read
+    as tired, it reads as broken. An empty tank costs **6%** (205 → 192.7): the cushion shrinks to
+    nothing without ever being taken away. **When a number can break the feel of the game, derive it
+    from the speeds that are already there.**
+    **Two kinds of tired, because the chart promised both.** 🏃 A LONG RUN empties it (measured
+    **13.1/s** on a real sprint: 94 → 22 over 5.5 seconds; the bar appears at 74 and goes red at 28).
+    🕐 A LONG DRIVE wears you down too — each snap lowers the **ceiling** the huddle can refill you
+    to (−4, floor 68), measured walking 96·92·88·84·80·76·72·68 and then HOLDING, and resetting to
+    100 the moment the ball changes hands. ⏰ The no-huddle refills at **0.39×** (28.5/s → 11.0/s),
+    which is the honest cost the hurry-up never had — it was pure upside before this. ⏱ A timeout or
+    the end of a quarter gives everything back, which is now **the timeout button's third job**.
+    ⚠️ **A DEAD BRANCH, CAUGHT ONLY BECAUSE THE TICK WAS COUNTED.** "If the state is `qbreak`, refill"
+    got **zero ticks** — `updateHUD` does not run while a break screen is up, so the rule was code
+    that looked like a rule. The rest now lives in `startBreak`, where the break actually happens.
+    **A staged test that never ran also reported a perfect result** (a ceiling that never moved, in a
+    state where nothing ticks) — count the ticks before believing the measurement.
+
   - **📈 v4.11 — WIN PROBABILITY (Round 13, pick ⑦, `src/winprob.js`, no save).** The broadcast
     number, and 🔥 Momentum's opposite: momentum is what you have DONE, this is what is LEFT.
     **⚠️ THE WARNING ON THE CHART WAS THE FEATURE** — *"a number that flatters you is worse than no
