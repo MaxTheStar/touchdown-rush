@@ -61,7 +61,12 @@
   // ---- What main.js asks for ---------------------------------------------
   // Given an index into the `offense` array, what's that guy's nickname?
   function forField(idx) {
-    const slot = FIELD_TO_SLOT[idx];
+    let slot = FIELD_TO_SLOT[idx];
+    // 🧑‍🤝‍🧑 PERSONNEL (personnel.js): a substitute in this spot is a different
+    // man — your tight end is roster slot 4, and a backup off the bench has no
+    // nickname yet (null), so the announcer just uses his normal line.
+    const sub = (window.TDPersonnel && TDPersonnel.subAt) ? TDPersonnel.subAt(idx) : null;
+    if (sub) slot = sub.rosterIdx;
     if (slot == null) return null;
     const roster = (window.TDDraft && TDDraft.rosterAges) ? TDDraft.rosterAges() : [];
     const p = roster[slot];

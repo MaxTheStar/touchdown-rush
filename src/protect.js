@@ -84,7 +84,16 @@
   const DEFAULT = 'balanced';
 
   let id = DEFAULT;
-  const scheme = () => SCHEMES.find(s => s.id === id) || SCHEMES[1];
+  // 🧑‍🤝‍🧑 PERSONNEL PACKAGES (personnel.js): in 🙌 3 WIDE there IS no running
+  // back — the man in his spot is a receiver — so there is nobody to keep in.
+  // MAX PROTECT then quietly plays as ⚖️ BALANCED (its tighter pocket came from
+  // that fourth blocker, so it can't keep the one without the other). Your pick
+  // is remembered and comes back the moment the back does.
+  const noBack = () => !!(window.TDPersonnel && TDPersonnel.hasBack && !TDPersonnel.hasBack());
+  const scheme = () => {
+    const s = SCHEMES.find(x => x.id === id) || SCHEMES[1];
+    return (s.back && noBack()) ? SCHEMES[1] : s;
+  };
 
   function newGame() { id = DEFAULT; paint(); }
 
@@ -128,12 +137,15 @@
     const row = $('pp-row');
     if (!row) return;
     const cur = scheme();
+    const gone = noBack();   // 🙌 3 WIDE: no back on the field to keep in
     row.innerHTML =
       '<div class="pp-head">🛡 PASS PROTECTION</div>' +
       '<div class="pp-opts">' +
       SCHEMES.map(s =>
-        '<div class="pp-btn' + (s.id === cur.id ? ' on' : '') + '" data-id="' + s.id + '">' +
-          '<b>' + s.ic + ' ' + s.name + '</b><span>' + s.blurb + '</span>' +
+        '<div class="pp-btn' + (s.id === cur.id ? ' on' : '') + (s.back && gone ? ' off' : '') +
+          '" data-id="' + s.id + '">' +
+          '<b>' + s.ic + ' ' + s.name + '</b><span>' +
+          (s.back && gone ? 'No back on the field to keep in.' : s.blurb) + '</span>' +
         '</div>').join('') +
       '</div>';
     row.querySelectorAll('.pp-btn').forEach(el => {
@@ -148,6 +160,8 @@
 
   function choose(next) {
     if (!SCHEMES.some(s => s.id === next)) return;
+    // Can't keep a back in when there isn't one (🙌 3 WIDE) — the tap does nothing.
+    if (noBack() && (SCHEMES.find(s => s.id === next) || {}).back) return;
     id = next;
     paint();
     if (window.TDSound) TDSound.sting('coin');

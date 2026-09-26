@@ -88,20 +88,32 @@
     return has ? 2 : 1;
   }
 
+  // 🧑‍🤝‍🧑 PERSONNEL PACKAGES (personnel.js): if a SUBSTITUTE is standing in
+  // this spot — your tight end in 🧱 HEAVY, a backup receiver in 🙌 3 WIDE —
+  // it is HIS trait that counts, not the trait of the man he replaced, who is
+  // sitting on the bench. Nobody different there (always, on ⚖️ REGULAR)
+  // = exactly the old lookup.
+  function fxOnField(slot) {
+    const sub = (window.TDPersonnel && TDPersonnel.subAt) ? TDPersonnel.subAt(slot) : null;
+    if (!sub) return fxAt(slot);
+    const n = sub.player ? nameOf(sub.player.trait) : null;
+    return (n && FX[n]) ? FX[n] : null;
+  }
+
   // ---- per-player: only pays out for the man actually involved ------------
   // `slot` is the OFFENSE index (0 QB, 1 RB, 2 WR1, 3 WR2).
   function speedFor(slot) {
-    const f = fxAt(slot);
+    const f = fxOnField(slot);
     const own = f && f.speed ? f.speed * clutchMult() : 0;
     return 1 + own + captain('allSpeed');
   }
   function catchFor(slot) {
-    const f = fxAt(slot);
+    const f = fxOnField(slot);
     const own = f && f.katch ? f.katch * clutchMult() : 0;
     return own + captain('allCatch');
   }
   function stiffFor(slot) {
-    const f = fxAt(slot);
+    const f = fxOnField(slot);
     return f && f.stiff ? f.stiff * clutchMult() : 0;
   }
 

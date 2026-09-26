@@ -145,6 +145,28 @@
     return best;
   }
 
+  // 🧑‍🤝‍🧑 PERSONNEL PACKAGES (personnel.js) — who on the bench could run on
+  // for a few snaps at position `pos`? The same rule as the depth chart: a man
+  // who really plays that position if there is one, otherwise the best man
+  // still sitting down. The one already covering an injury is out on the
+  // field, so he can't be in two places at once. Hands back a COPY (nobody
+  // edits the bench from outside this file), or null if there is nobody.
+  function available(pos) {
+    ensure();
+    const busy = busyIdx();
+    let best = -1;
+    s.bench.forEach((b, i) => {
+      if (i === busy) return;
+      const fits = b.pos === pos;
+      const bestFits = best >= 0 && s.bench[best].pos === pos;
+      if (best < 0 || (fits && !bestFits) ||
+          (fits === bestFits && b.ovr > s.bench[best].ovr)) best = i;
+    });
+    if (best < 0) return null;
+    return { idx: best, fits: s.bench[best].pos === pos,
+             player: JSON.parse(JSON.stringify(s.bench[best])) };
+  }
+
   // ---- The final whistle --------------------------------------------------
   function gameEnded() {
     ensure();
@@ -389,6 +411,7 @@
 
   window.TDInjury = {
     open, close, render, gameEnded, injured, coverFor,
+    available,          // 🧑‍🤝‍🧑 personnel.js: a backup who can run on for a few snaps
     bench: () => (ensure(), s.bench.slice()),
     _heal: heal, _hurt: hurtSomebody,
     _state: () => s,

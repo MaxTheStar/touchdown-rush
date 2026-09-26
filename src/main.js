@@ -569,7 +569,11 @@ function create() {
 
   // Debug handle — lets you peek at the game from the browser console.
   // Try typing  __td.G.score  or  __td.G.state  in DevTools.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  // ⚠️ It is also the BRIDGE the add-on files drive the field through, so a
+  // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
+  // substitute somewhere new with `place` and walks the tight end to his block
+  // with `steer`; both used to be main.js-only and both threw when called.
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -775,6 +779,7 @@ function snap(time) {
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
+  if (window.TDPersonnel) TDPersonnel.snapped();  // 🧑‍🤝‍🧑 whoever is out there has really played now
   // 🌟 SUPERSTAR MODE: the camera belongs to YOU, not to the man with the ball.
   const starNow = (window.TDStar && TDStar.on()) ? TDStar.player() : null;
   if (starNow) TDStar.snap();
@@ -911,6 +916,9 @@ function canHandOff() {
   // blocking a linebacker for you. On 🛡 MAX PROTECT the back is a blocker, and
   // that is the real price of the scheme: a longer pocket, but no run to him.
   if (window.TDProtect && TDProtect.blocking(offense[1])) return false;
+  // 🧑‍🤝‍🧑 …and in 🙌 3 WIDE there is no running back at all — the man in his
+  // spot is a receiver split out wide. Nobody to hand it to (personnel.js).
+  if (window.TDPersonnel && !TDPersonnel.hasBack()) return false;
   return Phaser.Math.Distance.Between(
     offense[0].s.x, offense[0].s.y, offense[1].s.x, offense[1].s.y) <= HANDOFF_DIST;
 }
@@ -1231,8 +1239,13 @@ function callPlay() {
   // there is no pressure, self-scouting does not get a vote; it still shows up
   // in COVERAGE (the cushion below), which on easy is nearly always man.
   const selfBlitz = (blitzOdds > 0 && window.TDSelf) ? TDSelf.blitzShift() : 0;
+  // 🙌 …and the same rule again for WHO you have on the field: an empty backfield
+  // means no run to respect and nobody to pick up a blitzer, so they send one
+  // more often (personnel.js). Behind the same `blitzOdds > 0` gate, so EASY
+  // still promises no pressure however you line up.
+  const packBlitz = (blitzOdds > 0 && window.TDPersonnel) ? TDPersonnel.blitzShift() : 0;
   G.coverage = Math.random() < zoneOdds ? 'zone' : 'man';
-  G.blitz    = Math.random() < Phaser.Math.Clamp(blitzOdds + selfBlitz, 0, 0.6);
+  G.blitz    = Math.random() < Phaser.Math.Clamp(blitzOdds + selfBlitz + packBlitz, 0, 0.6);
   G.passTarget = null;
 }
 
@@ -1273,17 +1286,27 @@ function updateReceivers(elapsed) {
     if (o === starMan) continue;       // 🌟 in Superstar Mode YOU run this man's route
     // 🛡 a back who stayed in to block is not running a route at all.
     if (window.TDProtect && TDProtect.blocking(o)) continue;
+    // 🧱 …and on a HEAVY run the tight end forgets his route and goes to lead
+    // block for the runner instead. He drives himself, so we're done with him.
+    if (window.TDPersonnel && TDPersonnel.leadBlock(o)) continue;
 
     const depth = o.startY - o.s.y; // yards upfield since the snap
     const side = sideOf(o);
     let { vx, vy } = routeVelocity(o, depth, side);
     // 🛡 🏃 FIVE OUT gets everybody off the line quicker; the others are ×1.
     if (window.TDProtect) { const rm = TDProtect.routeMult(); vx *= rm; vy *= rm; }
+    // 🧑‍🤝‍🧑 A SUBSTITUTE RUNS LIKE HIMSELF, not like the man whose spot he took:
+    // 'wr' = a slot receiver (in 🙌 3 WIDE, so he works open below like the other
+    // two), 'te' = a big tight end, a step slower and no shaking free. null (the
+    // default, every snap of ⚖️ REGULAR) leaves both of those exactly as they were.
+    const runsLike = window.TDPersonnel ? TDPersonnel.runsLike(o) : null;
+    if (runsLike === 'te') { const ts = TDPersonnel.teSpeed(); vx *= ts; vy *= ts; }
 
     // 🧠 WORK OPEN — if a defender is crowding him, the receiver slides toward
     // the open grass (away from that defender) to shake free. Just a nudge, so
     // the route still looks like a route. WRs only, and only past the stem.
-    if (o.role === 'WR' && depth > 44) {
+    const worksOpen = runsLike ? runsLike === 'wr' : o.role === 'WR';
+    if (worksOpen && depth > 44) {
       let nearX = null, nd = Infinity;
       for (const d of defense) {
         const dd = Phaser.Math.Distance.Between(o.s.x, o.s.y, d.s.x, d.s.y);
@@ -1462,6 +1485,10 @@ function updateDefense(elapsed) {
       // slower PURSUE_SPEED so a good runner can actually break away. (Maxwell,
       // the ballhawk, closes a touch faster than the rest.)
       tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED * boost * (isStar ? 1.12 : 1);
+      // 🧱 …unless the tight end has him sealed off on a HEAVY run, in which case
+      // he keeps exactly what a blocked pass rusher keeps — one rule for both
+      // kinds of block, so the pocket and the run lane bend the same way.
+      if (window.TDPersonnel && TDPersonnel.sealed(d)) speed *= diff().rushSlow;
     } else if (isStar) {
       // 👑 MAXWELL roams the deep middle as a center-field robber: he hovers over
       // the top of your deepest receiver and reads the throw, ignoring man/zone.
@@ -1591,7 +1618,15 @@ function checkTackle() {
       // (shop) makes that much rarer.
       const grip = window.TDShop ? TDShop.gripFactor() : 0;
       if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble()) fumble();
-      else endPlay('tackle');
+      else {
+        // 🧱 HEAVY — the whistle hasn't gone yet. Eight big bodies are all
+        // leaning the same way, so the pile falls forward another yard and a
+        // half (personnel.js decides whether this was really a pile at all).
+        // ⚠️ AFTER the fumble roll and BEFORE the spot is marked: the extra
+        // step is part of the tackle, so from the 2 it can still be six points.
+        if (window.TDPersonnel && TDPersonnel.pushPile() && checkTouchdown()) return;
+        endPlay('tackle');
+      }
       return;
     }
   }
@@ -2252,6 +2287,10 @@ function startCpuDrive() {
   // Closing them here is the fix at the right level: it is not about those two
   // features, it is that YOUR pre-snap choices cannot outlive your possession.
   closePreSnapPanels();
+  // 🧑‍🤝‍🧑 …and for the same reason, your PERSONNEL is over too: those men were
+  // sent on for a drive that has ended. It also puts their name tags back, so
+  // your safety isn't standing there wearing a "TE" while you play defense.
+  if (window.TDPersonnel) TDPersonnel.newDrive();
   // After a turnover, they take over right where it happened; otherwise a normal
   // possession starts at their own 25.
   const spot = (G.turnoverSpotCpu != null) ? G.turnoverSpotCpu : 25;
@@ -2976,6 +3015,9 @@ function finishCpuDrive() {
 // Start YOUR possession: right at the turnover spot if you just got one,
 // otherwise field a kickoff.
 function takeYourBall() {
+  // 🧑‍🤝‍🧑 A new drive comes out in its base package — your substitutions were
+  // for the drive that just ended, not for this one (personnel.js).
+  if (window.TDPersonnel) TDPersonnel.newDrive();
   if (G.turnoverSpotYou != null) {
     const s = G.turnoverSpotYou; G.turnoverSpotYou = null;
     document.body.classList.remove('returning');
@@ -3779,6 +3821,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDProtect) TDProtect.newGame();     // 🛡 back to ⚖️ balanced protection
   if (window.TDPlayClock) TDPlayClock.newGame(); // ⏳ fresh play clock, fresh flag count
   if (window.TDSilent) TDSilent.newGame();       // 🔇 back on the call
+  if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
@@ -4506,6 +4549,12 @@ function layoutSkill(L) {
   place(offense[1], f.rbx, L + f.rby);   // RB
   place(offense[2], f.wr1, L + 14);      // WR #1
   place(offense[3], f.wr2, L + 14);      // WR #2
+  // 🧑‍🤝‍🧑 PERSONNEL PACKAGES (personnel.js) — now that the formation has put
+  // everyone on its spots, run any substitute on and stand HIM somewhere else.
+  // ⚠️ Before the startX/startY loop below on purpose: a slot receiver's snap
+  // spot has to be where he really lines up, or his route mirrors the wrong way.
+  // On ⚖️ REGULAR (the default) this moves nobody at all.
+  if (window.TDPersonnel) TDPersonnel.lineUp(L, f);
   for (const i of [1, 2, 3]) { offense[i].startY = offense[i].s.y; offense[i].startX = offense[i].s.x; }
 }
 
@@ -4608,6 +4657,7 @@ function setupPlay(next) {
   if (window.TDHurry) TDHurry.update(clockCtx);
   if (window.TDProtect) TDProtect.newPlay();   // 🛡 keep the protection row in sync
   if (window.TDSilent) TDSilent.newPlay();     // 🔇 …and the snap-count row beside it
+  if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
 

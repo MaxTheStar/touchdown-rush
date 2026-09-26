@@ -38,6 +38,17 @@
     { idx: 6, pos: 'CB', emoji: '🦅', fallback: 'Your Corner' },
     { idx: 7, pos: 'S',  emoji: '🚧', fallback: 'Your Safety' },
   ];
+  // 🧑‍🤝‍🧑 PERSONNEL PACKAGES (personnel.js) — two men who only play when you
+  // SEND THEM ON: your tight end (roster slot 4, who never had a spot on the
+  // field before 🧱 HEAVY) and the backup receiver who comes off the bench in
+  // 🙌 3 WIDE. They are counted like everyone else, but they only get a line
+  // on the sheet in a game they actually played — otherwise every box score
+  // would carry two "quiet day at the office" rows for men who never came on.
+  const EXTRA_SLOTS = [
+    { idx: 4,     pos: 'TE', emoji: '🧱', fallback: 'Your Tight End', side: 'off', extra: 'te' },
+    { idx: 'sub', pos: 'WR', emoji: '🙌', fallback: 'Your Backup Receiver', side: 'off', extra: 'sub' },
+  ];
+  const ALL_SLOTS = () => SLOTS.concat(EXTRA_SLOTS, DEF_SLOTS);
 
   let stats = {};        // slotKey -> the numbers below
   let pendingCatch = -1; // set the moment a pass is caught, used when the play ends
@@ -53,26 +64,41 @@
   // Start (or restart) the book — called from beginGame.
   function newGame() {
     stats = {}; pendingCatch = -1; awarded = null; game = null;
-    for (const s of SLOTS.concat(DEF_SLOTS)) stats[s.idx] = blank();
+    for (const s of ALL_SLOTS()) stats[s.idx] = blank();
   }
   newGame();
 
   // Your drafted roster, read straight from the save (read-only — we never
   // change it). Falls back to friendly names if there's no roster yet.
   function rosterName(slot) {
+    // 🙌 the backup receiver lives on the 🏥 bench, not in the roster — ask
+    // personnel.js which man it actually sent on this game.
+    if (slot.extra === 'sub') {
+      const n = (window.TDPersonnel && TDPersonnel.subName) ? TDPersonnel.subName() : null;
+      return n || slot.fallback;
+    }
     let roster = null;
     try { roster = T ? T.load('roster', null) : JSON.parse(localStorage.getItem('tdr-roster')); } catch (e) {}
     const p = Array.isArray(roster) ? roster[slot.idx] : null;
     return (p && p.name) ? p.name : slot.fallback;
   }
 
+  // 🧑‍🤝‍🧑 main.js tells us which SPOT on the field had the ball. Usually that
+  // spot IS the roster slot — but when a substitute is standing in it
+  // (personnel.js), the credit goes to the man who was actually out there.
+  function keyOf(idx) {
+    const sub = (window.TDPersonnel && TDPersonnel.subAt) ? TDPersonnel.subAt(idx) : null;
+    return sub ? sub.key : idx;
+  }
+
   // ---- The hooks main.js calls ------------------------------------------
-  function noteCatch(idx) { if (stats[idx]) pendingCatch = idx; }   // a pass was caught by this guy
+  function noteCatch(idx) { idx = keyOf(idx); if (stats[idx]) pendingCatch = idx; }   // a pass was caught by this guy
 
   // A play just ended. `idx` is who had the ball (an offense index, or -1 if it
   // wasn't one of our tracked guys), `gain` is the yards from the line of
   // scrimmage — so a touchdown counts the whole run, and a sack counts negative.
   function play(result, idx, gain) {
+    idx = keyOf(idx);
     const yds = Math.round(gain || 0);
     const me = stats[idx];
     if (me) {
@@ -112,7 +138,7 @@
 
   function mvp() {
     let best = null;
-    for (const slot of SLOTS.concat(DEF_SLOTS)) {
+    for (const slot of ALL_SLOTS()) {   // 🧱 yes — your tight end can win it
       const s = stats[slot.idx]; if (!s) continue;
       const sc = scoreOf(s);
       if (sc <= 0) continue;                       // did nothing — can't be the star
@@ -152,7 +178,7 @@
   // yards the receivers gained, so team yards = rushing + receiving (never both).
   function teamTotals() {
     let rushYds = 0, recYds = 0, td = 0, fg = 0, takeaway = 0, rec = 0, rush = 0;
-    for (const slot of SLOTS.concat(DEF_SLOTS)) {
+    for (const slot of ALL_SLOTS()) {   // a substitute's yards are the team's yards too
       const s = stats[slot.idx]; if (!s) continue;
       rushYds += s.rushYds; recYds += s.recYds; td += s.td;
       fg += s.fg; takeaway += s.takeaway; rec += s.rec; rush += s.rush;
@@ -209,10 +235,19 @@
     game: () => game,          // 📊 the scoreboard (null until a game has finished)
     teamTotals,                // 📊 team-level yardage / TDs / turnovers
     // 📊 the full stat sheet — every tracked player with a name (Box Score uses this)
-    table: () => SLOTS.concat(DEF_SLOTS).map(slot => ({
+    // 🧑‍🤝‍🧑 …plus the tight end / backup receiver, but only in a game they played.
+    table: () => SLOTS.concat(EXTRA_SLOTS.filter(shown), DEF_SLOTS).map(slot => ({
       pos: slot.pos, emoji: slot.emoji, name: rosterName(slot),
-      side: slot.idx <= 3 ? 'off' : 'def',
+      side: slot.side || (slot.idx <= 3 ? 'off' : 'def'),
       stats: Object.assign({}, stats[slot.idx])
     }))
   };
+
+  // Did this substitute get onto the field this game? He shows if he took a
+  // snap (personnel.js knows), or if he has a number to his name anyway.
+  function shown(slot) {
+    const s = stats[slot.idx];
+    if (s && Object.keys(s).some(k => s[k])) return true;
+    return !!(window.TDPersonnel && TDPersonnel.played && TDPersonnel.played(slot.extra));
+  }
 })();
