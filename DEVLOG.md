@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.15 — cache-buster is `?v=171` in `index.html`.
+- **Version:** v4.16 — cache-buster is `?v=172` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,7 +218,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     another new board and continue."* **Theme: the craft** — the small professional things real
     players and coaches do to steal an edge, plus the two places the game still settles something
     interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
-    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
+    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
     Scramble · ⑧📣 The Twelfth Man.
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
     `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
@@ -230,6 +230,34 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **👀 v4.16 — PRE-SNAP MOTION (Round 14, pick ④, `src/motion.js`, no save).** Send a receiver
+    jogging across the formation and **watch what they do about it**: somebody runs across with him =
+    MAN (that defender has him wherever he goes), nobody moves = ZONE (they are guarding grass, and a
+    receiver leaving one zone is somebody else's problem). The best part is that the game does not
+    have to explain it — you can just look. Measured both ways: **in man the corner travels 163px
+    across with him; in zone he moves exactly 0.**
+    ⚠️ **AND IT IS WORTH DOING BECAUSE IT BEATS THE BLUFF.** 🗣️ Audibles (v2.5) put a tell on the 🗣️
+    button — BLITZ? / MAN? / ZONE? — and **about one look in five is a deliberate lie**. That question
+    mark is the entire point of this pick: motion is how a real quarterback finds out which time he is
+    being lied to. It calls a new `TDAudible.reveal()`, and from that moment the button and the panel
+    stop guessing — MAN? becomes **MAN!** and the panel reads "👀 Motion caught them in". **Caught
+    live on a real disguise in testing: the button said BLITZ?, the defence was actually in man, and
+    motion turned it into MAN!** `reveal()` returned the truth in 400/400 rolls.
+    **The price:** 4 seconds off ⏳ the play clock (a new `TDPlayClock.spend`, which can take you into
+    the red but never past zero — the foul is still decided by the ordinary tick on the ordinary
+    rules), one motion a down, and ⏰ the no-huddle hides the button outright because there is no time
+    to look. Its own side button under ⏱️ SPIKE rather than a fifth chip in `#ingame-ctrls`; at
+    375×812 it sits y437–487, six pixels under the spike button and 107 clear of the D-pad.
+    ⚠️ **IT REALLY MOVES HIM, SO HIS SNAP SPOT IS RE-RECORDED** — `sideOf()` reads `startX` to decide
+    which way a route mirrors, so without that he runs his route toward a sideline he is no longer on.
+    Exactly the trap 🧑‍🤝‍🧑 personnel.js hit in v4.10. A snap mid-jog stops him where he stands and
+    records THAT spot (478 → cut at 451 → `startX` 451).
+    ⚠️ **AND THE NON-OBVIOUS WIRING: audible.js only rewrites its button label inside `sync()`**, which
+    main.js calls when a play is set up or snapped — neither of which is "a man just finished going in
+    motion". Without motion.js calling it, the answer you paid four seconds for sits unwritten until
+    the next snap, which is far too late to use. **A getter changing is not the same as the screen
+    changing; find out who repaints it.**
+
   - **🔥 v4.15 — THE HOT HAND (Round 14, pick ③, `src/hothand.js`, no save).** Some days one player
     cannot be stopped, and the game had no idea who was having a good day.
     ⚠️ **THE ONE THING IT MUST NOT BE IS 🔥 MOMENTUM (v4.1)**, and the difference fits on a line:
