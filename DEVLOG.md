@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.14 — cache-buster is `?v=170` in `index.html`.
+- **Version:** v4.15 — cache-buster is `?v=171` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,7 +218,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     another new board and continue."* **Theme: the craft** — the small professional things real
     players and coaches do to steal an edge, plus the two places the game still settles something
     interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
-    ③🔥 The Hot Hand · ④👀 Pre-Snap Motion · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
+    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
     Scramble · ⑧📣 The Twelfth Man.
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
     `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
@@ -230,6 +230,33 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **🔥 v4.15 — THE HOT HAND (Round 14, pick ③, `src/hothand.js`, no save).** Some days one player
+    cannot be stopped, and the game had no idea who was having a good day.
+    ⚠️ **THE ONE THING IT MUST NOT BE IS 🔥 MOMENTUM (v4.1)**, and the difference fits on a line:
+    **momentum is the TEAM and any good play feeds it** — a sack, a takeaway, a stop by a defence you
+    never see — **while the hot hand is ONE MAN and only his OWN touches feed it.** Proven in both
+    directions: a defensive takeaway moves the team meter **0 → 26 and leaves every player's heat at
+    exactly 0**, and one receiver catching three in a row takes **him** to 66 while moving the team
+    meter **not at all**. They can point opposite ways, which is the point — a team can be reeling
+    while one man is having the game of his life, and that is usually why the game is still close.
+    ⚠️ **KEYED TO THE MAN, NOT THE SHIRT.** 🧑‍🤝‍🧑 Personnel (v4.10) can change who is standing in a
+    spot mid-drive, so heat is stored against the same key 📊 the stat book uses. Verified: a hot
+    receiver reads 66, the tight end runs on **cold at 0**, earns his own 22, and the receiver returns
+    with his streak intact. Heat on a SPOT would have handed a substitute somebody else's good day.
+    ⚠️ **ITS OWN FLOATING FLAME, NOT THE NAME LABEL.** Two files already write those labels — main.js
+    sets them up and personnel.js rewrites them at every line-up — so a 🔥 appended there would be
+    wiped by the next substitution, or would survive over a man who had gone cold. One Phaser text
+    object, created once, following the hottest man at +13/−20 and hidden the moment nobody qualifies.
+    **Deliberately small, because the flame is doing most of the work:** +5 points of catch and +3%
+    speed at full heat, fading in from the threshold rather than snapping on — measured live, the
+    carrier runs 204 → 210 px/s. Heat bleeds 9 every play, so four quiet plays put him out; it is a
+    record of what you have done LATELY, which is the only kind of hot that means anything. Nobody hot
+    returns exactly 0 and ×1, so a game where nobody gets going is the old game untouched.
+    🧪 **A measurement that measured nothing, again:** the first speed check read 0 px/s both hot and
+    cold, because the play was not live and nothing was driving the carrier. Same family as the v4.12
+    tick count and the v4.10 goal-line trials — **check that the thing you are measuring is actually
+    running before you believe the number.**
+
   - **🧊 v4.14 — ICE THE KICKER (Round 14, pick ②, `src/icing.js`, no save).** ⚠️ **THE PICK HIT A WALL
     ON ITS FIRST LINE: THERE WAS NOTHING TO ICE.** `cpuDriveEnd('fieldgoal')` simply awarded three
     points, so **every field goal the computer had ever attempted, from any distance, went in** — the
