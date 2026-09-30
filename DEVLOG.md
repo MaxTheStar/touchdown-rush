@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.12 — cache-buster is `?v=168` in `index.html`.
+- **Version:** v4.13 — cache-buster is `?v=169` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -212,6 +212,41 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     definitely there cannot be trusted about the thing you are actually asking about.
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
+
+  - **🏁 Round 14 — "The Pro Moves Board" (drawn 2026-09-29, right after Round 13 swept).** Artifact
+    `H1STHBaKV6E6NgP9fMSVtb`. Max opened it himself — *"I think you can continue to round 14… generate
+    another new board and continue."* **Theme: the craft** — the small professional things real
+    players and coaches do to steal an edge, plus the two places the game still settles something
+    interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker ·
+    ③🔥 The Hot Hand · ④👀 Pre-Snap Motion · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
+    Scramble · ⑧📣 The Twelfth Man.
+    ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
+    `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
+    kicker on the roster are ALL absent. Thirteen rounds have covered the big systems; what is left is
+    craft. ⚠️ **Two picks are unfinished business rather than new ideas:** ⑦ `TDSpecial.rollOnside()`
+    is still `Math.random()` while every player stands still — precisely the thing Max caught on the
+    muffed punt, which took v4.8 *and* v4.9 to put right (the `'loose'`-ball machinery exists now, so
+    it is mostly plumbing a proven system into a second place); and ⑧ the defensive drive is still
+    tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
+    a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
+    without anybody opening MY TEAM to find their squad reset.
+  - **🎯 v4.13 — THE TWO-POINT CHART (Round 14, pick ①, `src/twopoint.js`, no save).** The ①/② panel
+    has offered the choice since v1.x and never said a word about it. Real coaches do not guess here;
+    they carry a laminated card and read it while the crowd is still cheering. **The whole idea in one
+    sentence: LAND ON A NUMBER THAT MAKES THEM NEED AN EXTRA SCORE.** Up 5, a touchdown beats you — go
+    for two and their touchdown only TIES. Down 10, a touchdown and a two still leaves you short — go
+    for two and it ties. Every line on the card is that same thought, which is why the *reason* is the
+    feature and the recommendation is just the headline.
+    ⚠️ **ADVICE, NEVER AUTOPILOT** — it rings a button and never presses one, the same rule 🧮 the
+    Fourth-Down Helper (v3.1) lives by, and going for two when the card says kick is allowed to be the
+    best moment of your game. `advise()` is pure, so all 30 scores were checked without playing a down:
+    **go at −10, −5, −2, +1, +5, +12; kick at the other 24.**
+    ⚠️ **AND THE CARD IS NOT ALWAYS RIGHT, SO IT SAYS SO.** Two late-game overrides beat it: tied with
+    20 seconds left → take the point and the lead (a chart is a plan for the rest of the game, and
+    sometimes there is no rest of the game), and down 1 with 20 seconds left → two WINS it now. Early
+    in a game it volunteers that the kick is not a mistake, because with three quarters left it isn't.
+    Verified live through the real `showPATChoice` hook with the right button ringed, and at 375×812
+    with the wordiest line on the card: the stack runs 244→568 of 812 with no sideways scroll.
 
   - **🏁 Round 13 — "The Game Day Board" (drawn 2026-09-17, right after Round 12 swept).** Artifact
     `50618cb0-d796-44a4-96cc-c729da1a2878`. ⚠️ **Max reversed the stop order again** — "if it's swept,
