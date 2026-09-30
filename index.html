@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=168" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=168" />
+  <link rel="icon" type="image/png" href="favicon.png?v=169" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=169" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=168" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=169" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=168" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=169" />
   <style>
     html, body {
       margin: 0;
@@ -972,6 +972,27 @@
       box-shadow: 0 3px 10px rgba(0,0,0,.4);
     }
     #pat-choice .choice:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
+    /* ---- 🎯 THE TWO-POINT CHART (src/twopoint.js) ----------------------
+       Sits between the question and the two buttons. It is deliberately quiet
+       — a coach's card is read, not shouted — and only picks up the gold
+       outline late in a game, when the call actually decides something. */
+    #pat-advice {
+      width: min(78vw, 300px); padding: 10px 13px; border-radius: 13px;
+      background: rgba(10,16,32,0.66); border: 1px solid rgba(255,255,255,0.22);
+      text-align: left;
+    }
+    #pat-advice:empty { display: none; }
+    #pat-advice.hot { border-color: rgba(255,214,10,0.8); background: rgba(40,32,6,0.82); }
+    .pat-rec {
+      font: 800 11px "Arial Black", Arial; color: #9aa8bd;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .pat-rec b { color: #ffe066; }
+    .pat-why { font: 12px/1.45 Arial; color: #dfe6f2; margin-top: 5px; }
+    /* The card's pick gets a ring — the same "highlight, never press" idea
+       🧮 the Fourth-Down Helper uses on its own panel. */
+    #pat-choice .choice.rec { box-shadow: 0 0 0 2px rgba(255,214,10,0.9), 0 3px 10px rgba(0,0,0,.4); }
+    @media (max-width: 430px) { .pat-why { font-size: 11.5px; } }
     #btn-xp  { background: rgba(255,214,10,0.28); border-color: rgba(255,214,10,0.75); }
     #btn-xp:active  { background: rgba(255,214,10,0.55); }
     #btn-two { background: rgba(123,216,143,0.30); border-color: rgba(123,216,143,0.85); }
@@ -4116,6 +4137,10 @@
   <div id="pat-choice">
     <div class="title">TOUCHDOWN! 🏈</div>
     <div class="sub">Take the point, or go for two?</div>
+    <!-- 🎯 THE TWO-POINT CHART (src/twopoint.js) — what the coach's card says
+         about this exact score, and why. Its own element ABOVE the buttons, so
+         the buttons never move under a thumb already on its way down. -->
+    <div id="pat-advice"></div>
     <div class="choice" id="btn-xp">① KICK · +1</div>
     <div class="choice" id="btn-two">② GO FOR 2 · +2</div>
   </div>
@@ -5117,89 +5142,90 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=168"></script>
-  <script src="src/sound.js?v=168"></script>
-  <script src="src/shop.js?v=168"></script>
-  <script src="src/spin.js?v=168"></script>
-  <script src="src/challenges.js?v=168"></script>
-  <script src="src/quests.js?v=168"></script>
-  <script src="src/progress.js?v=168"></script>
-  <script src="src/streak.js?v=168"></script>
-  <script src="src/achievements.js?v=168"></script>
-  <script src="src/trophy.js?v=168"></script>
-  <script src="src/records.js?v=168"></script>
-  <script src="src/road.js?v=168"></script>
-  <script src="src/roadtrip.js?v=168"></script>
-  <script src="src/cards.js?v=168"></script>
-  <script src="src/stadium.js?v=168"></script>
-  <script src="src/ranked.js?v=168"></script>
-  <script src="src/halftime.js?v=168"></script>
-  <script src="src/uniform.js?v=168"></script>
-  <script src="src/powerup.js?v=168"></script>
-  <script src="src/arcade.js?v=168"></script>
-  <script src="src/trivia.js?v=168"></script>
-  <script src="src/nemesis.js?v=168"></script>
-  <script src="src/weather.js?v=168"></script>
-  <script src="src/season.js?v=168"></script>
-  <script src="src/playoffs.js?v=168"></script>
-  <script src="src/film.js?v=168"></script>
-  <script src="src/celebration.js?v=168"></script>
-  <script src="src/juice.js?v=168"></script>
-  <script src="src/gamestats.js?v=168"></script>
-  <script src="src/sportspage.js?v=168"></script>
-  <script src="src/press.js?v=168"></script>
-  <script src="src/staff.js?v=168"></script>
-  <script src="src/chemistry.js?v=168"></script>
-  <script src="src/boxscore.js?v=168"></script>
-  <script src="src/field.js?v=168"></script>
-  <script src="src/ball.js?v=168"></script>
-  <script src="src/mascot.js?v=168"></script>
-  <script src="src/poster.js?v=168"></script>
-  <script src="src/house.js?v=168"></script>
-  <script src="src/allstar.js?v=168"></script>
-  <script src="src/leaders.js?v=168"></script>
-  <script src="src/traits.js?v=168"></script>
-  <script src="src/awards.js?v=168"></script>
-  <script src="src/rebrand.js?v=168"></script>
-  <script src="src/draft.js?v=168"></script>
-  <script src="src/training.js?v=168"></script>
-  <script src="src/injuries.js?v=168"></script>
-  <script src="src/flag.js?v=168"></script>
-  <script src="src/freeagency.js?v=168"></script>
-  <script src="src/gameplan.js?v=168"></script>
-  <script src="src/playbook.js?v=168"></script>
-  <script src="src/createplayer.js?v=168"></script>
-  <script src="src/nicknames.js?v=168"></script>
-  <script src="src/special.js?v=168"></script>
-  <script src="src/events.js?v=168"></script>
-  <script src="src/dynasty.js?v=168"></script>
-  <script src="src/ads.js?v=168"></script>
-  <script src="src/tour.js?v=168"></script>
-  <script src="src/concession.js?v=168"></script>
-  <script src="src/kick.js?v=168"></script>
-  <script src="src/drill.js?v=168"></script>
-  <script src="src/scout.js?v=168"></script>
-  <script src="src/simgame.js?v=168"></script>
-  <script src="src/audible.js?v=168"></script>
-  <script src="src/defcall.js?v=168"></script>
-  <script src="src/superstar.js?v=168"></script>
-  <script src="src/crowd.js?v=168"></script>
-  <script src="src/fourth.js?v=168"></script>
-  <script src="src/clockplay.js?v=168"></script>
-  <script src="src/bighit.js?v=168"></script>
-  <script src="src/selfscout.js?v=168"></script>
-  <script src="src/penalty.js?v=168"></script>
-  <script src="src/hurry.js?v=168"></script>
-  <script src="src/momentum.js?v=168"></script>
-  <script src="src/protect.js?v=168"></script>
-  <script src="src/puntreturn.js?v=168"></script>
-  <script src="src/toss.js?v=168"></script>
-  <script src="src/homeaway.js?v=168"></script>
-  <script src="src/playclock.js?v=168"></script>
-  <script src="src/silent.js?v=168"></script>
-  <script src="src/personnel.js?v=168"></script>
-  <script src="src/winprob.js?v=168"></script>
-  <script src="src/gastank.js?v=168"></script>
-  <script src="src/main.js?v=168"></script>
+  <script src="src/stats.js?v=169"></script>
+  <script src="src/sound.js?v=169"></script>
+  <script src="src/shop.js?v=169"></script>
+  <script src="src/spin.js?v=169"></script>
+  <script src="src/challenges.js?v=169"></script>
+  <script src="src/quests.js?v=169"></script>
+  <script src="src/progress.js?v=169"></script>
+  <script src="src/streak.js?v=169"></script>
+  <script src="src/achievements.js?v=169"></script>
+  <script src="src/trophy.js?v=169"></script>
+  <script src="src/records.js?v=169"></script>
+  <script src="src/road.js?v=169"></script>
+  <script src="src/roadtrip.js?v=169"></script>
+  <script src="src/cards.js?v=169"></script>
+  <script src="src/stadium.js?v=169"></script>
+  <script src="src/ranked.js?v=169"></script>
+  <script src="src/halftime.js?v=169"></script>
+  <script src="src/uniform.js?v=169"></script>
+  <script src="src/powerup.js?v=169"></script>
+  <script src="src/arcade.js?v=169"></script>
+  <script src="src/trivia.js?v=169"></script>
+  <script src="src/nemesis.js?v=169"></script>
+  <script src="src/weather.js?v=169"></script>
+  <script src="src/season.js?v=169"></script>
+  <script src="src/playoffs.js?v=169"></script>
+  <script src="src/film.js?v=169"></script>
+  <script src="src/celebration.js?v=169"></script>
+  <script src="src/juice.js?v=169"></script>
+  <script src="src/gamestats.js?v=169"></script>
+  <script src="src/sportspage.js?v=169"></script>
+  <script src="src/press.js?v=169"></script>
+  <script src="src/staff.js?v=169"></script>
+  <script src="src/chemistry.js?v=169"></script>
+  <script src="src/boxscore.js?v=169"></script>
+  <script src="src/field.js?v=169"></script>
+  <script src="src/ball.js?v=169"></script>
+  <script src="src/mascot.js?v=169"></script>
+  <script src="src/poster.js?v=169"></script>
+  <script src="src/house.js?v=169"></script>
+  <script src="src/allstar.js?v=169"></script>
+  <script src="src/leaders.js?v=169"></script>
+  <script src="src/traits.js?v=169"></script>
+  <script src="src/awards.js?v=169"></script>
+  <script src="src/rebrand.js?v=169"></script>
+  <script src="src/draft.js?v=169"></script>
+  <script src="src/training.js?v=169"></script>
+  <script src="src/injuries.js?v=169"></script>
+  <script src="src/flag.js?v=169"></script>
+  <script src="src/freeagency.js?v=169"></script>
+  <script src="src/gameplan.js?v=169"></script>
+  <script src="src/playbook.js?v=169"></script>
+  <script src="src/createplayer.js?v=169"></script>
+  <script src="src/nicknames.js?v=169"></script>
+  <script src="src/special.js?v=169"></script>
+  <script src="src/events.js?v=169"></script>
+  <script src="src/dynasty.js?v=169"></script>
+  <script src="src/ads.js?v=169"></script>
+  <script src="src/tour.js?v=169"></script>
+  <script src="src/concession.js?v=169"></script>
+  <script src="src/kick.js?v=169"></script>
+  <script src="src/drill.js?v=169"></script>
+  <script src="src/scout.js?v=169"></script>
+  <script src="src/simgame.js?v=169"></script>
+  <script src="src/audible.js?v=169"></script>
+  <script src="src/defcall.js?v=169"></script>
+  <script src="src/superstar.js?v=169"></script>
+  <script src="src/crowd.js?v=169"></script>
+  <script src="src/fourth.js?v=169"></script>
+  <script src="src/clockplay.js?v=169"></script>
+  <script src="src/bighit.js?v=169"></script>
+  <script src="src/selfscout.js?v=169"></script>
+  <script src="src/penalty.js?v=169"></script>
+  <script src="src/hurry.js?v=169"></script>
+  <script src="src/momentum.js?v=169"></script>
+  <script src="src/protect.js?v=169"></script>
+  <script src="src/puntreturn.js?v=169"></script>
+  <script src="src/toss.js?v=169"></script>
+  <script src="src/homeaway.js?v=169"></script>
+  <script src="src/playclock.js?v=169"></script>
+  <script src="src/silent.js?v=169"></script>
+  <script src="src/personnel.js?v=169"></script>
+  <script src="src/winprob.js?v=169"></script>
+  <script src="src/gastank.js?v=169"></script>
+  <script src="src/twopoint.js?v=169"></script>
+  <script src="src/main.js?v=169"></script>
 </body>
 </html>

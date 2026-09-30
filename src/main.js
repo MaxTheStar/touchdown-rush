@@ -2049,6 +2049,12 @@ function showPATChoice() {
   G.pendingXP = false;                 // the choice replaces the old auto-kick
   G.twoPtTry = false;
   G.state = 'patdecision';
+  // 🎯 THE TWO-POINT CHART (twopoint.js) — what a real coach's card says about
+  // THIS score, and why. Advice only: it highlights a button, never presses
+  // one. ⚠️ The score already includes the touchdown by the time we get here,
+  // which is exactly the number the chart is keyed on.
+  if (window.TDTwo) TDTwo.show({ diff: G.score - G.oppScore, quarter: G.quarter,
+    clock: G.clock, quarters: NUM_QUARTERS });
   const panel = document.getElementById('pat-choice');
   if (panel) panel.style.display = 'flex';
 }
@@ -2058,6 +2064,7 @@ function choosePAT(which) {
   if (G.state !== 'patdecision') return;   // ignore stray taps
   const panel = document.getElementById('pat-choice');
   if (panel) panel.style.display = 'none';
+  if (window.TDTwo) TDTwo.clear();   // 🎯 wipe the chart's advice with the panel
   if (which === 'kick') startExtraPoint();
   else                  startTwoPointTry();
 }
