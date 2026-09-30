@@ -830,6 +830,10 @@ function runSpeed() {
   // Every other bonus here is team-wide; this one is deliberately not — a
   // 🚀 Speedster is fast when HE has the ball and nobody else is.
   if (window.TDTraits) s *= TDTraits.speedFor(offense.indexOf(G.ballCarrier));
+  // 🔥 …and times whether this man is HOT right now (src/hothand.js). Like the
+  // trait above it is deliberately about the man carrying it and nobody else,
+  // and it is exactly 1 for anybody who has not earned it.
+  if (window.TDHot) s *= TDHot.speedMult(offense.indexOf(G.ballCarrier));
   // 😮‍💨 …and times how much gas he has left (src/gastank.js). This is the only
   // one that can only ever make you SLOWER, and it is deliberately gentle: a
   // completely empty tank costs 6%, which trims your 11px cushion over a
@@ -1057,7 +1061,14 @@ function resolvePass(wr, x, y) {
   // ⭐ …plus the ⭐ TRAIT of the receiver this ball was thrown to — 🧲 Sure
   // Hands only helps the man being targeted (src/traits.js).
   const trCatch = window.TDTraits ? TDTraits.catchFor(offense.indexOf(wr)) : 0;
-  if (Math.random() > (CATCH_CHANCE + gl.catchBonus + trCatch) * wxCatch) { endPlay('incomplete', wxIncompleteMsg()); return; }
+  // 🔥 …and whether THIS man is having a day (hothand.js). Exactly 0 for anybody
+  // who is not hot, so most catches in most games are the old sum unchanged.
+  const hotCatch = window.TDHot ? TDHot.catchAdd(offense.indexOf(wr)) : 0;
+  if (Math.random() > (CATCH_CHANCE + gl.catchBonus + trCatch + hotCatch) * wxCatch) {
+    if (window.TDHot) TDHot.targeted(offense.indexOf(wr), false);   // thrown at him, never arrived
+    endPlay('incomplete', wxIncompleteMsg());
+    return;
+  }
   // ...or catch it and drop it.
   if (Math.random() < DROP_CHANCE - gl.dropCut)  { endPlay('incomplete', 'DROPPED IT!'); return; }
 
@@ -1692,10 +1703,14 @@ function endPlay(result, customMsg) {
 
   // ⭐ Stat book: log who had the ball and how far they got (gamestats.js turns
   // this into catches / carries / yards, and picks the Player of the Game).
-  if (window.TDGameStats) TDGameStats.play(result, offense.indexOf(G.ballCarrier),
-    result === 'touchdown' ? 100 - G.losYards
+  const statGain = result === 'touchdown' ? 100 - G.losYards
       : result === 'incomplete' ? 0
-      : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99) - G.losYards);
+      : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99) - G.losYards;
+  if (window.TDGameStats) TDGameStats.play(result, offense.indexOf(G.ballCarrier), statGain);
+  // 🔥 THE HOT HAND (hothand.js) — the same event, asked a different question:
+  // not "what are his numbers" but "is this man having a day?". It sits here so
+  // that what counts as a good play is decided in exactly one place.
+  if (window.TDHot) TDHot.play(result, offense.indexOf(G.ballCarrier), statGain);
 
   let msg, next, big = false;
   let spot = null;      // 🚩 where the ball was spotted (the Coach's Challenge reads this)
@@ -3888,6 +3903,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
   if (window.TDWin) TDWin.newGame();             // 📈 a fresh 50/50 and an empty swing chart
   if (window.TDGas) TDGas.newGame();             // 😮‍💨 …and a full tank
+  if (window.TDHot) TDHot.newGame();             // 🔥 nobody is hot yet
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
   if (window.TDShop) TDShop.startGame();         // 🪙 fresh "coins this game" count
@@ -5171,6 +5187,8 @@ function updateHUD() {
   // the huddle, and keeps its own clock because Phaser's delta cannot be
   // trusted across a modal (src/gastank.js).
   if (window.TDGas) TDGas.tick();
+  // 🔥 …and the flame follows whoever is hottest right now (src/hothand.js).
+  if (window.TDHot) TDHot.follow();
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
