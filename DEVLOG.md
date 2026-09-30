@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.13 — cache-buster is `?v=169` in `index.html`.
+- **Version:** v4.14 — cache-buster is `?v=170` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,7 +217,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `H1STHBaKV6E6NgP9fMSVtb`. Max opened it himself — *"I think you can continue to round 14… generate
     another new board and continue."* **Theme: the craft** — the small professional things real
     players and coaches do to steal an edge, plus the two places the game still settles something
-    interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker ·
+    interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
     ③🔥 The Hot Hand · ④👀 Pre-Snap Motion · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
     Scramble · ⑧📣 The Twelfth Man.
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
@@ -230,6 +230,33 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **🧊 v4.14 — ICE THE KICKER (Round 14, pick ②, `src/icing.js`, no save).** ⚠️ **THE PICK HIT A WALL
+    ON ITS FIRST LINE: THERE WAS NOTHING TO ICE.** `cpuDriveEnd('fieldgoal')` simply awarded three
+    points, so **every field goal the computer had ever attempted, from any distance, went in** — the
+    only kick in the game that could not miss (their extra points have always been 94%, and their
+    two-point tries could always fail). Nobody decided that; it was just never revisited. So the first
+    half of this pick is honest kicking:
+    **20 yds 97% · 30 yds 86% · 40 yds 76% · 50 yds 65% · 55 (the limit) 60%**, which across every
+    distance they actually kick from is **77%** — roughly one in four now misses, where it used to be
+    none in any. A miss is spotted where it was taken, so you take over there rather than fielding a
+    kickoff, which is a better prize than the automatic three points ever were.
+    ⚠️ **AND THE ICING ITSELF IS SMALLER THAN YOU THINK, ON PURPOSE.** In real football the evidence
+    for icing is thin — kickers make about the same share either way, and the practice swing may even
+    help. A game that turned it into a 30% swing would be teaching something false, so it is **6 points
+    of percentage** and the panel says so out loud. The lesson is not "icing works", it is "it is a
+    small edge that costs a timeout, so spend it when the kick actually matters" — and the card
+    refuses to recommend itself from 25 yards, anywhere in the first half, or when you are more than
+    eight ahead late.
+    ⚠️ **THE BUTTON HAD TO SWALLOW ITS OWN TAP.** It lives inside the 🛡 defense panel, and that whole
+    panel advances the drive when you touch it — without `stopPropagation` you would pay for the
+    timeout AND watch the kick sail through on the same tap. Verified on a real thumb-style event: the
+    timeout is spent, the score is unchanged, and the kick is still pending on the very next frame.
+    ⚠️ **AND THE FIRST DRAFT OF THIS FILE'S OWN COMMENT WAS WRONG** — it printed 92/82/71 because it
+    described a formula that had already been changed, and the 0.66 floor made every kick from 49 to
+    55 yards identical, so a 55-yarder was no braver than a 49-yarder. Both fixed; the numbers above
+    are the measured ones. **Same family as the v4.10 comment bug: check the comment against the code,
+    not against the intention.**
+
   - **🎯 v4.13 — THE TWO-POINT CHART (Round 14, pick ①, `src/twopoint.js`, no save).** The ①/② panel
     has offered the choice since v1.x and never said a word about it. Real coaches do not guess here;
     they carry a laminated card and read it while the crowd is still cheering. **The whole idea in one
