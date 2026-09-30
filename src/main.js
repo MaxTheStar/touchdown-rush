@@ -2969,10 +2969,33 @@ function defenseNextPlay() {
   setupDefensePlay();
 }
 
+// 🧊 What icing.js needs to know to say something true about this kick.
+function iceContext() {
+  return { lead: G.score - G.oppScore, quarter: G.quarter, clock: G.clock,
+           quarters: NUM_QUARTERS, timeouts: G.timeouts };
+}
+
 // Their drive is OVER — tally it up, show the banner, then hand the ball back.
 // (Their touchdown counts 7 — the try after is automatic for the computer.)
 function cpuDriveEnd(kind, customMsg) {
   if (!G.cpu) return;
+  // 🧊 THE FIELD GOAL IS NOT AUTOMATIC ANY MORE (icing.js). It used to be: every
+  // kick the computer attempted, from any distance, was three points — which
+  // made it the only kick in the game that could not miss (their extra points
+  // have always been 94%). Now it is rolled on distance, and if you spent a
+  // timeout icing him it is six points harder.
+  if (kind === 'fieldgoal' && window.TDIce) {
+    if (!TDIce.waiting()) TDIce.begin((100 - G.cpu.spot) + 17);
+    const shot = TDIce.resolve();
+    if (!shot.made) {
+      kind = 'fgmiss';
+      customMsg = 'NO GOOD!  ' + shot.dist + ' YARDS' + (shot.iced ? ' — YOU ICED HIM! 🧊' : '');
+      // A missed kick is spotted where it was taken, so you take over there
+      // rather than fielding a kickoff.
+      G.turnoverSpotYou = Phaser.Math.Clamp(Math.round(100 - G.cpu.spot), 1, 99);
+    }
+  }
+  if (window.TDIce) TDIce.clear();
   // 🔥 MOMENTUM — how their drive ended is one of the biggest swings in the
   // game. A takeaway does not nudge the meter, it lurches it.
   if (window.TDMomentum) TDMomentum.theirDrive(kind);
@@ -2995,6 +3018,12 @@ function cpuDriveEnd(kind, customMsg) {
                                      else                      {             msg = abbr + ' TD — XP NO GOOD  +6'; }
                                    } }
   else if (kind === 'fieldgoal') { pts = 3; big = true; msg = abbr + ' FIELD GOAL  +3'; }
+  else if (kind === 'fgmiss')    { big = true; msg = customMsg || 'NO GOOD — YOUR BALL!';
+                                   if (window.TDSound) TDSound.sting('td');
+                                   // 🧊 A miss is a stop you earned — but it is not a takeaway,
+                                   // so it pays nothing. Getting the ball at the kick spot IS
+                                   // the reward, and it is a better one than a kickoff.
+                                   sayComment(pick(['It sails wide!', 'NO GOOD!', 'He missed it!'])); }
   else if (kind === 'punt')      { msg = abbr + ' PUNTS IT AWAY'; }
   else if (kind === 'safety')    { big = true; msg = customMsg || 'SAFETY!  YOU +2';
                                    G.score += 2;                          // 🛑 the 2 points are YOURS
@@ -3082,6 +3111,9 @@ const DefenseSim = (function () {
     // the three call buttons belong on screen right now. Without it the panel
     // reads exactly as it always did.
     if (window.TDDefense) TDDefense.refresh();
+    // 🧊 …and icing.js gets the same last word about the kick row, which is
+    // empty on every play except the one where they line up a field goal.
+    if (window.TDIce) TDIce.refresh(iceContext());
   }
 
   // Begin the opponent's drive (G.cpu is already set by startCpuDrive).
@@ -3195,7 +3227,14 @@ const DefenseSim = (function () {
     // 4th down: they decide — usually kick (FG in range / punt), sometimes go for it.
     if (G.cpu.down === 4 && !G.cpu.goFor) {
       const fgDist = (100 - G.cpu.spot) + 17;
-      if (fgDist <= FG_MAX_DIST && Math.random() < 0.85) { endDrive('fieldgoal', null, '4th down — they send out the <b>field-goal</b> unit…'); return; }
+      if (fgDist <= FG_MAX_DIST && Math.random() < 0.85) {
+        // 🧊 Tell icing.js a kick is on the way BEFORE the panel repaints, so
+        // the ❄️ ICE HIM row is there on the same frame the unit trots out —
+        // you get the whole "tap to continue" beat to decide (src/icing.js).
+        if (window.TDIce) TDIce.begin(fgDist);
+        endDrive('fieldgoal', null, '4th down — they send out the <b>field-goal</b> unit…');
+        return;
+      }
       if (!(G.cpu.togo <= 2 && G.cpu.spot > 40 && Math.random() < 0.5)) { endDrive('punt', null, '4th down — they <b>punt</b> it away…'); return; }
       G.cpu.goFor = true;                                   // GO FOR IT → run the 4th-down play now
       render("4th down — they're <b>GOING FOR IT!</b>");
@@ -3950,6 +3989,23 @@ function secondHalfKick() {
 // actually PLAY, it calls startSeasonGame, and we report the score back to it
 // from endGame(). Kept tiny on purpose — the season never touches Phaser.
 window.TDGame = {
+  // 🧊 ICE THE KICKER (icing.js) — spend a timeout to make their kicker stand
+  // there and think about it. ⚠️ It goes through the REAL `callTimeout`, so it
+  // costs exactly what any other timeout costs and gets the same banner; this
+  // is not a free button that happens to be labelled "timeout".
+  iceKicker: () => {
+    if (!window.TDIce || !TDIce.waiting()) return false;
+    if (G.timeouts <= 0) return false;
+    G.timeouts--;
+    G.clockStopped = true;
+    TDIce.markIced();
+    showBanner('🧊 TIMEOUT — ICING THE KICKER  ·  ' + G.timeouts + ' left', false);
+    sayComment(pick(['Timeout! Let him think about it.', 'Icing the kicker!', 'Freeze him!']));
+    if (window.TDSound) TDSound.sting('coin');
+    updateTimeoutBtn();
+    TDIce.refresh(iceContext());
+    return true;
+  },
   // find a team (or an earned uniform) by its abbreviation
   teamByAbbr: (abbr) => allTeams().find(t => t.abbr === abbr) || null,
   // the team currently shown on the CHOOSE YOUR TEAM menu
