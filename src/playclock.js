@@ -389,6 +389,18 @@
     paint();
   }
 
+  // 👀 PRE-SNAP MOTION (motion.js) bills the clock for the time a man spends
+  // jogging across the formation. ⚠️ It can take you INTO the red — that is the
+  // whole cost of looking — but it can never take you past zero and hand you a
+  // delay of game you had no chance to avoid: the foul is still decided by the
+  // ordinary tick, on the ordinary rules, on a later frame.
+  function spend(secs) {
+    if (!running) return left;
+    left = Math.max(0.6, left - Math.max(0, secs || 0));
+    paint();
+    return left;
+  }
+
   function newGame() {
     running = false; left = fullSecs(); lastTime = 0;
     parked = false; delays = 0;
@@ -400,6 +412,7 @@
 
   window.TDPlayClock = {
     tick, judgeSnap, stop, reset, newGame, setup,
+    spend,                   // 👀 motion.js bills the clock for a man in motion
     // pure rules, exposed so they can be swept without playing a down
     chanceAt, spotAfter, stepBack,
     // …and the situational versions the game actually rolls against

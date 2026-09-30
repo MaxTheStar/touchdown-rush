@@ -4756,6 +4756,7 @@ function setupPlay(next) {
   if (window.TDHurry) TDHurry.update(clockCtx);
   if (window.TDProtect) TDProtect.newPlay();   // 🛡 keep the protection row in sync
   if (window.TDSilent) TDSilent.newPlay();     // 🔇 …and the snap-count row beside it
+  if (window.TDMotion) TDMotion.newPlay();     // 👀 …and a fresh man available to send in motion
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -5189,6 +5190,8 @@ function updateHUD() {
   if (window.TDGas) TDGas.tick();
   // 🔥 …and the flame follows whoever is hottest right now (src/hothand.js).
   if (window.TDHot) TDHot.follow();
+  // 👀 …and a man in motion keeps jogging across until he gets there (motion.js).
+  if (window.TDMotion) TDMotion.tick();
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.

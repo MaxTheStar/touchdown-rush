@@ -102,6 +102,18 @@
     }
     armed = null;
     wasRight = false;
+    confirmed = false;
+  }
+
+  // 👀 PRE-SNAP MOTION (motion.js) — you sent a man across and watched what
+  // they did about it, so the disguise is over: from here on the panel and the
+  // button tell the TRUTH about this down. ⚠️ This is the whole reason motion
+  // is worth doing: the tell on this button is a bluff about one time in five,
+  // and motion is how a real quarterback finds out which time.
+  function reveal() {
+    showing = truth;
+    confirmed = true;
+    return truth;
   }
 
   // The line main.js used to read out at the line of scrimmage.
@@ -115,12 +127,18 @@
 
   // The short version that fits under the 🗣️ icon on the button.
   const BTN_LABEL = { blitz: 'BLITZ?', man: 'MAN?', zone: 'ZONE?' };
+  // 👀 …and the version for when you have STOPPED GUESSING. Pre-snap motion
+  // (motion.js) makes them show their hand, so the question mark becomes a
+  // full stop — see reveal() below.
+  const SURE_LABEL = { blitz: 'BLITZ!', man: 'MAN!', zone: 'ZONE!' };
+  let confirmed = false;   // has motion caught them out this down?
 
   // ---- the panel ---------------------------------------------------------
   function render() {
     const body = $('aud-body'); if (!body) return;
     body.innerHTML =
-      '<div class="au-show">They are showing:<b>' +
+      '<div class="au-show' + (confirmed ? ' sure' : '') + '">' +
+        (confirmed ? '👀 Motion caught them in:' : 'They are showing:') + '<b>' +
         (showing === 'blitz' ? '🔥 PRESSURE' : showing === 'zone' ? '🪟 ZONE' : '🎯 MAN') +
       '</b></div>' +
       CALLS.map(c =>
@@ -128,8 +146,10 @@
           '<div class="au-ic">' + c.ic + '</div>' +
           '<div class="au-txt"><b>' + c.name + '</b><span>' + c.blurb + '</span></div>' +
         '</div>').join('') +
-      '<div class="au-foot">Watch what they do, not what they say — about one look in five ' +
-        'is a bluff.</div>';
+      (confirmed
+        ? '<div class="au-foot">You sent a man across and they told you the truth. No bluff this down.</div>'
+        : '<div class="au-foot">Watch what they do, not what they say — about one look in five ' +
+          'is a bluff.</div>');
     body.querySelectorAll('.au-call').forEach(el => {
       el.addEventListener('pointerdown', e => { e.preventDefault(); call(el.getAttribute('data-id')); });
     });
@@ -182,7 +202,7 @@
       // call you have made. This is the readout that replaced the spoken line.
       const small = b.querySelector('small');
       if (small) small.textContent = armed ? armed.name.split(' ')[0]
-                                   : (showing ? BTN_LABEL[showing] : 'AUDIBLE');
+                                   : (showing ? (confirmed ? SURE_LABEL : BTN_LABEL)[showing] : 'AUDIBLE');
       b.classList.toggle('reading', ready && !armed);
     }
     // 🎩 Arming the trick overwrites these same routes, so it cancels the
@@ -219,6 +239,8 @@
 
   window.TDAudible = {
     newPlay, tell, sync, open, close, catchAdd,
+    reveal,                      // 👀 motion.js: they showed their hand
+    confirmed: () => confirmed,
     showing: () => showing,
     truth: () => truth,
     armed: () => armed && armed.id,
