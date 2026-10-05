@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.17 — cache-buster is `?v=173` in `index.html`.
+- **Version:** v4.18 — cache-buster is `?v=174` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -230,6 +230,18 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **🧱 v4.18 — THE POCKET (off-board, Max's idea; `src/kick.js`, no save).** *"The field goal is only
+    one player attacking you — what if you have a whole pocket, a team trying to block you, and another
+    team trying to get you?"* The kick screen had ONE rusher and no blockers. Now five of YOUR blockers
+    (your colours, `k_blocker`) stand in front of the kicker and THREE of theirs charge three gaps. Each
+    rusher runs to the wall, is HELD by his blocker (they shove), then beats him (blocker falls) and
+    sprints for the ball; first man home blocks the kick. Hold time is random per man, so there is no
+    single moment to count down to — the red HURRY (`K.rush > 0.6`) now means "somebody just got
+    through", ~0.6s before the block. **Tuning kept honest:** the first man through arrives ~3.0–4.5s
+    (mean ≈ the old fixed `rushMs`, measured over 60 simulated kicks at 3400), so difficulty and
+    🦵 Golden Toe still mean what they meant; a strong 🏟 offense rating (`TDDraft.boost().off`, clamped
+    0.92–1.12) holds blocks a bit longer. `K.rush` is still the most dangerous man's progress, so
+    `peek()`/HURRY semantics are unchanged; `K.rusher` is still the middle man.
   - **🦵 v4.17 — YOUR OWN KICKER (Round 14, pick ⑤, `src/kicker.js`, save `tdr-kicker`).** In
     🏟 MY TEAM → 📋 ROSTER a new card lets you SIGN a kicker (first one free, a replacement costs 25🪙):
     three prospects each time — 💣 BOMBER (big 🦵 leg, loose 🎯 aim), 🎯 SNIPER (the reverse), ⚖️ STEADY —

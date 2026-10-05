@@ -57,9 +57,9 @@ window.KickGame = (function () {
   const LANES     = [170, 300, 410];                  // where the 3 rushers start (screen x)
   const BLOCK_X   = [200, 245, 290, 335, 380];        // your 5 blockers, shoulder to shoulder
   const BLOCK_Y   = 548;
-  const WALL_AT   = 0.55;                             // × rushMs — when they reach the wall
+  const WALL_AT   = 0.52;                             // × rushMs — when they reach the wall
   const HOLD_MIN  = 0.20, HOLD_RANGE = 0.60;          // × rushMs — how long a block lasts
-  const DASH_AT   = 0.12;                             // × rushMs — the last sprint to the ball
+  const DASH_AT   = 0.18;                             // × rushMs — the last sprint to the ball
 
   // ---- Colors ----
   const SKY_TOP = 0x0b1020, SKY_LOW = 0x1a2a4a, CROWD = 0x11162b;
