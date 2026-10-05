@@ -44,6 +44,23 @@ window.KickGame = (function () {
   const RUSH_END   = { x: 286, y: 628, s: 1.12 };   // right on the ball = BLOCKED!
   const RUSH_DEFAULT_MS = 3400;                      // time to arrive if none given
 
+  // ---- 🧱 THE POCKET — a whole line against a whole rush (v4.18) ----
+  // It used to be ONE man against nobody. Now five of YOUR blockers stand in
+  // front of the kicker and THREE of theirs charge at three different gaps.
+  // Each rusher runs up to the wall, gets HELD by his blocker for a while, then
+  // beats him and sprints for the ball. Whoever gets home first blocks the kick.
+  // The hold is random per man, so you can no longer count down to one fixed
+  // moment — the red HURRY appears the instant ANYBODY gets through. The timing
+  // is tuned so the FIRST man through arrives about when the lone rusher used to
+  // (rushMs), so every difficulty and 🦵 Golden Toe still means what it meant.
+  const WALL_P    = 0.6;                              // how far along his path the wall is
+  const LANES     = [170, 300, 410];                  // where the 3 rushers start (screen x)
+  const BLOCK_X   = [200, 245, 290, 335, 380];        // your 5 blockers, shoulder to shoulder
+  const BLOCK_Y   = 548;
+  const WALL_AT   = 0.55;                             // × rushMs — when they reach the wall
+  const HOLD_MIN  = 0.20, HOLD_RANGE = 0.60;          // × rushMs — how long a block lasts
+  const DASH_AT   = 0.12;                             // × rushMs — the last sprint to the ball
+
   // ---- Colors ----
   const SKY_TOP = 0x0b1020, SKY_LOW = 0x1a2a4a, CROWD = 0x11162b;
   const FIELD_NEAR = 0x379437, GOAL_GOLD = 0xffd400;
@@ -76,6 +93,7 @@ window.KickGame = (function () {
     // display objects (kept so we can clean them all up)
     objs: [],
     ball: null, crosshair: null, powerBar: null, rusher: null,
+    rushers: [], blockers: [], clock: 0,   // 🧱 the pocket (see THE POCKET above)
     hud: null, hint: null, distLabel: null, banner: null,
     flight: null,       // the ball-flight tween (so we can stop it)
 
@@ -109,6 +127,7 @@ window.KickGame = (function () {
     K.rushMs = opts.rushMs || RUSH_DEFAULT_MS;
     // Rebuild the rusher's art each kick so it wears the CURRENT opponent's colors.
     if (scene.textures.exists('k_rusher')) scene.textures.remove('k_rusher');
+    if (scene.textures.exists('k_blocker')) scene.textures.remove('k_blocker');
 
     // Longer kicks are harder: you need more power, and the aim swings faster.
     K.powerToReach = clamp(0.30 + (K.distance - 17) / 70, 0.35, 0.92);
@@ -167,6 +186,7 @@ window.KickGame = (function () {
     }
     for (const o of K.objs) o.destroy();
     K.objs = [];
+    K.rushers = []; K.blockers = [];
     K.ball = K.crosshair = K.powerBar = K.rusher = K.hud = K.hint = K.distLabel = K.banner = null;
     K.active = false;
   }
@@ -196,7 +216,8 @@ window.KickGame = (function () {
     // 🏃 While you're aiming or powering up, the rusher keeps charging. If he
     // reaches the ball before you kick, the kicker is tackled — you lose it!
     if (K.state === 'aim' || K.state === 'power') {
-      K.rush = Math.min(1, K.rush + delta / K.rushMs);
+      K.clock += delta;
+      advancePocket();
       positionRusher();
       updateHurryHint();
       if (K.rush >= 1) getBlocked();
@@ -207,12 +228,51 @@ window.KickGame = (function () {
 
   // Slide the rusher along his charge path (small & far → big & on the ball).
   function positionRusher() {
-    if (!K.rusher) return;
-    const t = K.rush;
-    K.rusher.setPosition(
-      Phaser.Math.Linear(RUSH_START.x, RUSH_END.x, t),
-      Phaser.Math.Linear(RUSH_START.y, RUSH_END.y, t)
-    ).setScale(Phaser.Math.Linear(RUSH_START.s, RUSH_END.s, t)).setVisible(true);
+    K.rushers.forEach(r => {
+      const t = r.p;
+      let x = Phaser.Math.Linear(r.x0, RUSH_END.x, t);
+      const y = Phaser.Math.Linear(RUSH_START.y, RUSH_END.y, t);
+      // While a man is being held, he and his blocker shove each other.
+      const held = t >= WALL_P && !r.beaten;
+      if (held) x += Math.sin(K.clock / 38 + r.lane) * 2.5;
+      r.s.setPosition(x, y).setScale(Phaser.Math.Linear(RUSH_START.s, RUSH_END.s, t)).setVisible(true);
+      if (r.blk) r.blk.x = r.blk.baseX + (held ? Math.sin(K.clock / 38 + r.lane + 1) * 2.5 : 0);
+    });
+  }
+
+  // 🧱 Roll a fresh rush: three men, each with his own hold time.
+  function rollPocket() {
+    K.clock = 0; K.rush = 0;
+    // A strong team (🏟 MY TEAM offense rating) holds its blocks a bit longer.
+    let line = 1;
+    try { if (window.TDDraft && TDDraft.boost) line = clamp(TDDraft.boost().off, 0.92, 1.12); } catch (e) {}
+    K.rushers.forEach(r => {
+      r.hold = K.rushMs * (HOLD_MIN + HOLD_RANGE * Math.random()) * line;
+      r.wall = K.rushMs * WALL_AT;
+      r.dash = K.rushMs * DASH_AT;
+      r.beaten = false; r.p = 0;
+      if (r.blk) { r.blk.setAngle(0).setAlpha(1); r.blk.x = r.blk.baseX; }
+    });
+  }
+
+  // Move every rusher along his three-part journey: run to the wall, get held,
+  // break through and sprint. K.rush is the most dangerous man's progress.
+  function advancePocket() {
+    let top = 0;
+    K.rushers.forEach(r => {
+      const c = K.clock;
+      if (c < r.wall) r.p = WALL_P * (c / r.wall);
+      else if (c < r.wall + r.hold) r.p = WALL_P;
+      else {
+        if (!r.beaten) {                         // the moment he beats his man
+          r.beaten = true;
+          if (r.blk) K.scene.tweens.add({ targets: r.blk, angle: r.lane === 0 ? -70 : 70, alpha: 0.55, duration: 260 });
+        }
+        r.p = Math.min(1, WALL_P + (1 - WALL_P) * ((c - r.wall - r.hold) / r.dash));
+      }
+      top = Math.max(top, r.p);
+    });
+    K.rush = top;
   }
 
   // When the rusher gets close, the hint turns into a red "HURRY!" warning.
@@ -372,7 +432,7 @@ window.KickGame = (function () {
     K.aimSpeed = AIM_SPEED * (1 + (K.distance - 34) / 130);
     K.aimX = GOAL_CENTER; K.aimDir = 1;
     K.power = 0; K.powerDir = 1;
-    K.rush = 0; K.blocked = false;        // 🏃 send the rusher back to the start
+    K.blocked = false; rollPocket();      // 🏃 send the rush back to the start with fresh holds
     K.lockedResult = null; K.wxBlew = false;
     positionRusher();
     K.state = 'aim';
@@ -407,7 +467,7 @@ window.KickGame = (function () {
       K.hud.setText(`MADE ${K.made}   ·   STREAK ${K.streak}   ·   BEST ${K.best}`);
     } else {
       K.hud.setText(K.mode === 'punt' ? 'PUNT' : `${Math.round(K.distance)}-YD FIELD GOAL`);
-      if (K.kicker && K.mode !== 'punt') K.hud.setText(`${Math.round(K.distance)}-YD FIELD GOAL · 🦵 ${K.kicker.name.toUpperCase()}`);
+      if (K.kicker && K.mode !== 'punt') K.hud.setText(`${Math.round(K.distance)}-YD FG · 🦵 ${K.kicker.name.toUpperCase()}`);
     }
     // The distance badge under the goal (nice for judging power).
     if (K.distLabel) K.distLabel.setText(K.mode === 'punt' ? 'BOOT IT!' : Math.round(K.distance) + ' yd');
@@ -445,8 +505,22 @@ window.KickGame = (function () {
     // The football on its tee.
     K.ball = keep(scene.add.sprite(BALL_X, BALL_Y, 'k_ball')).setDepth(106);
 
-    // 🏃 The rusher (in the OTHER team's colors) — starts downfield and charges.
-    K.rusher = keep(scene.add.sprite(RUSH_START.x, RUSH_START.y, 'k_rusher')).setDepth(105);
+    // 🧱 Your five blockers, then 🏃 their three rushers (in the OTHER team's
+    // colors) — they start downfield and charge at three different gaps.
+    K.blockers = BLOCK_X.map(x => {
+      const b = keep(scene.add.sprite(x, BLOCK_Y, 'k_blocker')).setDepth(106).setScale(0.95);
+      b.baseX = x; return b;
+    });
+    K.rushers = LANES.map((x0, i) => {
+      const s = keep(scene.add.sprite(x0, RUSH_START.y, 'k_rusher')).setDepth(105);
+      // each rusher fights the blocker standing in front of his wall point
+      const wx = x0 + WALL_P * (RUSH_END.x - x0);
+      let blk = K.blockers[0];
+      K.blockers.forEach(b => { if (Math.abs(b.baseX - wx) < Math.abs(blk.baseX - wx)) blk = b; });
+      return { s, x0, lane: i - 1, blk, hold: 0, wall: 0, dash: 0, beaten: false, p: 0 };
+    });
+    K.rusher = K.rushers[1].s;
+    rollPocket();
     positionRusher();
 
     // The aim crosshair (hidden until we're aiming).
@@ -546,6 +620,19 @@ window.KickGame = (function () {
       g.fillStyle(0xffffff); g.fillRect(18, 2, 4, 14);        // stripe
       g.generateTexture('k_kicker', 40, 40); g.destroy();
     }
+    if (!scene.textures.exists('k_blocker')) {
+      // 🧱 Your blockers wear YOUR colors, facing the rush with arms out.
+      const T = window.TEAM || {};
+      const jersey = (T.jersey != null) ? T.jersey : 0x1f4fd8;
+      const helmet = (T.helmet != null) ? T.helmet : 0x1f4fd8;
+      const g = scene.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(jersey);   g.fillEllipse(20, 28, 36, 22);      // a wide lineman's body
+      g.fillStyle(0xd9a066); g.fillCircle(5, 20, 4); g.fillCircle(35, 20, 4);  // arms out front
+      g.fillStyle(helmet);   g.fillCircle(20, 14, 13);
+      g.fillStyle(0xffffff); g.fillCircle(20, 14, 9);
+      g.fillStyle(helmet);   g.fillCircle(20, 14, 8);
+      g.generateTexture('k_blocker', 40, 40); g.destroy();
+    }
     if (!scene.textures.exists('k_rusher')) {
       // The blocker wears the OTHER team's colors (window.OPP), set by main.js.
       const O = window.OPP || {};
@@ -570,6 +657,7 @@ window.KickGame = (function () {
                    outcome: judge(), aimX: K.aimX, power: K.power,
                    lockedAim: K.lockedAim, lockedPower: K.lockedPower, lockedResult: K.lockedResult,
                    powerToReach: K.powerToReach, distance: K.distance,
+                   rushers: K.rushers.map(r => ({ p: r.p, hold: r.hold, beaten: r.beaten })), clock: K.clock,
                    rush: K.rush, rushMs: K.rushMs, blocked: K.blocked, wxBlew: K.wxBlew,
                    POST_LEFT, POST_RIGHT }),
   };
