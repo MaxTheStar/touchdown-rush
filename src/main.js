@@ -1988,6 +1988,7 @@ function startExtraPoint() {
 // The kick finished — score it, then start a fresh drive.
 function onKickDone(result) {
   document.body.classList.remove('kicking');  // bring the football buttons back
+  if (window.TDKicker) TDKicker.record(result, G.kickKind, G.kickDist);   // 🦵 his record + growth
   let msg;
   if (result.outcome === 'blocked') {
     // 🏃 The rusher got home — the kicker was tackled and the ball is lost.

@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.16 — cache-buster is `?v=172` in `index.html`.
+- **Version:** v4.17 — cache-buster is `?v=173` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,7 +218,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     another new board and continue."* **Theme: the craft** — the small professional things real
     players and coaches do to steal an edge, plus the two places the game still settles something
     interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
-    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker · ⑥🔄 The Pitch · ⑦⚡ The Onside
+    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker **v4.17 ✅** · ⑥🔄 The Pitch · ⑦⚡ The Onside
     Scramble · ⑧📣 The Twelfth Man.
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
     `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
@@ -230,6 +230,19 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **🦵 v4.17 — YOUR OWN KICKER (Round 14, pick ⑤, `src/kicker.js`, save `tdr-kicker`).** In
+    🏟 MY TEAM → 📋 ROSTER a new card lets you SIGN a kicker (first one free, a replacement costs 25🪙):
+    three prospects each time — 💣 BOMBER (big 🦵 leg, loose 🎯 aim), 🎯 SNIPER (the reverse), ⚖️ STEADY —
+    so it is a real choice. 70 is neutral and changes nothing; leg moves the power the kick needs (±10%),
+    accuracy moves how fast the aim swings (±25%). Folded into kick.js beside Golden Toe, REAL games only
+    (practice drills untouched); his name shows on the kick screen. He keeps his own record (FG, XP,
+    longest) via ONE line in main.js `onKickDone`, and grows +1 every 4 makes (long FG → leg, short → aim).
+    ⚠️ **DELIBERATE DEVIATION from the chart: he is NOT a ninth entry in `tdr-roster`.** That array is
+    8 long and trades/salary/growth/injuries/dynasty index it by SLOTS/OFF_END; a ninth man would touch
+    all of them and need a migration. He has no spot during a play, so he has his own key — no existing
+    save changes at all (verified: roster still 8). draft.js only gained `TDKicker.cardHTML()` in
+    rosterHTML and `render` on the `TDDraft` export. Punts are not counted/affected (punt distance is
+    only a banner number in this game — faking an effect there would be dishonest).
   - **👀 v4.16 — PRE-SNAP MOTION (Round 14, pick ④, `src/motion.js`, no save).** Send a receiver
     jogging across the formation and **watch what they do about it**: somebody runs across with him =
     MAN (that defender has him wherever he goes), nobody moves = ZONE (they are guarding grass, and a

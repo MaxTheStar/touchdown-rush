@@ -536,7 +536,8 @@
       : '';
 
     const rows = roster.map(p => playerRow(p, '', true)).join('');
-    const html = head + payHTML + grewSum + `<div class="dr-list">${rows}</div>` +
+    const kickerCard = window.TDKicker ? TDKicker.cardHTML() : '';   // 🦵 your own kicker (kicker.js)
+    const html = head + payHTML + grewSum + `<div class="dr-list">${rows}</div>` + kickerCard +
       `<div class="dr-hint">🌱 Your players grow as you play — keep going and your rookies become stars!</div>`;
 
     // You've seen the growth now — clear the "▲+N" badges so they don't linger.
@@ -1053,6 +1054,7 @@
   // ---- What the rest of the game may use ----------------------------------
   window.TDDraft = {
     open,               // show the MY TEAM screen (the 🏟 menu button)
+    render,             // 🦵 kicker.js redraws the tab after you sign a kicker
     boost,              // main.js beginGame: { off, def } multipliers for YOUR team
     teamOverall,        // { off, def, ovr } — handy for other modules / debug
     payroll: teamPayroll,

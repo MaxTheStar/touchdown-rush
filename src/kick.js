@@ -121,6 +121,18 @@ window.KickGame = (function () {
       K.powerToReach *= (1 - toe * 0.25);   // needs a touch less power to reach
     }
 
+    // 🦵 YOUR OWN KICKER (kicker.js): his leg and his aim. Real games only —
+    // the practice drills stay the same for everybody. 70 changes nothing.
+    K.kicker = null;
+    if (!K.standalone && window.TDKicker && window.TDKicker.mods) {
+      const km = window.TDKicker.mods();
+      if (km) {
+        K.kicker = km;
+        K.powerToReach *= km.power;
+        K.aimSpeed     *= km.aim;
+      }
+    }
+
     makeTextures(scene);
     buildView(scene);
 
@@ -395,6 +407,7 @@ window.KickGame = (function () {
       K.hud.setText(`MADE ${K.made}   ·   STREAK ${K.streak}   ·   BEST ${K.best}`);
     } else {
       K.hud.setText(K.mode === 'punt' ? 'PUNT' : `${Math.round(K.distance)}-YD FIELD GOAL`);
+      if (K.kicker && K.mode !== 'punt') K.hud.setText(`${Math.round(K.distance)}-YD FIELD GOAL · 🦵 ${K.kicker.name.toUpperCase()}`);
     }
     // The distance badge under the goal (nice for judging power).
     if (K.distLabel) K.distLabel.setText(K.mode === 'punt' ? 'BOOT IT!' : Math.round(K.distance) + ' yd');
