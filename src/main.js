@@ -3339,6 +3339,10 @@ const DefenseSim = (function () {
     // the three call buttons belong on screen right now. Without it the panel
     // reads exactly as it always did.
     if (window.TDDefense) TDDefense.refresh();
+    // 📣 THE TWELFTH MAN (twelfth.js) — the timing bar above the call buttons.
+    // ⚠️ AFTER endDrive has set `dsimEnding`, like the call buttons: a finished
+    // drive must not still be offering to raise the roof.
+    if (window.TDTwelfth) TDTwelfth.refresh({ ending: !!G.dsimEnding });
     // 🧊 …and icing.js gets the same last word about the kick row, which is
     // empty on every play except the one where they line up a field goal.
     if (window.TDIce) TDIce.refresh(iceContext());
@@ -3360,7 +3364,7 @@ const DefenseSim = (function () {
   }
 
   // Decide ONE play's outcome from difficulty, YOUR defense rating & the weather.
-  function play() {
+  function play(tw) {
     const dDef = window.TDDraft ? TDDraft.teamOverall().def : 65;
     const dStop = Math.min(1, Math.max(0, (dDef - 60) / 39));                 // 0..1: your defense strength
     // 📣 …times the HOME CROWD (crowd.js): the same noise number beginGame folds
@@ -3371,7 +3375,8 @@ const DefenseSim = (function () {
     // under the crowd's 6%, and zero inside the meter's dead band — so most of
     // most games this is exactly 1 and nothing here changes at all.
     const mo = (window.TDMomentum && TDMomentum.cpuPowMult) ? TDMomentum.cpuPowMult() : 1;
-    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop) * crowd * mo;
+    const cpuPow = ({ easy: 0.82, medium: 1.0, hard: 1.18 }[G.difficulty] || 1.0) * (1 - 0.30 * dStop) * crowd * mo
+      * (tw ? tw.pow : 1);   // 📣 …and the roar YOU raised for this one snap (twelfth.js; ×1 without one)
     const wxCatch  = window.TDWeather ? TDWeather.catchMult()  : 1;
     const wxFumble = window.TDWeather ? TDWeather.fumbleMult() : 1;
     const hawk = (window.TDShop && TDShop.hawkBoost) ? TDShop.hawkBoost() : 0;  // 🖐 Ball Hawk: more takeaways
@@ -3391,7 +3396,7 @@ const DefenseSim = (function () {
 
     if (Math.random() < passShare) {                                          // ---- PASS ----
       if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
-      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete);
+      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
       if (Math.random() < inc) return { r: 'inc', y: 0, t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
       if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, t: '<b>SACK!</b> ' + y + ' yards.' }; }
       let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
@@ -3468,7 +3473,20 @@ const DefenseSim = (function () {
       render("4th down — they're <b>GOING FOR IT!</b>");
       return;
     }
-    apply(play());
+    // 📣 THE TWELFTH MAN: the roar you raised belongs to THIS snap only. A loud
+    // enough house can make them jump before the ball is even snapped — a
+    // FALSE START, −5, same down. ⚠️ It is not `apply()`: no down is used, no
+    // clock runs, and the defence you called stays armed for the replay.
+    const tw = window.TDTwelfth ? TDTwelfth.take() : null;
+    if (tw && Math.random() < tw.falseStart) {
+      TDTwelfth.noteFalseStart();
+      G.cpu.spot = Math.max(1, G.cpu.spot - 5);
+      G.cpu.togo += 5;
+      if (window.TDSound) TDSound.sting('stuff');
+      render(TDTwelfth.falseStartLine());
+      return;
+    }
+    apply(play(tw));
   }
 
   function wire() {
@@ -4105,6 +4123,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.starGame = false;                            // 🌟 …and not a Superstar game either
                                                  // (simgame.js READS this flag; it keeps no copy)
   G.fakeKick = false;
+  if (window.TDTwelfth) TDTwelfth.newGame();     // 📣 no leftover roar from the last game
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown

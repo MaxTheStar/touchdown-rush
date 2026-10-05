@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.20 — cache-buster is `?v=176` in `index.html`.
+- **Version:** v4.21 — cache-buster is `?v=179` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -219,7 +219,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     players and coaches do to steal an edge, plus the two places the game still settles something
     interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
     ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker **v4.17 ✅** · ⑥🔄 The Pitch **v4.19 ✅** · ⑦⚡ The Onside
-    Scramble **v4.20 ✅** · ⑧📣 The Twelfth Man.
+    Scramble **v4.20 ✅** · ⑧📣 The Twelfth Man **v4.21 ✅** — **🎉 ROUND 14 SWEPT 8/8**, plus the off-board 🧱 The Pocket v4.18 (Max's idea).
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
     `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
     kicker on the roster are ALL absent. Thirteen rounds have covered the big systems; what is left is
@@ -230,6 +230,27 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **📣 v4.21 — THE TWELFTH MAN (Round 14, pick ⑧, `src/twelfth.js`, no save).** The one part of the game
+    where you had NOTHING to do — their drive in the tap-to-progress defense sim — now has a hand on the
+    crowd dial. A timing bar (`#tw-row`, a SIBLING above `#dsim-calls`) sweeps across the panel; ONE press
+    per play stops it (green ±0.11 of centre = DEAFENING, yellow ±0.26 = LOUD, else a ragged cheer). The
+    result lasts for ONE snap (`take()` in `DefenseSim.tap`, like 🛡️ defcall's `consume`). Effects: a
+    chance they **FALSE START** (−5, SAME down, no clock, your defence call stays armed), a few more
+    incompletions, a touch less yardage — each scaled by `0.35 + 0.65×crowd noise`, so a tiny quiet
+    stadium gets ~⅓ of it. **Not a tapping contest:** one press, a second `roar()` is a no-op (checked),
+    mashing is worth nothing. **Worth nothing on the road:** `TDCrowd.stands()` is false away, so the row
+    is one dim line ("🚌 ROAD GAME…") and `roar()` returns null; hidden entirely for drill/all-star/house.
+    ⚠️ **THE FIRST CUT WAS 2× TOO STRONG AND ONLY A DRIVE-LEVEL MEASUREMENT SHOWED IT.** The constants
+    (−4% yardage, +8% incompletions, 12% false start) LOOK small, but a drive is a chain of conversions:
+    per 3,000+ drives a perfect roar in a packed stadium cut points/drive 0.81 → 0.37 (−54%), against
+    −26% for crowd.js's whole −6% cap and −31% for a lone 12% false start. Now −1.5% / +2% / 5%:
+    perfect+packed ≈ the crowd's own cap (−26% vs one opponent, −19% vs another), perfect+typical
+    stadium ≈ half (−13% / −8%), ≈0.24 false starts a drive at the top. **Measure drive-level (points per
+    drive), never per-play yardage:** per-play also double-counted false starts (a replayed down is not a
+    lost one). The button swallows its own pointerdown (the panel advances the drive on touch — same
+    lesson as icing.js). Hooks in main.js: `DefenseSim.render` → `TDTwelfth.refresh({ending})` (after
+    `dsimEnding` is set), `play(tw)` (`cpuPow × tw.pow`, `inc + tw.incomplete`), `tap()` (take + false
+    start before `apply(play())`), `beginGame` → `TDTwelfth.newGame()`.
   - **⚡ v4.20 — THE ONSIDE SCRAMBLE (Round 14, pick ⑦, in main.js `startOnsideScramble`, no save).** The
     onside kick used to be `TDSpecial.rollOnside()` = `Math.random() < 0.22` while everyone stood still —
     the muffed punt again. Now the squib lands ~12 yards out and SQUIRTS 30–70px in ANY direction (a real
@@ -261,8 +282,9 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     rusher runs to the wall, is HELD by his blocker (they shove), then beats him (blocker falls) and
     sprints for the ball; first man home blocks the kick. Hold time is random per man, so there is no
     single moment to count down to — the red HURRY (`K.rush > 0.6`) now means "somebody just got
-    through", ~0.6s before the block. **Tuning kept honest:** the first man through arrives ~3.0–4.5s
-    (mean ≈ the old fixed `rushMs`, measured over 60 simulated kicks at 3400), so difficulty and
+    through", ~0.6s before the block. **Tuning kept honest:** the first man through arrives 3.1–5.0s, mean
+    3.6 (the old fixed `rushMs` was 3.4; measured over 80 simulated kicks at 3400, after the final
+    WALL_AT .52 / DASH_AT .18 tuning), so difficulty and
     🦵 Golden Toe still mean what they meant; a strong 🏟 offense rating (`TDDraft.boost().off`, clamped
     0.92–1.12) holds blocks a bit longer. `K.rush` is still the most dangerous man's progress, so
     `peek()`/HURRY semantics are unchanged; `K.rusher` is still the middle man.
