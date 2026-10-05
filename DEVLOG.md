@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.18 — cache-buster is `?v=174` in `index.html`.
+- **Version:** v4.19 — cache-buster is `?v=175` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,7 +218,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     another new board and continue."* **Theme: the craft** — the small professional things real
     players and coaches do to steal an edge, plus the two places the game still settles something
     interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
-    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker **v4.17 ✅** · ⑥🔄 The Pitch · ⑦⚡ The Onside
+    ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker **v4.17 ✅** · ⑥🔄 The Pitch **v4.19 ✅** · ⑦⚡ The Onside
     Scramble · ⑧📣 The Twelfth Man.
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
     `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
@@ -230,6 +230,17 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **🔄 v4.19 — THE PITCH (Round 14, pick ⑥, `src/pitch.js`, no save).** Once your runner has crossed the
+    line, a 🔄 PITCH button (right edge, under ⚡; key `P`) and an orange ring appear on the nearest
+    teammate who is LEVEL or BEHIND him within 135px and not blocking (a lateral can never go forward).
+    The ball flies fast and short (`pitch()` in main.js, state `'pass'`, never sets `G.hasPassed`). Clean
+    → he is the runner, +650ms burst. Dropped → **a LIVE BALL**: the v4.8/4.9 muff scramble reused
+    (`G.pitchLoose` flag, `'loose'` state, `resolveMuff` routes to `resolvePitchScramble`) — the ball
+    squirts PAST him (46–64px, v4.9's lesson), your man is the one you chase, 3 defenders chase it, first
+    there wins; you → still live and running, them → turnover at the spot. Drop chance (pure,
+    `TDPitch.dropChance`): 5% clean, +≈0.16 with a defender on his hip (<62px), +6% long, −0.6×Sure Hands,
+    ×weather fumble mult, capped 45%. ⚠️ Gated to AFTER the line so the button never shows on an
+    ordinary dropback (QB+RB are always level). Verified clean + forced-drop + defence-recovers paths.
   - **🧱 v4.18 — THE POCKET (off-board, Max's idea; `src/kick.js`, no save).** *"The field goal is only
     one player attacking you — what if you have a whole pocket, a team trying to block you, and another
     team trying to get you?"* The kick screen had ONE rusher and no blockers. Now five of YOUR blockers

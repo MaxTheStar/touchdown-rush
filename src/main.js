@@ -438,7 +438,7 @@ let keys;          // keyboard
 // (just like pressing a key one time). See setupTouchButtons() below.
 const touch = {
   left: false, right: false, up: false, down: false,   // held arrows
-  snap: false, one: false, two: false, three: false, hand: false  // one-shot taps
+  snap: false, one: false, two: false, three: false, hand: false, pitch: false  // one-shot taps
 };
 
 // Player 2's arrows (the defense player in 2-player mode)
@@ -503,6 +503,13 @@ function create() {
   G.carrierRing.fillStyle(0x2ee6ff, 0.14);
   G.carrierRing.fillCircle(0, 0, 20);
 
+  // 🔄 A softer orange ring under the man you could PITCH to (pitch.js).
+  G.pitchRing = this.add.graphics().setDepth(4).setVisible(false);
+  G.pitchRing.lineStyle(3, 0xffa94d, 0.95);
+  G.pitchRing.strokeCircle(0, 0, 17);
+  G.pitchRing.fillStyle(0xffa94d, 0.12);
+  G.pitchRing.fillCircle(0, 0, 17);
+
   // A little "announcer" line that pops quick play-by-play call-outs.
   // The announcer's call-outs sit ON the field, so they need their own dark
   // plate behind them — white words straight over grass and yard numbers were
@@ -521,7 +528,7 @@ function create() {
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H',
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P',
     // Player 2 uses W A S D to drive the defender (handy for testing on a computer)
     w: 'W', a: 'A', s: 'S', d: 'D'
   });
@@ -573,7 +580,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -774,6 +781,7 @@ function snap(time) {
   if (window.TDPlayClock) TDPlayClock.stop();   // ⏳ …and nothing left to be late for
   G.snapTime = time;
   G.hasPassed = false;
+  G.pitchLoose = false;       // 🔄 no leftover dropped-pitch scramble
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
@@ -901,6 +909,9 @@ function controlBallCarrier() {
     else if (consume('three') || Phaser.Input.Keyboard.JustDown(keys.three)) throwTo(3);
     else if (consume('hand')  || Phaser.Input.Keyboard.JustDown(keys.hand))  handOff();
   }
+  // 🔄 A pitch is a lateral, so it works in the open field too — not only behind
+  // the line like a pass. (Read after the pass block so a tap is never both.)
+  if (consume('pitch') || Phaser.Input.Keyboard.JustDown(keys.pitch)) pitch();
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
@@ -944,6 +955,115 @@ function handOff() {
   G.ballCarrier = rb;
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
   sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
+}
+
+// ============================================================
+// 🔄 THE PITCH (pitch.js has the brain; the ball in flight lives here)
+// ------------------------------------------------------------
+// The carrier flips it sideways/backwards to the nearest man who is level with
+// him or behind. It travels fast and short. If the man handles it he is a fresh
+// runner (with a short burst — the defense just chased the wrong guy). If he
+// does not, it is a LIVE BALL: the same scramble a muffed punt uses (`'loose'`),
+// won by whoever reaches it first. ⚠️ A pitch is a LATERAL — it never sets
+// G.hasPassed, so a forward pass is still legal afterwards.
+// ============================================================
+const PITCH_SPEED = 560;       // px/s — a quick flip, not a throw
+const PITCH_BURST_MS = 650;    // the new runner's burst of speed
+function pitchTarget() {
+  if (!window.TDPitch || G.state !== 'live' || !G.ballCarrier) return null;
+  if (window.TDStar && TDStar.on()) return null;       // 🌟 you are one man there, not the team
+  const c = G.ballCarrier;
+  if (c.role === 'OL') return null;
+  // Only once he has crossed the line: this is "out of room at the edge", and it
+  // keeps the button (and the ring) off the screen on every ordinary dropback.
+  if (c.s.y > G.losY - 4) return null;
+  const cands = [];
+  offense.forEach((o, i) => {
+    if (o === c || o.role === 'OL') return;
+    if (window.TDProtect && TDProtect.blocking(o)) return;   // he is busy blocking
+    cands.push({ i, x: o.s.x, y: o.s.y });
+  });
+  const t = TDPitch.pick({ x: c.s.x, y: c.s.y }, cands);
+  return t ? Object.assign({ o: offense[t.i] }, t) : null;
+}
+function pitch() {
+  const t = pitchTarget(); if (!t) return;
+  const c = G.ballCarrier.s, rec = t.o;
+  G.state = 'pass';            // the ball is in the air: nobody can be tackled this instant
+  ballFollow = false;
+  G.passTarget = { x: rec.s.x, y: rec.s.y };   // the defense breaks on the new man
+  sayComment(pick(['Pitch!', 'He pitches it out!', 'Option! Pitch!', 'Flips it back!']));
+  ball.setPosition(c.x, c.y);
+  const flight = Math.max(140, t.dist / PITCH_SPEED * 1000);
+  const vx = rec.s.body ? rec.s.body.velocity.x : 0, vy = rec.s.body ? rec.s.body.velocity.y : 0;
+  G.scene.cameras.main.startFollow(ball, true, 0.2, 0.2);
+  G.scene.tweens.add({
+    targets: ball,
+    x: Phaser.Math.Clamp(rec.s.x + vx * flight / 1000, 10, FIELD_WIDTH - 10),
+    y: rec.s.y + vy * flight / 1000,
+    duration: flight, ease: 'Sine.Out',
+    onComplete: () => resolvePitch(rec, t.dist, { x: c.x, y: c.y }),
+  });
+}
+function resolvePitch(rec, dist, from) {
+  G.passTarget = null;
+  if (G.state !== 'pass') return;
+  let nd = Infinity;
+  for (const d of defense) nd = Math.min(nd, Phaser.Math.Distance.Between(d.s.x, d.s.y, rec.s.x, rec.s.y));
+  const p = TDPitch.dropChance({
+    defDist: nd, dist,
+    sure: window.TDTraits ? TDTraits.catchFor(offense.indexOf(rec)) : 0,
+    wx: wxFumble(),
+  });
+  if (Math.random() < p) { dropThePitch(rec, from); return; }
+  // Clean. He is the runner now, and the men chasing the old carrier overran.
+  G.ballCarrier = rec;
+  G.state = 'live';
+  ballFollow = true;
+  G.boostUntil = G.scene.time.now + PITCH_BURST_MS;
+  G.scene.cameras.main.startFollow(rec.s, true, 0.12, 0.12);
+  sayComment(pick(['Got it!', 'Clean pitch!', 'He takes it!']));
+}
+// The pitch hits the turf: it keeps going the way it was thrown, PAST him (never
+// at his feet — v4.9's lesson: a ball that lands inside RECOVER_DIST is
+// recovered on frame one and the "scramble" never happens).
+function dropThePitch(rec, from) {
+  freezeEveryone();
+  G.state = 'fumble';
+  G.pitchLoose = true;
+  G.ballCarrier = rec;         // YOUR man — you chase it with the D-pad
+  showBanner('PITCH DROPPED!!!', true);
+  sayComment(pick(['The pitch is loose!', 'Nobody has it!', 'He dropped the pitch!']));
+  if (window.TDSound) TDSound.sting('stuff');
+  ballFollow = false;
+  const heading = Math.atan2(rec.s.y - from.y, rec.s.x - from.x);
+  const ang = heading + Phaser.Math.DegToRad(Phaser.Math.Between(-40, 40));
+  const far = Phaser.Math.Between(MUFF_MIN, MUFF_MAX);
+  const bx = Phaser.Math.Clamp(rec.s.x + Math.cos(ang) * far, 12, FIELD_WIDTH - 12);
+  const by = Math.max(ENDZONE + 10, rec.s.y + Math.sin(ang) * far);
+  G.scene.tweens.add({ targets: ball, x: bx, y: by, duration: 420, ease: 'Bounce.Out' });
+  G.scene.time.delayedCall(460, () => {
+    if (G.state !== 'fumble' || !G.pitchLoose) return;
+    G.state = 'loose';
+    G.looseUntil = G.scene.time.now + LOOSE_MS;
+    G.looseChasers = nearestDefenders(ball.x, ball.y, LOOSE_CHASERS);
+    showBanner('GET IT!!!', true);
+  });
+}
+// The scramble is over. (Called from resolveMuff — `'loose'` is shared.)
+function resolvePitchScramble(byYou) {
+  G.looseChasers = null; G.pitchLoose = false;
+  freezeEveryone();
+  if (byYou) {
+    G.state = 'live';
+    ballFollow = true;
+    G.scene.cameras.main.startFollow(G.ballCarrier.s, true, 0.12, 0.12);
+    showBanner('YOU GOT IT BACK!', false);
+    sayComment('Falls on it! Still our ball!');
+  } else {
+    G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(ball.y)), 1, 99);
+    endPlay('interception', 'THEY JUMPED ON IT!');
+  }
 }
 
 // ============================================================
@@ -4372,6 +4492,7 @@ function updateLooseBall(time) {
 // scramble above, i.e. from who actually reached the ball. A muff is the worst
 // moment in the game, and it must not be an automatic turnover OR a dice roll.
 function resolveMuff(byYou) {
+  if (G.pitchLoose) { resolvePitchScramble(byYou); return; }   // 🔄 a dropped pitch, not a punt
   G.looseChasers = null;
   freezeEveryone();
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);
@@ -4689,7 +4810,7 @@ function setupPlay(next) {
   G.hasPassed = false;
   G.ballCarrier = offense[0];
   ballFollow = true;
-  touch.snap = touch.one = touch.two = touch.three = touch.hand = false; // clear old taps
+  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = false; // clear old taps
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
@@ -4787,6 +4908,7 @@ function setupTouchButtons() {
   bindTap('btn-2', 'two');
   bindTap('btn-3', 'three');
   bindTap('btn-hand', 'hand');
+  bindTap('btn-pitch', 'pitch');   // 🔄 THE PITCH (pitch.js)
 
   // Player 2 (defense) — just four arrows, moving the "P2" red player
   bindHold('btn2-up', 'up', touch2);
@@ -5171,6 +5293,15 @@ function updateHUD() {
   // Gray out the HAND button when you're too far from the RB to hand off.
   const handBtn = document.getElementById('btn-hand');
   if (handBtn) handBtn.classList.toggle('off', !canHandOff());
+
+  // 🔄 THE PITCH — show the button and ring the man who would get it, only
+  // while a legal pitch exists (level or behind, in range, not blocking).
+  const pt = pitchTarget();
+  document.body.classList.toggle('can-pitch', !!pt);
+  if (G.pitchRing) {
+    G.pitchRing.setVisible(!!pt);
+    if (pt) G.pitchRing.setPosition(pt.o.s.x, pt.o.s.y);
+  }
 
   // Scoreboard now shows BOTH teams' points — yours and the computer's.
   hud.score.setText(G.team
