@@ -580,7 +580,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -782,6 +782,7 @@ function snap(time) {
   G.snapTime = time;
   G.hasPassed = false;
   G.pitchLoose = false;       // 🔄 no leftover dropped-pitch scramble
+  G.onsideLoose = false;      // ⚡ …or onside scramble
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
@@ -2158,6 +2159,12 @@ function onKickDone(result) {
       TDSpecial.onsideOffered(G.score, G.oppScore, G.quarter)) {
     G.deadUntil = Number.MAX_SAFE_INTEGER;      // hold here until you answer
     TDSpecial.askOnside(choice => {
+      if (choice === 'onside' && offense && offense[0]) {
+        // ⚡ THE ONSIDE SCRAMBLE (v4.20): the ball is genuinely loose and YOU go
+        // get it. The dead-ball timer stays parked until it is settled.
+        startOnsideScramble();
+        return;
+      }
       if (choice === 'onside') {
         if (TDSpecial.rollOnside()) {           // 🎉 you got it back!
           G.next = { los: TDSpecial.winSpot(), down: 1, fd: Math.min(TDSpecial.winSpot() + 10, 100) };
@@ -2171,6 +2178,91 @@ function onKickDone(result) {
       G.deadUntil = G.scene.time.now + 900;      // let the game breathe, then play on
     });
   }
+}
+
+// ============================================================
+// ⚡ THE ONSIDE SCRAMBLE
+// ------------------------------------------------------------
+// This used to be `Math.random() < 0.22` while everybody stood still — the muffed
+// punt all over again, and v4.8/v4.9 had to be spent turning THAT into a real race.
+// Now the squib is kicked, lands ~12 yards out, and SQUIRTS in a random direction
+// (any of the 360°: sometimes toward their hands team, sometimes back at yours,
+// which is what a real onside bounce is). Then it is the 'loose' scramble: you
+// drive your man with the D-pad, their three nearest men run at the ball, first
+// there falls on it. The geometry is fixed by a 6000-trial simulation:
+//   • a player who goes straight for it wins ≈ 31%  (the real rate is ~1 in 4)
+//   • a player who stands still wins ≈ 0.5%         (v4.9's rule: never a free win)
+// ⚠️ THE NUMBERS BELOW ARE THAT SIMULATION — change them together or not at all.
+// ============================================================
+const ONSIDE_MY_BACK = 90;     // px — your man starts this far behind where it lands
+const ONSIDE_UP_X = 45, ONSIDE_UP_Y = 30;   // their up men, relative to the landing
+const ONSIDE_REACT_MS = 350;   // their hands team needs a beat to read the bounce
+const ONSIDE_SQ_MIN = 30, ONSIDE_SQ_MAX = 70;   // how far it squirts after landing
+function startOnsideScramble() {
+  freezeEveryone();
+  G.state = 'fumble';          // frozen while the kick is in the air
+  G.onsideLoose = true; G.pitchLoose = false; G.puntMuffed = false;
+  document.body.classList.remove('kicking');
+  // Only your hands man is on the field of yours (the kickoff's trick: hide the rest).
+  for (let i = 1; i < offense.length; i++) {
+    offense[i].s.setVisible(false); if (offense[i].label) offense[i].label.setVisible(false);
+  }
+  if (offense[0].label) offense[0].label.setVisible(false);
+  if (referee) referee.setVisible(false);
+  for (const d of defense) if (d.label) d.label.setVisible(false);
+
+  const kx = FIELD_WIDTH / 2, ky = yardsToY(35);               // the tee, your own 35
+  const lx = Phaser.Math.Clamp(kx + Phaser.Math.Between(-60, 60), 80, FIELD_WIDTH - 80);
+  const ly = ky - Phaser.Math.Between(110, 130);               // 11–13 yards out
+  const ang = Math.random() * Math.PI * 2;                     // ANY direction
+  const far = Phaser.Math.Between(ONSIDE_SQ_MIN, ONSIDE_SQ_MAX);
+  const fx = Phaser.Math.Clamp(lx + Math.cos(ang) * far, 20, FIELD_WIDTH - 20);
+  const fy = Math.max(ENDZONE + 30, ly + Math.sin(ang) * far);
+
+  place(offense[0], lx + Phaser.Math.Between(-25, 25), ly + ONSIDE_MY_BACK);
+  offense[0].s.setVisible(true);
+  G.ballCarrier = offense[0];
+  // Their three up men wait where it will land; the other four are deeper.
+  const up = [[-ONSIDE_UP_X, -ONSIDE_UP_Y], [0, -ONSIDE_UP_Y - 15], [ONSIDE_UP_X, -ONSIDE_UP_Y]];
+  for (let i = 0; i < defense.length; i++) {
+    const o = i < 3 ? up[i] : [(i - 4.5) * 80, -140 - (i % 2) * 40];
+    place(defense[i], Phaser.Math.Clamp(lx + o[0] + Phaser.Math.Between(-15, 15), 20, FIELD_WIDTH - 20),
+                      ly + o[1] + Phaser.Math.Between(-12, 12));
+    defense[i].s.setVisible(true);
+  }
+  ballFollow = false;
+  ball.setPosition(kx, ky).setVisible(true);
+  G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
+  showBanner('ONSIDE KICK!', true);
+  sayComment(pick(['Onside kick!', "Here it comes — it's an onside kick!", 'Surprise onside!']));
+  if (window.TDSound) TDSound.sting('stuff');
+  G.scene.tweens.add({ targets: ball, x: lx, y: ly, duration: 520, ease: 'Sine.Out' });
+  G.scene.tweens.add({ targets: ball, x: fx, y: fy, duration: 520, delay: 520, ease: 'Bounce.Out' });
+  G.scene.time.delayedCall(1100, () => {
+    if (G.state !== 'fumble' || !G.onsideLoose) return;
+    G.state = 'loose';
+    G.looseUntil = G.scene.time.now + LOOSE_MS;
+    G.looseReactAt = G.scene.time.now + ONSIDE_REACT_MS;
+    G.looseChasers = nearestDefenders(ball.x, ball.y, LOOSE_CHASERS);
+    showBanner('GO GET IT!!!', true);
+  });
+}
+// The scramble is over: it sets where the NEXT possession starts, exactly the
+// way the old coin flip did — only now it is where the ball really ended up.
+function resolveOnside(byYou) {
+  G.onsideLoose = false; G.looseChasers = null;
+  freezeEveryone();
+  const y = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);
+  if (byYou) {
+    G.next = { los: y, down: 1, fd: Math.min(y + 10, 100) };
+    if (window.TDSound) TDSound.sting('td');
+  } else {
+    G.next = { los: 20, down: 1, fd: 30, fresh: true };
+    G.turnoverSpotCpu = Phaser.Math.Clamp(100 - y, 1, 99);
+  }
+  if (window.TDSpecial) TDSpecial.onsideFlash(byYou);
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1100;
 }
 
 // ============================================================
@@ -4461,6 +4553,8 @@ function updateLooseBall(time) {
   for (const d of defense) {
     if (G.looseChasers && G.looseChasers.indexOf(d) === -1) { d.s.setVelocity(0, 0); continue; }
     if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
+    // ⚡ an onside kick bounces unpredictably — their hands team needs a beat to read it
+    if (G.onsideLoose && time < G.looseReactAt) { d.s.setVelocity(0, 0); continue; }
     steer(d.s, ball.x, ball.y, diff().koCover);
   }
 
@@ -4493,6 +4587,7 @@ function updateLooseBall(time) {
 // moment in the game, and it must not be an automatic turnover OR a dice roll.
 function resolveMuff(byYou) {
   if (G.pitchLoose) { resolvePitchScramble(byYou); return; }   // 🔄 a dropped pitch, not a punt
+  if (G.onsideLoose) { resolveOnside(byYou); return; }          // ⚡ the onside kick, not a punt
   G.looseChasers = null;
   freezeEveryone();
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);

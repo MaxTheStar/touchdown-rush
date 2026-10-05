@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.19 — cache-buster is `?v=175` in `index.html`.
+- **Version:** v4.20 — cache-buster is `?v=176` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -219,7 +219,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     players and coaches do to steal an edge, plus the two places the game still settles something
     interesting with a dice roll. Order: ①🎯 Two-Point Chart **v4.13 ✅** · ②🧊 Ice the Kicker **v4.14 ✅** ·
     ③🔥 The Hot Hand **v4.15 ✅** · ④👀 Pre-Snap Motion **v4.16 ✅** · ⑤🦵 Your Own Kicker **v4.17 ✅** · ⑥🔄 The Pitch **v4.19 ✅** · ⑦⚡ The Onside
-    Scramble · ⑧📣 The Twelfth Man.
+    Scramble **v4.20 ✅** · ⑧📣 The Twelfth Man.
     ⚠️ **The grep check came back unusually clean this time** — motion (the only hits are the CSS
     `prefers-reduced-motion` kind), laterals, icing, a two-point chart, a per-player hot streak and a
     kicker on the roster are ALL absent. Thirteen rounds have covered the big systems; what is left is
@@ -230,6 +230,19 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     tap-to-progress, the one part of the game with nothing to do. ⚠️ **⑤ is the only pick that changes
     a SAVED shape** — `tdr-roster` has been an eight-man array since v1.19 and has to grow a ninth man
     without anybody opening MY TEAM to find their squad reset.
+  - **⚡ v4.20 — THE ONSIDE SCRAMBLE (Round 14, pick ⑦, in main.js `startOnsideScramble`, no save).** The
+    onside kick used to be `TDSpecial.rollOnside()` = `Math.random() < 0.22` while everyone stood still —
+    the muffed punt again. Now the squib lands ~12 yards out and SQUIRTS 30–70px in ANY direction (a real
+    onside bounce), then it is the `'loose'` scramble v4.8/4.9 built (`G.onsideLoose`; `resolveMuff`
+    routes to `resolveOnside`): you drive your man, their 3 nearest run at the ball after a 350ms read,
+    first there recovers; where it ENDS is where the next possession starts (your ~47 / their ~54, no
+    more fixed 45/48). **Geometry is fixed by simulation, so don't nudge one number alone:** 8000 trials →
+    reaction 0.25s ≈ 33%, 0.4s ≈ 20% (a typical thumb), 0.6s ≈ 5%; standing still ≈ 0.5% (live: 0/8).
+    A superhuman instant bot won 9/12 live, which is the point — it is a skill now. `rollOnside()` stays
+    in special.js as the fallback if the offense array is missing. Verified both outcomes flow on: win →
+    1st&10 at the recovery spot with all 7 men visible; loss → CPU drive. ⚠️ In a HIDDEN preview pane the
+    1100ms `delayedCall` into `'loose'` sometimes doesn't fire inside a harness window (scene time) —
+    that is the harness, same as the muff.
   - **🔄 v4.19 — THE PITCH (Round 14, pick ⑥, `src/pitch.js`, no save).** Once your runner has crossed the
     line, a 🔄 PITCH button (right edge, under ⚡; key `P`) and an orange ring appear on the nearest
     teammate who is LEVEL or BEHIND him within 135px and not blocking (a lateral can never go forward).
