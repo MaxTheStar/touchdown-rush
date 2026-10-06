@@ -41,7 +41,15 @@
     if (s.rush)     bits.push(`<span>${s.rush}</span> ${s.rush === 1 ? 'carry' : 'carries'}`);
     if (s.rushYds)  bits.push(`<span>${s.rushYds}</span> rush yds`);
     if (s.td)       bits.push(`<span>${s.td}</span> TD`);
-    if (s.takeaway) bits.push(`<span>${s.takeaway}</span> ${s.takeaway === 1 ? 'takeaway' : 'takeaways'}`);
+    // 📊 the defensive line (gamestats.js noteDefense) — a defender's row used to
+    // be a single "takeaway" number or "quiet day at the office"
+    if (s.sack)     bits.push(`<span>${s.sack}</span> ${s.sack === 1 ? 'sack' : 'sacks'}`);
+    if (s.tkl)      bits.push(`<span>${s.tkl}</span> ${s.tkl === 1 ? 'tackle' : 'tackles'}`);
+    if (s.tfl)      bits.push(`<span>${s.tfl}</span> for loss`);
+    if (s.pd)       bits.push(`<span>${s.pd}</span> ${s.pd === 1 ? 'pass defended' : 'passes defended'}`);
+    if (s.int)      bits.push(`<span>${s.int}</span> ${s.int === 1 ? 'interception' : 'interceptions'}`);
+    if (s.ff)       bits.push(`<span>${s.ff}</span> ${s.ff === 1 ? 'forced fumble' : 'forced fumbles'}`);
+    if (s.takeaway > (s.int || 0)) bits.push(`<span>${s.takeaway}</span> ${s.takeaway === 1 ? 'takeaway' : 'takeaways'}`);
 
     const quiet = bits.length === 0;
     const star = isStar(p) ? '<span class="bx-star">⭐ POTG</span>' : '';
@@ -88,6 +96,7 @@
       `<div class="bx-tiles">` +
         tile(t.total, 'total yards') + tile(t.rushYds, 'rushing') + tile(t.recYds, 'receiving') +
         tile(t.td, 'touchdowns') + tile(t.fg, 'field goals') + tile(t.takeaway, 'takeaways') +
+        tile(t.sack, 'sacks') + tile(t.tkl, 'tackles') + tile(t.pd, 'passes defended') +
       `</div>` +
       // 📈 the swing chart (winprob.js) — how the game was actually won, which
       // is a better story than any column of numbers. Returns '' when there is

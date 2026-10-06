@@ -55,15 +55,19 @@
   let defTurn = 0;       // rotates which defender gets credit for a takeaway
   let awarded = null;    // this game's winner (so the Box Score can show it too)
   let game = null;       // 📊 the scoreboard side of things, filled in at the final whistle
+  let lastCredit = null; // 📊 the defender credited with THEIR last play (the takeaway goes to him)
 
   function blank() {
     return { rec: 0, recYds: 0, rush: 0, rushYds: 0, td: 0, fg: 0, longFg: 0,
-             takeaway: 0, comp: 0, passYds: 0, passTd: 0 };
+             takeaway: 0, comp: 0, passYds: 0, passTd: 0,
+             // 📊 DEFENSE (v4.23): the 1-player defense sim credits each of THEIR plays to
+             // one of your three defenders — see noteDefense() below.
+             tkl: 0, sack: 0, tfl: 0, pd: 0, int: 0, ff: 0 };
   }
 
   // Start (or restart) the book — called from beginGame.
   function newGame() {
-    stats = {}; pendingCatch = -1; awarded = null; game = null;
+    stats = {}; pendingCatch = -1; awarded = null; game = null; lastCredit = null;
     for (const s of ALL_SLOTS()) stats[s.idx] = blank();
   }
   newGame();
@@ -123,9 +127,93 @@
   }
 
   function noteTakeaway() {                 // your defense got the ball back
-    const slot = DEF_SLOTS[defTurn % DEF_SLOTS.length];
-    defTurn++;
-    const d = stats[slot.idx]; if (d) d.takeaway++;
+    // 📊 In the 1-player defense the man who MADE the play gets the takeaway: the
+    // interception is his, and so is the tackle on the 4th-down stop. The old
+    // rotation is only the fallback now, for the 2-player live defense where no
+    // single play is credited.
+    let idx = lastCredit;
+    lastCredit = null;
+    if (idx == null) { idx = DEF_SLOTS[defTurn % DEF_SLOTS.length].idx; defTurn++; }
+    const d = stats[idx]; if (d) d.takeaway++;
+  }
+
+  // ---- 📊 THE DEFENSIVE BOX SCORE (Round 15, pick ②) -----------------------
+  // The defense used to have ONE number, `takeaway`, handed to your three
+  // defenders in turn like a raffle: nobody was ever credited with a sack or a
+  // tackle. Now every play THEY run in the defense sim is credited to somebody.
+  //
+  // WHO IS A WEIGHTED DRAW, NOT A ROTATION, and the weights are football:
+  //                 linebacker  corner  safety
+  //   a run            55%       15%     30%
+  //   a run for a loss 70%       10%     20%
+  //   a catch          20%       45%     35%      (somebody tackled the receiver)
+  //   a sack           65%       10%     25%
+  //   a pass defended  15%       60%     25%
+  //   an interception  10%       55%     35%
+  // …then nudged by who your men actually are: a 🛡 BRUISER makes more tackles, a
+  // 🦅 BALL HAWK more passes defended and picks, a ⚡ PLAYMAKER more sacks and
+  // takeaways, and a higher rating makes any man likelier to be the one. So the
+  // linebacker you drafted at 84 really does lead the sheet.
+  //
+  // ⚠️ IT IS A STAT BOOK, NOT A SECOND SIMULATION. Nothing here changes who wins a
+  // play — `DefenseSim.play()` already decided that — it only writes down who it
+  // was. That is why it cannot disagree with the scoreboard.
+  const CREDIT = {            // [LB, CB, S] — rows must each sum to 1
+    run:   [0.55, 0.15, 0.30], loss: [0.70, 0.10, 0.20], catch: [0.20, 0.45, 0.35],
+    sack:  [0.65, 0.10, 0.25], pd:   [0.15, 0.60, 0.25], int:   [0.10, 0.55, 0.35],
+    ff:    [0.50, 0.20, 0.30],
+  };
+  const TRAIT_NUDGE = {       // trait -> { kind: multiplier }
+    'BRUISER':   { run: 1.5, loss: 1.5, catch: 1.3 },
+    'BALL HAWK': { pd: 1.8, int: 2.0 },
+    'PLAYMAKER': { sack: 1.4, ff: 1.4, int: 1.3, pd: 1.3 },
+    'WALL':      { run: 1.4, loss: 1.4, sack: 1.3 },
+  };
+  const PD_SHARE = 0.55;      // not every incompletion is a defender's doing — some are just missed
+
+  function weightsFor(kind) {
+    return DEF_SLOTS.map((slot, i) => {
+      let w = CREDIT[kind][i];
+      try {
+        const tr = window.TDTraits && TDTraits.traitAt ? TDTraits.traitAt(slot.idx) : null;
+        if (tr && TRAIT_NUDGE[tr] && TRAIT_NUDGE[tr][kind]) w *= TRAIT_NUDGE[tr][kind];
+        const p = window.TDDraft && TDDraft.playerAt ? TDDraft.playerAt(slot.idx) : null;
+        if (p && p.ovr) w *= p.ovr / 70;
+      } catch (e) {}
+      return w;
+    });
+  }
+  // Draw one defender's slot index for a kind of play.
+  function whoMade(kind) {
+    const w = weightsFor(kind);
+    let r = Math.random() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return DEF_SLOTS[i].idx; }
+    return DEF_SLOTS[DEF_SLOTS.length - 1].idx;
+  }
+
+  // main.js DefenseSim.apply() hands over every play it resolves:
+  //   { r: 'gain'|'inc'|'int'|'fum', y: yards, tag: 'sack'|undefined, side: 'pass'|'run' }
+  // Returns the slot idx credited (or null — an incompletion nobody caused).
+  function noteDefense(p) {
+    if (!p) return null;
+    let idx = null;
+    const give = (kind, fields) => {
+      idx = whoMade(kind);
+      const d = stats[idx]; if (!d) return;
+      for (const f of fields) d[f]++;
+    };
+    if (p.r === 'int')                    give('int',   ['int']);
+    else if (p.r === 'fum')               give('ff',    ['ff']);
+    else if (p.tag === 'sack')            give('sack',  ['sack', 'tkl', 'tfl']);   // a sack is also a tackle for loss
+    else if (p.r === 'inc') { if (Math.random() < PD_SHARE) give('pd', ['pd']); }
+    else if (p.side === 'run') {
+      if (p.y < 0)                        give('loss',  ['tkl', 'tfl']);
+      else if (p.y === 0)                 give('loss',  ['tkl']);
+      else                                give('run',   ['tkl']);
+    }
+    else                                  give('catch', ['tkl']);                  // a completion was tackled by somebody
+    lastCredit = idx;
+    return idx;
   }
 
   // ---- Who was the star? -------------------------------------------------
@@ -133,7 +221,11 @@
   // yards, catches and field goals. Highest score wins the award.
   function scoreOf(s) {
     return s.td * 60 + s.takeaway * 50 + s.fg * 35 + s.rec * 5
-         + s.recYds + s.rushYds + s.passTd * 30 + Math.round(s.passYds * 0.5);
+         + s.recYds + s.rushYds + s.passTd * 30 + Math.round(s.passYds * 0.5)
+         // 📊 …and a defender can win it now: a sack is worth most, then a forced
+         // fumble, a tackle for loss, a pass defended, and a plain tackle. (The
+         // takeaway above already pays for an interception or a recovery.)
+         + s.sack * 35 + s.ff * 30 + s.tfl * 8 + s.pd * 10 + s.tkl * 4;
   }
 
   function mvp() {
@@ -161,14 +253,20 @@
     if (s.rush)    bits.push(s.rush + (s.rush === 1 ? ' carry' : ' carries'));
     if (s.rushYds) bits.push(s.rushYds + ' rush yds');
     if (s.td)      bits.push(s.td + ' TD');
-    if (s.takeaway) bits.push(s.takeaway + (s.takeaway === 1 ? ' takeaway' : ' takeaways'));
+    if (s.sack)    bits.push(s.sack + (s.sack === 1 ? ' sack' : ' sacks'));
+    if (s.tkl)     bits.push(s.tkl + (s.tkl === 1 ? ' tackle' : ' tackles'));
+    if (s.tfl)     bits.push(s.tfl + ' for loss');
+    if (s.pd)      bits.push(s.pd + (s.pd === 1 ? ' pass defended' : ' passes defended'));
+    if (s.int)     bits.push(s.int + (s.int === 1 ? ' interception' : ' interceptions'));
+    if (s.ff)      bits.push(s.ff + (s.ff === 1 ? ' forced fumble' : ' forced fumbles'));
+    if (s.takeaway > s.int) bits.push(s.takeaway + (s.takeaway === 1 ? ' takeaway' : ' takeaways'));
     return bits.length ? bits.join('  ·  ') : 'played a solid game';
   }
 
   // Coins for the award — a little for showing up, more for a big day.
   function bonusFor(b) {
     const yds = b.s.recYds + b.s.rushYds;
-    return Math.max(8, Math.min(35, 8 + b.s.td * 6 + b.s.takeaway * 6 + Math.floor(yds / 15)));
+    return Math.max(8, Math.min(35, 8 + b.s.td * 6 + b.s.takeaway * 6 + b.s.sack * 3 + Math.floor(yds / 15)));
   }
 
   // ---- The final whistle: award it (main.js calls this from endGame) ------
@@ -178,12 +276,14 @@
   // yards the receivers gained, so team yards = rushing + receiving (never both).
   function teamTotals() {
     let rushYds = 0, recYds = 0, td = 0, fg = 0, takeaway = 0, rec = 0, rush = 0;
+    let sack = 0, tkl = 0, pd = 0;
     for (const slot of ALL_SLOTS()) {   // a substitute's yards are the team's yards too
       const s = stats[slot.idx]; if (!s) continue;
       rushYds += s.rushYds; recYds += s.recYds; td += s.td;
       fg += s.fg; takeaway += s.takeaway; rec += s.rec; rush += s.rush;
+      sack += s.sack; tkl += s.tkl; pd += s.pd;
     }
-    return { rushYds, recYds, total: rushYds + recYds, td, fg, takeaway, rec, rush };
+    return { rushYds, recYds, total: rushYds + recYds, td, fg, takeaway, rec, rush, sack, tkl, pd };
   }
 
   // main.js fills this in at the final whistle so the Box Score has a scoreboard.
@@ -229,6 +329,7 @@
   // ---- What the rest of the game may use ---------------------------------
   window.TDGameStats = {
     newGame, noteCatch, play, noteFG, noteTakeaway,   // main.js hooks
+    noteDefense,                                       // 📊 main.js DefenseSim: who made THEIR play
     finish,                                            // endGame: award the star
     mvp, lineFor, rosterName,                          // handy for the Box Score
     winner: () => awarded,
