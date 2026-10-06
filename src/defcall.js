@@ -84,6 +84,46 @@
               bigPass: -0.05, bigRun: -0.02, passGain: 1.00, runGain: 1.20 } },
   ];
 
+  // ============================================================
+  // 🛑 PREVENT DEFENSE (Round 15, pick ④) — the one call that is not always there
+  // ------------------------------------------------------------
+  // Up seven with forty seconds left, the only way they score is a big play, so
+  // real coaches drop everybody deep and make them take the long way down the
+  // field: they can have the short stuff, they cannot have the touchdown.
+  //
+  // ⚠️ IT ONLY EXISTS IN THE SITUATION IT IS FOR. Early in a game "prevent" is the
+  // famous mistake (it prevents you from winning: they just march), so the button
+  // appears only when a coach would genuinely reach for it:
+  //     the end of a half (Q2 or Q4)  ·  their ball  ·  last 80 seconds
+  //     ·  you lead by ONE SCORE (1 to 8)
+  // — the first call in the game that is conditional, which is what makes it a
+  // call worth KNOWING rather than a fourth thing to tap.
+  //
+  // ⚠️ AND IT HAS TO BE THE WRONG CALL SOMETIMES, like the other three (see the
+  // table above). It is the best answer when they need a LOT of yards in a hurry,
+  // and the worst when they are close: soft coverage and a thin box hand a team on
+  // your 20 an easy chunk. Measured against the others over thousands of
+  // clock-aware drives (see DEVLOG v4.25).
+  // ============================================================
+  const PREVENT_CLOCK = 80;       // seconds left in the quarter
+  const PREVENT = { id: 'prevent', ic: '🛑', name: 'PREVENT', tag: '🛑 PREVENT',
+    blurb: 'Late, up one score: everybody deep. No big plays — but they can have the short stuff, so it fails if they are close.',
+    mods: { sack: -0.07, stuff: -0.06, incomplete: -0.12, intAdd: 0, fumbleAdd: -0.01,
+            bigPass: -0.08, bigRun: -0.08, passGain: 0.90, runGain: 1.30 } };
+
+  // Is that call on the table right now? Read straight off main.js's own state so
+  // it can never disagree with the game.
+  function preventOn() {
+    try {
+      const g = window.__td && __td.G;
+      if (!g || !g.cpu || g.state !== 'dsim' || g.dsimEnding || g.overtime) return false;
+      if (g.quarter !== 2 && g.quarter !== __td.NUM_QUARTERS) return false;   // the end of a half
+      if (g.clock > PREVENT_CLOCK) return false;
+      const lead = g.score - g.oppScore;
+      return lead >= 1 && lead <= 8;                                           // a one-score game
+    } catch (e) { return false; }
+  }
+
   let armed = null;   // the call for the play about to happen
 
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
@@ -106,8 +146,10 @@
   // ---- the three buttons, inside the panel you are already tapping --------
   function paint() {
     const row = $('dsim-calls'); if (!row) return;
-    row.innerHTML = CALLS.map(c =>
-      '<div class="dc-btn' + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+    // 🛑 …plus PREVENT, on its own full-width row, only when it is on the table.
+    const list = preventOn() || (armed && armed.id === 'prevent') ? CALLS.concat(PREVENT) : CALLS;
+    row.innerHTML = list.map(c =>
+      '<div class="dc-btn' + (c === PREVENT ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     row.querySelectorAll('.dc-btn').forEach(el => {
       el.addEventListener('pointerdown', e => {
@@ -123,7 +165,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -156,6 +198,9 @@
     try { ending = !!(window.__td && __td.G && __td.G.dsimEnding); } catch (e) {}
     const row = $('dsim-calls');
     if (row) row.style.display = ending ? 'none' : 'flex';
+    // 🛑 the clock moves between plays, so the late-game call can appear (or go)
+    // on any repaint. Cheap: three or four small divs.
+    if (!ending) paint();
     const tap = $('dsim-tap');
     if (tap && !ending) tap.textContent = '▶ NO CALL — JUST PLAY';
   }
@@ -163,8 +208,9 @@
   window.TDDefense = {
     mods, consume, show, refresh,
     armed: () => armed && armed.id,
+    preventOn,
     _choose: choose,
-    _calls: () => CALLS.map(c => ({ id: c.id, mods: c.mods })),
+    _calls: () => CALLS.concat(PREVENT).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 
