@@ -62,7 +62,7 @@
              takeaway: 0, comp: 0, passYds: 0, passTd: 0,
              // 📊 DEFENSE (v4.23): the 1-player defense sim credits each of THEIR plays to
              // one of your three defenders — see noteDefense() below.
-             tkl: 0, sack: 0, tfl: 0, pd: 0, int: 0, ff: 0 };
+             tkl: 0, sack: 0, tfl: 0, pd: 0, int: 0, ff: 0, blk: 0 };
   }
 
   // Start (or restart) the book — called from beginGame.
@@ -161,7 +161,7 @@
   const CREDIT = {            // [LB, CB, S] — rows must each sum to 1
     run:   [0.55, 0.15, 0.30], loss: [0.70, 0.10, 0.20], catch: [0.20, 0.45, 0.35],
     sack:  [0.65, 0.10, 0.25], pd:   [0.15, 0.60, 0.25], int:   [0.10, 0.55, 0.35],
-    ff:    [0.50, 0.20, 0.30],
+    ff:    [0.50, 0.20, 0.30], blk:  [0.50, 0.20, 0.30],   // a blocked kick (🚫 blockkick.js)
   };
   const TRAIT_NUDGE = {       // trait -> { kind: multiplier }
     'BRUISER':   { run: 1.5, loss: 1.5, catch: 1.3 },
@@ -189,6 +189,15 @@
     let r = Math.random() * w.reduce((a, b) => a + b, 0);
     for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return DEF_SLOTS[i].idx; }
     return DEF_SLOTS[DEF_SLOTS.length - 1].idx;
+  }
+
+  // 🚫 A blocked kick: one of your rushers got a hand on it. Credited like a play,
+  // so the takeaway that follows goes to the same man.
+  function noteBlock() {
+    const idx = whoMade('blk');
+    const d = stats[idx]; if (d) d.blk++;
+    lastCredit = idx;
+    return idx;
   }
 
   // main.js DefenseSim.apply() hands over every play it resolves:
@@ -225,7 +234,7 @@
          // 📊 …and a defender can win it now: a sack is worth most, then a forced
          // fumble, a tackle for loss, a pass defended, and a plain tackle. (The
          // takeaway above already pays for an interception or a recovery.)
-         + s.sack * 35 + s.ff * 30 + s.tfl * 8 + s.pd * 10 + s.tkl * 4;
+         + s.sack * 35 + s.ff * 30 + s.tfl * 8 + s.pd * 10 + s.tkl * 4 + s.blk * 40;
   }
 
   function mvp() {
@@ -259,6 +268,7 @@
     if (s.pd)      bits.push(s.pd + (s.pd === 1 ? ' pass defended' : ' passes defended'));
     if (s.int)     bits.push(s.int + (s.int === 1 ? ' interception' : ' interceptions'));
     if (s.ff)      bits.push(s.ff + (s.ff === 1 ? ' forced fumble' : ' forced fumbles'));
+    if (s.blk)     bits.push(s.blk + (s.blk === 1 ? ' blocked kick' : ' blocked kicks'));
     if (s.takeaway > s.int) bits.push(s.takeaway + (s.takeaway === 1 ? ' takeaway' : ' takeaways'));
     return bits.length ? bits.join('  ·  ') : 'played a solid game';
   }
@@ -329,7 +339,7 @@
   // ---- What the rest of the game may use ---------------------------------
   window.TDGameStats = {
     newGame, noteCatch, play, noteFG, noteTakeaway,   // main.js hooks
-    noteDefense,                                       // 📊 main.js DefenseSim: who made THEIR play
+    noteDefense, noteBlock,                            // 📊 main.js DefenseSim: who made THEIR play / blocked their kick
     finish,                                            // endGame: award the star
     mvp, lineFor, rosterName,                          // handy for the Box Score
     winner: () => awarded,

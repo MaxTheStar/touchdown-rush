@@ -49,6 +49,7 @@
     if (s.pd)       bits.push(`<span>${s.pd}</span> ${s.pd === 1 ? 'pass defended' : 'passes defended'}`);
     if (s.int)      bits.push(`<span>${s.int}</span> ${s.int === 1 ? 'interception' : 'interceptions'}`);
     if (s.ff)       bits.push(`<span>${s.ff}</span> ${s.ff === 1 ? 'forced fumble' : 'forced fumbles'}`);
+    if (s.blk)      bits.push(`<span>${s.blk}</span> ${s.blk === 1 ? 'blocked kick' : 'blocked kicks'}`);
     if (s.takeaway > (s.int || 0)) bits.push(`<span>${s.takeaway}</span> ${s.takeaway === 1 ? 'takeaway' : 'takeaways'}`);
 
     const quiet = bits.length === 0;

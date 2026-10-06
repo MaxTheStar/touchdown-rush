@@ -3227,6 +3227,32 @@ function iceContext() {
 // (Their touchdown counts 7 — the try after is automatic for the computer.)
 function cpuDriveEnd(kind, customMsg) {
   if (!G.cpu) return;
+  // 🚫 BLOCK THE KICK (blockkick.js). If you SENT EVERYBODY at their field goal or
+  // punt, the roll happens here — before icing rolls the kick itself:
+  //   a FLAG  = 15 yards and an automatic first down, and the drive is NOT over, so
+  //             this returns and the drive goes back on the map;
+  //   a BLOCK = the kick is dead and it is YOUR ball where it was kicked from; it
+  //             goes through the turnover branch below, so it pays like one.
+  if ((kind === 'fieldgoal' || kind === 'punt') && window.TDBlockKick) {
+    const rush = TDBlockKick.resolve(kind);
+    if (rush && rush.result === 'flag') {
+      if (window.TDIce) TDIce.clear();
+      if (window.TDSound) TDSound.sting('stuff');
+      DefenseSim.resume(rush.flagYards, '🚩 <b>ROUGHING THE ' + (kind === 'punt' ? 'PUNTER' : 'KICKER') +
+        '!</b> You ran into him — 15 yards and an automatic first down.');
+      return;
+    }
+    if (rush && rush.result === 'block') {
+      if (window.TDIce) TDIce.clear();
+      // The ball is loose behind the line: the holder stands ~7 yards back for a
+      // field goal, the punter a little deeper. (Their yards -> yours: 100 - x.)
+      G.turnoverSpotYou = Phaser.Math.Clamp(Math.round(100 - (G.cpu.spot - (kind === 'punt' ? 8 : 7))), 1, 99);
+      customMsg = kind === 'punt' ? 'PUNT BLOCKED — YOUR BALL!' : 'KICK BLOCKED — YOUR BALL!';
+      kind = 'turnover';
+      if (window.TDCeleb && TDCeleb.splash) TDCeleb.splash('block');            // 🕺 the defense dances
+      if (window.TDGameStats && TDGameStats.noteBlock) TDGameStats.noteBlock();  // 📊 …and a man gets the credit
+    }
+  }
   // 🧊 THE FIELD GOAL IS NOT AUTOMATIC ANY MORE (icing.js). It used to be: every
   // kick the computer attempted, from any distance, was three points — which
   // made it the only kick in the game that could not miss (their extra points
@@ -3366,6 +3392,10 @@ const DefenseSim = (function () {
     // 🧊 …and icing.js gets the same last word about the kick row, which is
     // empty on every play except the one where they line up a field goal.
     if (window.TDIce) TDIce.refresh(iceContext());
+    // 🚫 …and blockkick.js gets the row under it: send everybody at THIS kick.
+    // ⚠️ After endDrive has set `dsimEnding` and `dsimPending`, like the rows above.
+    if (window.TDBlockKick) TDBlockKick.refresh(Object.assign(
+      { ending: !!G.dsimEnding, kind: G.dsimPending && G.dsimPending.kind }, iceContext()));
   }
 
   // Begin the opponent's drive (G.cpu is already set by startCpuDrive).
@@ -3524,7 +3554,20 @@ const DefenseSim = (function () {
     if (el) el.addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
   }
 
-  return { start, tap, wire };
+  // 🚩 A penalty took the drive's ENDING back (blockkick.js: you ran into the
+  // kicker). `endDrive` had queued the kick as the end of the drive and the next
+  // tap was about to resolve it, so this puts the drive back on the map: +yards
+  // and a fresh set of downs, and the panel comes back up.
+  function resume(yards, line) {
+    G.state = 'dsim';
+    G.dsimEnding = false; G.dsimPending = null;
+    G.cpu.spot = Math.min(99, G.cpu.spot + yards);
+    G.cpu.down = 1; G.cpu.togo = Math.min(10, 100 - G.cpu.spot); G.cpu.goFor = false;
+    panel(true);
+    render(line);
+  }
+
+  return { start, tap, wire, resume };
 })();
 
 // ============================================================
