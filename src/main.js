@@ -2084,6 +2084,7 @@ function startKick(mode) {
   KickGame.enter(G.scene, {
     mode,
     distance: fieldGoalDistance(),
+    losYards: G.losYards,           // 🦶 the punt's power bar marks where the goal line is
     rushMs: diff().kickRush,        // 🏃 how long before the rusher can block it
     onDone: onKickDone,
   });
@@ -2139,6 +2140,25 @@ function onKickDone(result) {
     msg = (result.outcome === 'short') ? 'NO GOOD — SHORT!' : 'NO GOOD — WIDE!';
   } else {
     msg = 'PUNT — ' + result.puntYards + ' YDS';
+  }
+  // 🦶 PUNTS THAT MATTER (fieldpos.js). The kick decides where THEY start: a punt
+  // lands `puntYards` past the line (touchback / fair catch / a return), a blocked
+  // kick is theirs where it was kicked, a missed field goal is theirs where it was
+  // taken but never inside their 20. Before v4.24 every one of these handed them
+  // the ball at their own 25, so a 20-yard shank and a 70-yard bomb were the same
+  // punt. ⚠️ Not the extra point — that is followed by a kickoff, not a spot.
+  if (window.TDFieldPos && G.kickKind !== 'xp') {
+    let fp = null;
+    if (result.outcome === 'blocked')       fp = TDFieldPos.afterBlock(G.losYards);
+    else if (result.mode === 'punt')        fp = TDFieldPos.afterPunt(G.losYards, result.puntYards);
+    else if (result.mode === 'fg' && !result.made) fp = TDFieldPos.afterMiss(G.losYards);
+    if (fp) {
+      G.turnoverSpotCpu = fp.spot;
+      if (result.mode === 'punt' && result.outcome !== 'blocked') {
+        msg += '\n' + (fp.kind === 'touchback' ? 'TOUCHBACK' : fp.kind === 'fair' ? 'FAIR CATCH' : 'RETURNED ' + fp.ret) +
+               ' · THEIR ' + fp.spot;
+      }
+    }
   }
   // A kick (or missed kick) ends your possession — the ball goes to the OTHER
   // team next (startNextPlay sees fresh:true and runs their drive). Run a little

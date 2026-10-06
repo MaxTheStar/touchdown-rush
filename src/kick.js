@@ -94,6 +94,8 @@ window.KickGame = (function () {
     objs: [],
     ball: null, crosshair: null, powerBar: null, rusher: null,
     rushers: [], blockers: [], clock: 0,   // 🧱 the pocket (see THE POCKET above)
+    legYds: 0,         // 🦶 yards his leg adds to a punt (kicker.js → fieldpos.js)
+    goalPower: null,   // 🦶 power at which a punt reaches the goal line (above it = touchback)
     hud: null, hint: null, distLabel: null, banner: null,
     flight: null,       // the ball-flight tween (so we can stop it)
 
@@ -150,6 +152,16 @@ window.KickGame = (function () {
         K.powerToReach *= km.power;
         K.aimSpeed     *= km.aim;
       }
+    }
+
+    // 🦶 PUNTS THAT MATTER (fieldpos.js): the punt's distance decides where they
+    // start, and past the goal line it is a touchback — so the power bar shows where
+    // that line is. `opts.losYards` is where the ball was snapped, from YOUR goal.
+    K.legYds = (K.kicker && window.TDFieldPos) ? TDFieldPos.legYards(K.kicker.leg) : 0;
+    K.goalPower = null; K.toGoal = null;
+    if (K.mode === 'punt' && opts.losYards != null) {
+      K.toGoal = Math.round(100 - opts.losYards);
+      K.goalPower = (K.toGoal - 20 - K.legYds) / MAX_PUNT;     // power whose punt just reaches the goal line
     }
 
     makeTextures(scene);
@@ -365,6 +377,13 @@ window.KickGame = (function () {
     });
   }
 
+  // 🦶 How far this punt went. Power sets it (20–75 yards); since v4.24 your
+  // kicker's LEG adds up to ±6 more (kicker.js), and the number finally means
+  // something — fieldpos.js turns it into where the other team starts.
+  function puntYards() {
+    return Math.round(clamp(20 + K.lockedPower * MAX_PUNT + K.legYds, 12, 80));
+  }
+
   // Work out the outcome from the locked-in aim + power.
   function judge() {
     // Got tackled? Nothing else matters — it's a blocked, lost kick.
@@ -386,8 +405,7 @@ window.KickGame = (function () {
       K.made++; K.streak++; K.best = Math.max(K.best, K.streak);
       showBanner("IT'S GOOD!  +" + K.points, '#ffe066');
     } else if (result === 'punt') {
-      const yds = Math.round(20 + K.lockedPower * MAX_PUNT);
-      showBanner('NICE PUNT!  ' + yds + ' YDS', '#ffe066');
+      showBanner('NICE PUNT!  ' + puntYards() + ' YDS', '#ffe066');
     } else if (result === 'short') {
       K.streak = 0;
       showBanner('NO GOOD — SHORT!', '#ff8080');
@@ -418,7 +436,7 @@ window.KickGame = (function () {
       outcome: result,
       distance: K.distance,
       points: K.points,
-      puntYards: Math.round(20 + K.lockedPower * MAX_PUNT),
+      puntYards: puntYards(),
     };
     exit();
     if (cb) cb(payload);
@@ -451,12 +469,22 @@ window.KickGame = (function () {
 
     const x = 34, top = 300, bottom = 636, w = 26, h = bottom - top;
     g.fillStyle(0x000000, 0.45); g.fillRoundedRect(x, top, w, h, 6);
-    // Green "reach zone": stop the bar in here (or higher) to reach the goal.
-    const zoneBot = top + h * (1 - K.powerToReach);
-    g.fillStyle(0x2ecc40, 0.30); g.fillRect(x, top, w, zoneBot - top);
     const level = (K.state === 'power') ? K.power : K.lockedPower;
     const fillH = h * level;
-    g.fillStyle(level >= K.powerToReach ? 0x2ecc40 : 0xffcc00, 1);
+    if (K.goalPower != null) {
+      // 🦶 A PUNT has no uprights to reach. What the bar shows instead is where the
+      // goal line is: power in the orange zone puts it in the end zone — a
+      // TOUCHBACK, they start at their 20 — so a bigger punt is not always better.
+      const gp = clamp(K.goalPower, 0, 1);
+      const zoneBot = top + h * (1 - gp);
+      g.fillStyle(0xff9b3d, 0.38); g.fillRect(x, top, w, zoneBot - top);
+      g.fillStyle(level > gp ? 0xff9b3d : 0xffcc00, 1);
+    } else {
+      // Green "reach zone": stop the bar in here (or higher) to reach the goal.
+      const zoneBot = top + h * (1 - K.powerToReach);
+      g.fillStyle(0x2ecc40, 0.30); g.fillRect(x, top, w, zoneBot - top);
+      g.fillStyle(level >= K.powerToReach ? 0x2ecc40 : 0xffcc00, 1);
+    }
     g.fillRoundedRect(x, bottom - fillH, w, fillH, 6);
     g.lineStyle(2, 0xffffff, 0.8); g.strokeRoundedRect(x, top, w, h, 6);
   }
@@ -470,7 +498,9 @@ window.KickGame = (function () {
       if (K.kicker && K.mode !== 'punt') K.hud.setText(`${Math.round(K.distance)}-YD FG · 🦵 ${K.kicker.name.toUpperCase()}`);
     }
     // The distance badge under the goal (nice for judging power).
-    if (K.distLabel) K.distLabel.setText(K.mode === 'punt' ? 'BOOT IT!' : Math.round(K.distance) + ' yd');
+    if (K.distLabel) K.distLabel.setText(K.mode === 'punt'
+      ? (K.toGoal != null ? 'BOOT IT!  ' + K.toGoal + ' TO THE GOAL LINE' : 'BOOT IT!')
+      : Math.round(K.distance) + ' yd');
 
     if (K.state === 'aim')         K.hint.setText('TAP to AIM  ⟵ ⟶');
     else if (K.state === 'power')  K.hint.setText(K.mode === 'punt' ? 'TAP to BOOT it' : 'TAP to set POWER');
@@ -534,6 +564,13 @@ window.KickGame = (function () {
     K.hud   = keep(scene.add.text(W / 2, 26, '', bigStyle(18, '#ffe066')).setOrigin(0.5));
     K.distLabel = keep(scene.add.text(GOAL_CENTER, GOAL_Y + 56, '', bigStyle(14, '#ffffff')).setOrigin(0.5));
     K.hint  = keep(scene.add.text(W / 2, 486, '', bigStyle(20, '#ffffff')).setOrigin(0.5));
+    // 🦶 the touchback zone's label, sitting beside the orange part of the power bar
+    if (K.goalPower != null && K.goalPower < 1) {
+      const gp = clamp(K.goalPower, 0, 1);
+      keep(scene.add.text(66, 300 + (636 - 300) * (1 - gp) / 2, 'TOUCH-\nBACK', {
+        fontFamily: 'Arial Black, Arial', fontSize: '11px', color: '#ffb36b',
+        stroke: '#000', strokeThickness: 3, align: 'left' }).setOrigin(0, 0.5));
+    }
   }
 
   function drawStadium(g) {

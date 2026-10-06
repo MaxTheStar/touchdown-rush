@@ -26,6 +26,11 @@
 //
 // The effects are folded into kick.js (one block, beside the 🦵 Golden Toe) and
 // main.js tells us how each real kick went. Practice drills are untouched.
+//
+// 🦶 UPDATE (v4.24): punts DO use his leg now, up to ±6 yards (kick.js `puntYards`).
+// v4.17 left them alone on purpose — a punt's distance only drew a banner, so a leg
+// rating on it would have been pretending. fieldpos.js (Punts That Matter) made the
+// distance decide where the other team starts, so the leg earns its yards.
 // ============================================================
 (function () {
   const T = window.TDStats ? TDStats.shared : null;
@@ -145,6 +150,8 @@
     const parts = [];
     if (pct(m.power) >= 1) parts.push(`needs <b>${pct(m.power)}% ${m.power < 1 ? 'less' : 'more'}</b> power`);
     if (pct(m.aim) >= 1) parts.push(`aim swings <b>${pct(m.aim)}% ${m.aim < 1 ? 'slower' : 'faster'}</b>`);
+    const py = window.TDFieldPos ? TDFieldPos.legYards(m.leg) : 0;     // 🦶 punts too (fieldpos.js)
+    if (py) parts.push(`punts go <b>${Math.abs(py)} yds ${py > 0 ? 'farther' : 'shorter'}</b>`);
     return parts.length ? 'In games: ' + parts.join(' · ') : 'In games: an average kicker — no change';
   }
   function prospectRow(p, i) {
