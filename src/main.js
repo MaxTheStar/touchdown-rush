@@ -3398,7 +3398,7 @@ const DefenseSim = (function () {
       if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return { r: 'int', y: 0, t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
       if (Math.random() < inc) return { r: 'inc', y: 0, t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
-      if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, t: '<b>SACK!</b> ' + y + ' yards.' }; }
+      if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, tag: 'sack', t: '<b>SACK!</b> ' + y + ' yards.' }; }
       let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
       if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
       return { r: 'gain', y, t: 'Pass complete for <b>' + y + '</b>.' };
@@ -3418,16 +3418,22 @@ const DefenseSim = (function () {
     // the normal line AND a drive-ending one, because both read p.t.
     if (window.TDDefense) p.t = TDDefense.consume() + p.t;
     advanceClock(p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY);
-    if (p.r === 'int' || p.r === 'fum') { endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
+    if (p.r === 'int' || p.r === 'fum') { splash(p.r); endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
     G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
     if (G.cpu.spot >= 100) { endDrive('touchdown', null, '<b>TOUCHDOWN ' + (G.oppTeam ? G.oppTeam.abbr : '') + '!</b>'); return; }
     G.cpu.togo -= p.y;
     let extra = '';
     if (G.cpu.togo <= 0) { G.cpu.down = 1; G.cpu.togo = 10; G.cpu.goFor = false; extra = ' <b>1st down.</b>'; }
     else G.cpu.down++;
-    if (G.cpu.down > 4) { if (window.TDSound) TDSound.sting('td'); endDrive('turnover', 'STOPPED ON DOWNS — YOUR BALL!', p.t); return; }
+    if (G.cpu.down > 4) { if (window.TDSound) TDSound.sting('td'); splash('stop'); endDrive('turnover', 'STOPPED ON DOWNS — YOUR BALL!', p.t); return; }
+    // 🕺 A sack that ALSO ended the drive is celebrated once, as the stop above.
+    if (p.tag === 'sack') splash('sack');
     render(p.t + extra);
   }
+
+  // 🕺 SACK DANCE (celebration.js): the defense gets the move you picked for
+  // touchdowns. One call, one caption; a missing file is simply no dance.
+  function splash(kind) { if (window.TDCeleb && TDCeleb.splash) TDCeleb.splash(kind); }
 
   // The drive is over — show the final line, then the NEXT tap hands off (via
   // cpuDriveEnd, exactly like the old live defense did).

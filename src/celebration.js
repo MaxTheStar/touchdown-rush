@@ -12,6 +12,13 @@
 // calls window.TDCeleb.play() the instant you score (one guarded line), and the
 // picker lives inside the 🛍 Pro Shop — so there's NO new menu button or status
 // bar to crowd the phone layout. Your choice saves in localStorage 'tdr-celebration'.
+//
+// 🕺 SACK DANCE (v4.22, Round 15 pick ①): your defense gets the same moment.
+// Until now `play()` was called from exactly one place — the touchdown branch of
+// endPlay — so a sack, an interception or a stop on fourth down (the plays your
+// DEFENSE wins) all went by in silence. `splash(kind)` plays the move you already
+// picked and paid for, with a caption saying what happened. No new unlock, no new
+// picker, and no coins: it is a celebration, not a reward.
 // ============================================================
 (function () {
   const KEY = 'tdr-celebration';
@@ -54,7 +61,7 @@
   const coins = () => (window.TDShop && TDShop.coins) ? TDShop.coins() : 0;
 
   // ---- Build the splashy burst (used both in-game and in the preview) -----
-  function burst(container, move, loop) {
+  function burst(container, move, loop, caption) {
     if (!container) return;
     container.innerHTML = '';
     const wrap = document.createElement('div');
@@ -82,7 +89,7 @@
 
     const label = document.createElement('div');
     label.className = 'celeb-name';
-    label.textContent = move.name + '!';
+    label.textContent = caption || (move.name + '!');
     wrap.appendChild(label);
 
     container.appendChild(wrap);
@@ -90,13 +97,21 @@
 
   // ---- The in-game moment: main.js calls this the instant YOU score --------
   let clearT = null;
-  function play() {
+  function play(caption) {
     const fx = $('celeb-fx'); if (!fx) return;
     fx.style.display = 'block';
-    burst(fx, byId(state.equipped), false);
+    burst(fx, byId(state.equipped), false, caption);
     clearTimeout(clearT);
     clearT = setTimeout(() => { fx.style.display = 'none'; fx.innerHTML = ''; }, reduce() ? 900 : 1600);
   }
+
+  // 🕺 The defense's moments. The caption replaces the move's name (a sack should
+  // say SACK, not "Raise the Roof!"); the big emoji and the confetti are yours.
+  const SPLASH = {
+    sack: 'SACK!', int: 'PICKED OFF!', fum: 'FUMBLE — YOURS!',
+    stop: 'STOPPED ON DOWNS!', block: 'BLOCKED!',
+  };
+  function splash(kind) { if (SPLASH[kind]) play(SPLASH[kind]); }
 
   // ---- The picker (inside the 🛍 Pro Shop) --------------------------------
   function renderPreview() { burst($('celeb-preview'), byId(state.equipped), true); }   // gentle looping preview
@@ -161,6 +176,7 @@
   // ---- What the rest of the game may use ----------------------------------
   window.TDCeleb = {
     play,   // main.js: you scored — show the celebration!
+    splash, // 🕺 main.js DefenseSim: your defense made a play — same move, with a caption
     open    // the Pro Shop button opens the picker
   };
 })();
