@@ -93,6 +93,46 @@
     return Math.round(clamp((leg - 70) / 25 * 6, -6, 6));
   }
 
-  window.TDFieldPos = { afterPunt, afterBlock, afterMiss, legYards, fairCatchChance,
-                     _consts: { TOUCHBACK, KICK_BACK } };
+  // ---- 🏈 YOU KICK OFF (Round 15, pick ⑧) --------------------------------------------
+  // After every score of yours (and a safety, and a deferred opening kick) the
+  // other team used to just start at its own 25 — nobody kicked anything, though
+  // when THEY score you field a kickoff and run it back. Now you kick it, and the
+  // kick decides where they start, the way a punt does:
+  //
+  //     out the back of the end zone   → touchback, their 25
+  //     into the end zone              → usually a knee (the deeper, the likelier),
+  //                                      else it comes out ~15–32 yards
+  //     short of the goal line         → caught where it lands and run back ~12–30
+  //                                      (one return in 25 is a big one)
+  //
+  // The kicker's leg (±6 yards, kicker.js) is what makes a strong one more likely to
+  // reach the end zone. A touchback is 25 and the average return from the end zone is
+  // about 23, so a BOOMING kick is worth about what the old flat 25 was — the whole
+  // cost is in a short one (a kick that dies at their 20 is returned to their 42).
+  const KICKOFF_FROM = 35, FREE_KICK_FROM = 20, TB_KICKOFF = 25;
+  function afterKickoff(from, yards, rnd) {
+    rnd = rnd || Math.random;
+    const landed = from + yards;                         // yards from MY goal where it came down
+    if (landed >= 110) {
+      return { spot: TB_KICKOFF, kind: 'touchback', ret: 0, landed, text: 'Out the back of the end zone — touchback.' };
+    }
+    if (landed >= 100) {                                  // into the end zone
+      const depth = landed - 100;                         // 0..10 yards deep
+      const kneel = clamp(0.40 + depth * 0.05, 0.40, 0.90);
+      if (rnd() < kneel) {
+        return { spot: TB_KICKOFF, kind: 'touchback', ret: 0, landed, text: 'Taken a knee in the end zone — touchback.' };
+      }
+      const ret = rint(15, 32, rnd);
+      const spot = clamp(ret - depth, 1, 99);             // he started `depth` yards deep
+      return { spot, kind: 'return', ret, landed, text: 'Brought out ' + ret + ' — they start at their own ' + spot + '.' };
+    }
+    const base = clamp(100 - landed, 1, 99);              // where it was caught, in THEIR yards
+    const ret = rnd() < 0.04 ? rint(35, 60, rnd) : rint(12, 30, rnd);
+    const spot = clamp(base + ret, 1, 99);                // (never a touchdown — capped at 99)
+    return { spot, kind: 'return', ret: spot - base, landed, text: 'Returned ' + (spot - base) + ' — they start at their own ' + spot + '.' };
+  }
+
+  window.TDFieldPos = { afterPunt, afterBlock, afterMiss, afterKickoff, legYards, fairCatchChance,
+                     KICKOFF_FROM, FREE_KICK_FROM,
+                     _consts: { TOUCHBACK, KICK_BACK, TB_KICKOFF } };
 })();

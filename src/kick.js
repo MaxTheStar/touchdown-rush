@@ -36,6 +36,11 @@ window.KickGame = (function () {
   const AIM_RIGHT   = 354;   //                                   (24px outside the right post)
   const POWER_SPEED = 1.6;   // how fast the power bar fills (per sec)
   const MAX_PUNT    = 55;    // a full-power punt goes this many yards
+  // 🏈 A KICKOFF (v4.29): yards = KICKOFF_BASE + power × KICKOFF_RANGE — 35 yards at
+  // the bottom of the bar, 80 at the top (before the kicker's leg). Zero power is not
+  // zero yards: nobody kicks off 10 yards. fieldpos.js `afterKickoff` turns it into
+  // where the other team starts.
+  const KICKOFF_BASE = 35, KICKOFF_RANGE = 45;
 
   // ---- 🏃 The rusher who tries to block the kick ----
   // He breaks through downfield (small + far) and charges the ball. Get your
@@ -95,6 +100,8 @@ window.KickGame = (function () {
     ball: null, crosshair: null, powerBar: null, rusher: null,
     rushers: [], blockers: [], clock: 0,   // 🧱 the pocket (see THE POCKET above)
     legYds: 0,         // 🦶 yards his leg adds to a punt (kicker.js → fieldpos.js)
+    boot: false,       // 🏈 a punt OR a kickoff: power only, no aiming, no uprights
+    noRush: false,     // 🏈 a kickoff has no rush, so no pocket either
     goalPower: null,   // 🦶 power at which a punt reaches the goal line (above it = touchback)
     hud: null, hint: null, distLabel: null, banner: null,
     flight: null,       // the ball-flight tween (so we can stop it)
@@ -118,7 +125,10 @@ window.KickGame = (function () {
   // ==========================================================
   function enter(scene, opts) {
     K.scene = scene;
-    K.mode = opts.mode || 'fg';
+    K.mode = opts.mode || 'fg';          // 'fg' | 'punt' | 'kickoff'
+    K.boot = (K.mode === 'punt' || K.mode === 'kickoff');
+    K.noRush = (K.mode === 'kickoff');
+    K.label = opts.label || null;
     K.distance = opts.distance || 40;
     K.points = (opts.points != null) ? opts.points : 3;  // 3 for a field goal, 1 for an extra point
     K.standalone = !!opts.standalone;
@@ -159,9 +169,12 @@ window.KickGame = (function () {
     // that line is. `opts.losYards` is where the ball was snapped, from YOUR goal.
     K.legYds = (K.kicker && window.TDFieldPos) ? TDFieldPos.legYards(K.kicker.leg) : 0;
     K.goalPower = null; K.toGoal = null;
-    if (K.mode === 'punt' && opts.losYards != null) {
+    if (K.boot && opts.losYards != null) {
       K.toGoal = Math.round(100 - opts.losYards);
-      K.goalPower = (K.toGoal - 20 - K.legYds) / MAX_PUNT;     // power whose punt just reaches the goal line
+      // power whose kick just reaches the goal line (a kickoff has its own, longer scale)
+      K.goalPower = (K.mode === 'kickoff')
+        ? (K.toGoal - KICKOFF_BASE - K.legYds) / KICKOFF_RANGE
+        : (K.toGoal - 20 - K.legYds) / MAX_PUNT;
     }
 
     makeTextures(scene);
@@ -170,7 +183,7 @@ window.KickGame = (function () {
     // A punt is just "boot it far" — no aiming, so skip straight to power.
     K.aimX = GOAL_CENTER; K.aimDir = 1;
     K.power = 0; K.powerDir = 1;
-    K.state = (K.mode === 'punt') ? 'power' : 'aim';
+    K.state = K.boot ? 'power' : 'aim';
 
     // One tap (or SPACE) does the next step. We listen for a plain DOM tap
     // right on the game canvas — the SAME dependable way the on-screen D-pad
@@ -292,7 +305,7 @@ window.KickGame = (function () {
     if (!K.hint) return;
     if (K.rush > 0.6) { K.hint.setText('🏃 KICK — HURRY!').setColor('#ff8080'); return; }
     const base = (K.state === 'aim') ? 'TAP to AIM  ⟵ ⟶'
-               : (K.mode === 'punt') ? 'TAP to BOOT it' : 'TAP to set POWER';
+               : K.boot ? 'TAP to BOOT it' : 'TAP to set POWER';
     K.hint.setText(base).setColor('#ffffff');
   }
 
@@ -351,7 +364,7 @@ window.KickGame = (function () {
     K.lockedResult = result;
 
     // A punt always goes straight ahead; a field goal goes where you aimed.
-    const endX = (K.mode === 'punt') ? GOAL_CENTER : K.lockedAim;
+    const endX = K.boot ? GOAL_CENTER : K.lockedAim;
     // Where the ball ends up depends on the outcome:
     //   good  -> sail UP through the uprights and rest BETWEEN them, above the crossbar (a clear make!)
     //   wide  -> arc to about crossbar height but off to the SIDE of a post (missed)
@@ -381,6 +394,9 @@ window.KickGame = (function () {
   // kicker's LEG adds up to ±6 more (kicker.js), and the number finally means
   // something — fieldpos.js turns it into where the other team starts.
   function puntYards() {
+    // 🏈 a KICKOFF is the same boot on a longer scale (fieldpos.js owns the numbers
+    // for the field-position side; these two must agree — see KICKOFF_* above).
+    if (K.mode === 'kickoff') return Math.round(clamp(KICKOFF_BASE + K.lockedPower * KICKOFF_RANGE + K.legYds, 25, 85));
     return Math.round(clamp(20 + K.lockedPower * MAX_PUNT + K.legYds, 12, 80));
   }
 
@@ -391,7 +407,7 @@ window.KickGame = (function () {
     // Once the kick is away, the outcome is locked (weather may have altered it).
     if (K.lockedResult) return K.lockedResult;
     // A punt ALWAYS gets away — power just decides how far, never a miss.
-    if (K.mode === 'punt') return 'punt';
+    if (K.boot) return 'punt';
     // A field goal needs enough power to reach, and good aim between the posts.
     const reaches = K.lockedPower >= K.powerToReach;
     if (!reaches) return 'short';
@@ -405,7 +421,7 @@ window.KickGame = (function () {
       K.made++; K.streak++; K.best = Math.max(K.best, K.streak);
       showBanner("IT'S GOOD!  +" + K.points, '#ffe066');
     } else if (result === 'punt') {
-      showBanner('NICE PUNT!  ' + puntYards() + ' YDS', '#ffe066');
+      showBanner((K.mode === 'kickoff' ? 'BOOM!  ' : 'NICE PUNT!  ') + puntYards() + ' YDS', '#ffe066');
     } else if (result === 'short') {
       K.streak = 0;
       showBanner('NO GOOD — SHORT!', '#ff8080');
@@ -494,16 +510,16 @@ window.KickGame = (function () {
     if (K.standalone) {
       K.hud.setText(`MADE ${K.made}   ·   STREAK ${K.streak}   ·   BEST ${K.best}`);
     } else {
-      K.hud.setText(K.mode === 'punt' ? 'PUNT' : `${Math.round(K.distance)}-YD FIELD GOAL`);
-      if (K.kicker && K.mode !== 'punt') K.hud.setText(`${Math.round(K.distance)}-YD FG · 🦵 ${K.kicker.name.toUpperCase()}`);
+      K.hud.setText(K.mode === 'kickoff' ? (K.label || 'KICKOFF') : K.mode === 'punt' ? 'PUNT' : `${Math.round(K.distance)}-YD FIELD GOAL`);
+      if (K.kicker && !K.boot) K.hud.setText(`${Math.round(K.distance)}-YD FG · 🦵 ${K.kicker.name.toUpperCase()}`);
     }
     // The distance badge under the goal (nice for judging power).
-    if (K.distLabel) K.distLabel.setText(K.mode === 'punt'
+    if (K.distLabel) K.distLabel.setText(K.boot
       ? (K.toGoal != null ? 'BOOT IT!  ' + K.toGoal + ' TO THE GOAL LINE' : 'BOOT IT!')
       : Math.round(K.distance) + ' yd');
 
     if (K.state === 'aim')         K.hint.setText('TAP to AIM  ⟵ ⟶');
-    else if (K.state === 'power')  K.hint.setText(K.mode === 'punt' ? 'TAP to BOOT it' : 'TAP to set POWER');
+    else if (K.state === 'power')  K.hint.setText(K.boot ? 'TAP to BOOT it' : 'TAP to set POWER');
     else if (K.state === 'kick')   K.hint.setText('');
     else if (K.state === 'result') K.hint.setText(K.standalone ? 'TAP to kick again' : 'TAP to continue');
   }
@@ -527,7 +543,7 @@ window.KickGame = (function () {
     keep(bg).setDepth(100);
 
     const goal = scene.add.graphics();
-    if (K.mode !== 'punt') drawGoalposts(goal);   // a punt doesn't kick through the uprights, so hide them
+    if (!K.boot) drawGoalposts(goal);   // a punt or kickoff doesn't kick through the uprights, so hide them
     keep(goal).setDepth(102);
 
     // The kicker (a chibi guy) stands just below the ball, closest to us.
@@ -537,11 +553,11 @@ window.KickGame = (function () {
 
     // 🧱 Your five blockers, then 🏃 their three rushers (in the OTHER team's
     // colors) — they start downfield and charge at three different gaps.
-    K.blockers = BLOCK_X.map(x => {
+    K.blockers = K.noRush ? [] : BLOCK_X.map(x => {
       const b = keep(scene.add.sprite(x, BLOCK_Y, 'k_blocker')).setDepth(106).setScale(0.95);
       b.baseX = x; return b;
     });
-    K.rushers = LANES.map((x0, i) => {
+    K.rushers = K.noRush ? [] : LANES.map((x0, i) => {
       const s = keep(scene.add.sprite(x0, RUSH_START.y, 'k_rusher')).setDepth(105);
       // each rusher fights the blocker standing in front of his wall point
       const wx = x0 + WALL_P * (RUSH_END.x - x0);
@@ -549,7 +565,7 @@ window.KickGame = (function () {
       K.blockers.forEach(b => { if (Math.abs(b.baseX - wx) < Math.abs(blk.baseX - wx)) blk = b; });
       return { s, x0, lane: i - 1, blk, hold: 0, wall: 0, dash: 0, beaten: false, p: 0 };
     });
-    K.rusher = K.rushers[1].s;
+    K.rusher = K.rushers[1] ? K.rushers[1].s : null;
     rollPocket();
     positionRusher();
 
@@ -567,7 +583,7 @@ window.KickGame = (function () {
     // 🦶 the touchback zone's label, sitting beside the orange part of the power bar
     if (K.goalPower != null && K.goalPower < 1) {
       const gp = clamp(K.goalPower, 0, 1);
-      keep(scene.add.text(66, 300 + (636 - 300) * (1 - gp) / 2, 'TOUCH-\nBACK', {
+      keep(scene.add.text(66, 300 + (636 - 300) * (1 - gp) / 2, K.mode === 'kickoff' ? 'END\nZONE' : 'TOUCH-\nBACK', {
         fontFamily: 'Arial Black, Arial', fontSize: '11px', color: '#ffb36b',
         stroke: '#000', strokeThickness: 3, align: 'left' }).setOrigin(0, 0.5));
     }

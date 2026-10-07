@@ -1845,6 +1845,7 @@ function endPlay(result, customMsg) {
     sayComment(pick(['SAFETY!', 'Tackled in the end zone!', 'Two points, the other way!']));
     advanceClock(TIME_SCORE_PLAY);
     G.next = { los: 20, down: 1, fd: 30, fresh: true };   // free kick → they receive
+    G.kickFrom = 20;                                       // 🏈 …and YOU take it, from your own 20 (fieldpos.js)
     G.state = 'dead';
     G.deadUntil = G.scene.time.now + 1800;
     updateHUD();
@@ -1920,6 +1921,10 @@ function endPlay(result, customMsg) {
       if (nd > 4) {
         msg = 'TURNOVER ON DOWNS';
         next = { los: 20, down: 1, fd: 30, fresh: true };
+        // 🏈 …and they take it WHERE YOU WERE STOPPED. This never set a spot, so a failed
+        // 4th down on your own 30 handed them the ball at THEIR 25 (and, with the kickoff
+        // below, would have handed them a kickoff). Their yards = 100 − yours.
+        G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - spot), 1, 99);
       } else {
         msg = customMsg || (result === 'incomplete' ? 'INCOMPLETE' : 'TACKLE');
         next = { los: spot, down: nd, fd: G.firstDownYards };
@@ -2555,6 +2560,12 @@ function startCpuDrive() {
   // sent on for a drive that has ended. It also puts their name tags back, so
   // your safety isn't standing there wearing a "TE" while you play defense.
   if (window.TDPersonnel) TDPersonnel.newDrive();
+  // 🏈 YOU KICK OFF (fieldpos.js). Every route that reaches here with NO spot set is a
+  // kickoff: after your touchdown + try, your field goal, a failed two-pointer, a
+  // safety (a free kick), a deferred opening kick, the second half. Turnovers, punts,
+  // misses and blocks all set a spot, so they skip this. Not in 2-player (the live
+  // red offence), and the kick hands its result back through the same door.
+  if (G.turnoverSpotCpu == null && window.TDFieldPos && !G.twoPlayer && !G.drillGame) { startKickoffKick(); return; }
   // After a turnover, they take over right where it happened; otherwise a normal
   // possession starts at their own 25.
   const spot = (G.turnoverSpotCpu != null) ? G.turnoverSpotCpu : 25;
@@ -2566,6 +2577,39 @@ function startCpuDrive() {
   showBanner(G.oppTeam.abbr + ' BALL — PLAY DEFENSE!', true);
   sayComment('Tackle the ball carrier!');
   setupDefensePlay();
+}
+
+// ============================================================
+// 🏈 YOU KICK OFF (Round 15, pick ⑧)
+// ------------------------------------------------------------
+// When THEY score you field a kickoff and run it back. When YOU score, the other
+// team simply started at its own 25 — nobody kicked anything. Now you take the tee:
+// the same one-tap boot as a punt, on a longer scale, and the kick decides where they
+// start (fieldpos.js `afterKickoff`): a booming one is a touchback or a knee, a short
+// one is run back toward midfield. A safety is a FREE KICK from your own 20.
+// ============================================================
+function startKickoffKick() {
+  const from = G.kickFrom || TDFieldPos.KICKOFF_FROM;
+  G.kickFrom = null;
+  G.state = 'kick';
+  G.kickKind = 'kickoff';
+  document.body.classList.add('kicking');            // hide the football buttons
+  G.scene.cameras.main.stopFollow();
+  KickGame.enter(G.scene, {
+    mode: 'kickoff',
+    label: from === TDFieldPos.FREE_KICK_FROM ? 'FREE KICK' : 'KICKOFF',
+    losYards: from,                                  // the power bar marks the goal line from here
+    onDone: result => onKickoffKickDone(result, from),
+  });
+}
+function onKickoffKickDone(result, from) {
+  document.body.classList.remove('kicking');
+  const r = TDFieldPos.afterKickoff(from, result.puntYards);
+  G.turnoverSpotCpu = r.spot;                         // …the door a turnover already uses
+  G.state = 'dwait';                                  // hold everything while the banner lands
+  showBanner((from === TDFieldPos.FREE_KICK_FROM ? 'FREE KICK' : 'KICKOFF') + ' — ' + result.puntYards + ' YDS\n' +
+             (r.kind === 'touchback' ? 'TOUCHBACK' : 'RETURNED ' + r.ret) + ' · THEIR ' + r.spot, true);
+  G.scene.time.delayedCall(1700, startCpuDrive);      // now there IS a spot, so this goes straight to their drive
 }
 
 // 🧩 RED (CPU) OFFENSE FORMATIONS (v1.17) — the red team used to line up the exact
@@ -4238,6 +4282,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDTwelfth) TDTwelfth.newGame();     // 📣 no leftover roar from the last game
   if (window.TDFormation) TDFormation.newGame(); // 🧠 …or leftover formation
   G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
+  G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown

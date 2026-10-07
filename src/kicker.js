@@ -151,7 +151,7 @@
     if (pct(m.power) >= 1) parts.push(`needs <b>${pct(m.power)}% ${m.power < 1 ? 'less' : 'more'}</b> power`);
     if (pct(m.aim) >= 1) parts.push(`aim swings <b>${pct(m.aim)}% ${m.aim < 1 ? 'slower' : 'faster'}</b>`);
     const py = window.TDFieldPos ? TDFieldPos.legYards(m.leg) : 0;     // 🦶 punts too (fieldpos.js)
-    if (py) parts.push(`punts go <b>${Math.abs(py)} yds ${py > 0 ? 'farther' : 'shorter'}</b>`);
+    if (py) parts.push(`punts &amp; kickoffs go <b>${Math.abs(py)} yds ${py > 0 ? 'farther' : 'shorter'}</b>`);
     return parts.length ? 'In games: ' + parts.join(' · ') : 'In games: an average kicker — no change';
   }
   function prospectRow(p, i) {
