@@ -214,7 +214,7 @@
     if (p.r === 'int')                    give('int',   ['int']);
     else if (p.r === 'fum')               give('ff',    ['ff']);
     else if (p.tag === 'sack')            give('sack',  ['sack', 'tkl', 'tfl']);   // a sack is also a tackle for loss
-    else if (p.r === 'inc') { if (Math.random() < PD_SHARE) give('pd', ['pd']); }
+    else if (p.r === 'inc') { if (p.tag === 'tip' || Math.random() < PD_SHARE) give('pd', ['pd']); }   // a tipped ball is, by definition, a pass defended
     else if (p.side === 'run') {
       if (p.y < 0)                        give('loss',  ['tkl', 'tfl']);
       else if (p.y === 0)                 give('loss',  ['tkl']);

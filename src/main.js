@@ -3407,6 +3407,7 @@ const DefenseSim = (function () {
   function start() {
     G.state = 'dsim';
     G.dsimEnding = false; G.dsimPending = null;
+    G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 no tipped ball left over from the last drive
     document.body.classList.remove('kicking');
     document.body.classList.add('returning');
     const abbr = G.oppTeam ? G.oppTeam.abbr : 'CPU';
@@ -3453,9 +3454,22 @@ const DefenseSim = (function () {
     // still this team's real tendency, nudged by the down — only now you got to see
     // it coming. Without that file it is the roll it always was.
     if (fm ? fm.intent === 'pass' : Math.random() < passShare) {              // ---- PASS ----
-      if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return { r: 'int', y: 0, side: 'pass', t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
+      // 🙌 THE TIPPED BALL (tipped.js). The interception roll used to be the whole story;
+      // now it starts a tipped ball you get to PLAY, and so does a share of the
+      // incompletions. The two outcomes are built up front (`win` = the pick it was
+      // before, `lose` = it hits the turf) and DefenseSim.tap() lets you decide which.
+      // ⚠️ It REPLACES the roll, it does not add one — see tipped.js for the numbers.
+      const winRes  = () => ({ r: 'int', y: 0, side: 'pass', t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) });
+      const loseRes = () => ({ r: 'inc', y: 0, side: 'pass', tag: 'tip', t: pick(['<b>Tipped</b> — and it hits the turf.', '<b>Tipped</b> — it slips through your hands.', '<b>Tipped</b> — so close!']) });
+      const tip = from => window.TDTipped
+        ? { r: 'tip', y: 0, side: 'pass', hawk, win: winRes(), lose: loseRes() }
+        : (from === 'int' ? winRes() : { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) });
+      if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return tip('int');
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
-      if (Math.random() < inc) return { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
+      if (Math.random() < inc) {
+        if (window.TDTipped && Math.random() < TDTipped.TIP_OF_INC) return tip('inc');
+        return { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
+      }
       if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, tag: 'sack', side: 'pass', t: '<b>SACK!</b> ' + y + ' yards.' }; }
       let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
       if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
@@ -3513,6 +3527,8 @@ const DefenseSim = (function () {
   // One tap advances everything.
   function tap() {
     if (G.state !== 'dsim') return;
+    // 🙌 A tipped ball is live: every tap (and SPACE) is the GRAB, not a new play.
+    if (G.dsimTip) { if (window.TDTipped) TDTipped.press(); return; }
     // A drive just ended? This tap hands the ball back.
     if (G.dsimEnding) {
       const pk = G.dsimPending; G.dsimEnding = false; G.dsimPending = null;
@@ -3556,7 +3572,19 @@ const DefenseSim = (function () {
     }
     const fm = window.TDFormation ? TDFormation.take() : null;     // 🧠 this snap's look + what it really was
     const played = play(tw, fm);
-    if (fm && fm.bluff) played.t = TDFormation.bluffLine(fm) + played.t;   // 🎭 say so when they lied
+    if (fm && fm.bluff) {                                                  // 🎭 say so when they lied
+      const pre = TDFormation.bluffLine(fm);
+      if (played.r === 'tip') { played.win.t = pre + played.win.t; played.lose.t = pre + played.lose.t; }
+      else played.t = pre + played.t;
+    }
+    // 🙌 …and a TIPPED ball is not decided yet: you decide it (tipped.js). If there is
+    // nothing to draw it on, it falls back to the pick it would have been.
+    if (played.r === 'tip') {
+      G.dsimTip = played;
+      const drawn = TDTipped.begin(played.hawk, caught => { G.dsimTip = null; apply(caught ? played.win : played.lose); });
+      if (!drawn) { G.dsimTip = null; apply(played.win); }
+      return;
+    }
     apply(played);
   }
 
@@ -4209,6 +4237,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.fakeKick = false;
   if (window.TDTwelfth) TDTwelfth.newGame();     // 📣 no leftover roar from the last game
   if (window.TDFormation) TDFormation.newGame(); // 🧠 …or leftover formation
+  G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
