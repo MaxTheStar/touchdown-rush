@@ -3385,6 +3385,11 @@ const DefenseSim = (function () {
     // the three call buttons belong on screen right now. Without it the panel
     // reads exactly as it always did.
     if (window.TDDefense) TDDefense.refresh();
+    // 🧠 READ THE FORMATION (formation.js) — how THEY lined up for this snap. Hidden
+    // when the drive is ending, and on 4th down until they decide to go for it (the
+    // next tap there is a kick or a punt, not a play to read).
+    if (window.TDFormation) TDFormation.refresh({
+      ending: !!G.dsimEnding || (G.cpu.down === 4 && !G.cpu.goFor), down: G.cpu.down, togo: G.cpu.togo });
     // 📣 THE TWELFTH MAN (twelfth.js) — the timing bar above the call buttons.
     // ⚠️ AFTER endDrive has set `dsimEnding`, like the call buttons: a finished
     // drive must not still be offering to raise the roof.
@@ -3414,7 +3419,7 @@ const DefenseSim = (function () {
   }
 
   // Decide ONE play's outcome from difficulty, YOUR defense rating & the weather.
-  function play(tw) {
+  function play(tw, fm) {
     const dDef = window.TDDraft ? TDDraft.teamOverall().def : 65;
     const dStop = Math.min(1, Math.max(0, (dDef - 60) / 39));                 // 0..1: your defense strength
     // 📣 …times the HOME CROWD (crowd.js): the same noise number beginGame folds
@@ -3444,7 +3449,10 @@ const DefenseSim = (function () {
     const D = (window.TDDefense && TDDefense.mods()) ||
               { sack: 0, stuff: 0, incomplete: 0, intAdd: 0, fumbleAdd: 0, bigPass: 0, bigRun: 0, passGain: 1, runGain: 1 };
 
-    if (Math.random() < passShare) {                                          // ---- PASS ----
+    // 🧠 …the play they RUN is the one their formation was drawn for (formation.js):
+    // still this team's real tendency, nudged by the down — only now you got to see
+    // it coming. Without that file it is the roll it always was.
+    if (fm ? fm.intent === 'pass' : Math.random() < passShare) {              // ---- PASS ----
       if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return { r: 'int', y: 0, side: 'pass', t: pick(['<b>INTERCEPTED!</b> Your ball!', '<b>PICKED OFF!</b> You got it!']) };
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
       if (Math.random() < inc) return { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
@@ -3546,7 +3554,10 @@ const DefenseSim = (function () {
       render(TDTwelfth.falseStartLine());
       return;
     }
-    apply(play(tw));
+    const fm = window.TDFormation ? TDFormation.take() : null;     // 🧠 this snap's look + what it really was
+    const played = play(tw, fm);
+    if (fm && fm.bluff) played.t = TDFormation.bluffLine(fm) + played.t;   // 🎭 say so when they lied
+    apply(played);
   }
 
   function wire() {
@@ -4197,6 +4208,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
                                                  // (simgame.js READS this flag; it keeps no copy)
   G.fakeKick = false;
   if (window.TDTwelfth) TDTwelfth.newGame();     // 📣 no leftover roar from the last game
+  if (window.TDFormation) TDFormation.newGame(); // 🧠 …or leftover formation
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
