@@ -105,7 +105,9 @@
       (window.TDWin ? TDWin.chartHTML() : '') +
       // player lines
       `<div class="bx-sec">🏈 Offense</div><div class="bx-rows">${off}</div>` +
-      `<div class="bx-sec">🛡 Defense</div><div class="bx-rows">${def}</div>`;
+      `<div class="bx-sec">🛡 Defense</div><div class="bx-rows">${def}</div>` +
+      // 📋 how the game was told — every possession of both teams (drives.js)
+      (window.TDDrives ? `<div class="bx-sec">📋 The Drives</div>${TDDrives.html()}` : '');
   }
 
   // ---- Open / close --------------------------------------------------------

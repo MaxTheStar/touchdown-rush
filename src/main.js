@@ -1850,6 +1850,7 @@ function endPlay(result, customMsg) {
     advanceClock(TIME_SCORE_PLAY);
     G.next = { los: 20, down: 1, fd: 30, fresh: true };   // free kick → they receive
     G.kickFrom = 20;                                       // 🏈 …and YOU take it, from your own 20 (fieldpos.js)
+    if (window.TDDrives) TDDrives.yourPlay({ result: 'tackle', spot: 0, losYards: G.losYards, next: { fresh: true }, msg: 'SAFETY', when: driveWhen() });
     G.state = 'dead';
     G.deadUntil = G.scene.time.now + 1800;
     updateHUD();
@@ -1947,6 +1948,8 @@ function endPlay(result, customMsg) {
              : (window.TDHurry ? TDHurry.runSecs(TIME_RUN_PLAY) : TIME_RUN_PLAY));
 
   G.next = next;
+  // 📋 THE DRIVE CHART: one more play of your drive — and the end of it if the ball changed hands.
+  if (window.TDDrives) TDDrives.yourPlay({ result: result, spot: spot, losYards: G.losYards, next: next, msg: msg, when: driveWhen() });
   G.state = 'dead';
   // …and going fast has to LOOK fast, or the mode is a number you're told
   // about rather than something you can feel.
@@ -2142,6 +2145,7 @@ function startExtraPoint() {
 function onKickDone(result) {
   document.body.classList.remove('kicking');  // bring the football buttons back
   if (window.TDKicker) TDKicker.record(result, G.kickKind, G.kickDist);   // 🦵 his record + growth
+  if (window.TDDrives) TDDrives.yourKick(G.kickKind === 'xp' ? 'xp' : result.mode === 'punt' ? 'punt' : 'fg', !!result.made, result.outcome === 'blocked');   // 📋 how the drive ended
   let msg;
   if (result.outcome === 'blocked') {
     // 🏃 The rusher got home — the kicker was tackled and the ball is lost.
@@ -2365,6 +2369,7 @@ function resolveTwoPoint(result) {
   if (result === 'touchdown') {
     G.score += 2;
     msg = 'TWO-POINT CONVERSION!  +2';
+    if (window.TDDrives) TDDrives.addPts('you', 2);   // 📋 the try rides on the touchdown drive
     if (window.TDSound) TDSound.sting('td');
     if (window.TDShop)  TDShop.earn(4);           // a 2-pt play pays a touch more than a kick
     if (window.TDProgress) TDProgress.addXP(5);   // 📈 +5 XP
@@ -2597,6 +2602,7 @@ function startCpuDrive() {
   const spot = (G.turnoverSpotCpu != null) ? G.turnoverSpotCpu : 25;
   G.turnoverSpotCpu = null;
   G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
+  if (window.TDDrives) TDDrives.beginOpp(spot, driveWhen());   // 📋 their drive starts here
   // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
   // Player 2 gets to run the red offense on their possession.
   if (!G.twoPlayer) { DefenseSim.start(); return; }
@@ -3381,6 +3387,7 @@ function cpuDriveEnd(kind, customMsg) {
                                    if (window.TDGameStats) TDGameStats.noteTakeaway(); }  // 🪙📈📋⭐ takeaway
 
   G.oppScore += pts;
+  if (window.TDDrives) TDDrives.endOpp(kind, customMsg || msg, pts);   // 📋 how their drive ended
   updateHUD();
   if (window.TDAchieve) TDAchieve.oppScored(G.oppScore - G.score);   // 🏅 track the biggest hole (for the Comeback badge)
   showBanner(msg, big);
@@ -3564,8 +3571,9 @@ const DefenseSim = (function () {
     // ⚠️ BEFORE the branches below, because every one of them can end the drive
     // and the takeaway on a drive-ending play has to find its man already credited.
     if (window.TDGameStats && TDGameStats.noteDefense) TDGameStats.noteDefense(p);
-    if (p.r === 'int' || p.r === 'fum') { splash(p.r); endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
+    if (p.r === 'int' || p.r === 'fum') { if (window.TDDrives) TDDrives.play('opp', G.cpu.spot); splash(p.r); endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
     G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
+    if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);      // 📋 one more play of their drive
     if (G.cpu.spot >= 100) { endDrive('touchdown', null, '<b>TOUCHDOWN ' + (G.oppTeam ? G.oppTeam.abbr : '') + '!</b>'); return; }
     G.cpu.togo -= p.y;
     let extra = '';
@@ -3697,6 +3705,10 @@ function startBreak(kind, resume) {
   if (window.TDGas) TDGas.timeout();
   G.breakResume = resume;
   G.breakReadyAt = G.scene.time.now + BREAK_MIN_MS;
+  if (window.TDDrives) {                          // 📋 the half closes whatever drive is open; either break can read the chart
+    if (kind === 'half') TDDrives.closeAll('END OF HALF');
+    TDDrives.showBreakButton();
+  }
   freezeEveryone();
   G.scene.cameras.main.stopFollow();
   if (routeGfx) routeGfx.clear();
@@ -3713,6 +3725,7 @@ function startBreak(kind, resume) {
 function endBreak() {
   if (G.state !== 'qbreak') return;
   if (G.scene.time.now < G.breakReadyAt) return;   // too soon — let the break land
+  if (window.TDDrives) TDDrives.hideBreakButton();
   destroyBreakOverlay();
   const resume = G.breakResume;
   G.breakResume = null;
@@ -3764,6 +3777,7 @@ function endGame() {
   if (G.state === 'gameover') return;   // the whistle only blows once
   G.gameOver = true;
   G.state = 'gameover';
+  if (window.TDDrives) { TDDrives.closeAll('END OF GAME'); TDDrives.hideBreakButton(); }   // 📋
   // 📈 Finish the swing chart on the REAL result, not on wherever the last snap
   // left the estimate — the line has to end at 100% or 0% or the 📊 box score
   // would show a game that was never quite won (src/winprob.js).
@@ -4329,6 +4343,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDRecords) TDRecords.startGame();   // 📖 fresh per-game record watching
   if (window.TDPowerup) TDPowerup.newGame();     // ⚡ your one Power-Up Play is ready again
   if (window.TDGameStats) TDGameStats.newGame(); // ⭐ a fresh stat book for this game
+  if (window.TDDrives) TDDrives.newGame(G.team ? G.team.abbr : 'YOU', G.oppTeam ? G.oppTeam.abbr : 'OPP');   // 📋 …and a blank drive chart
 
   // Paint both teams onto their players.
   // 👕 …in the road whites if this is an away game (homeaway.js keeps your
@@ -5105,6 +5120,9 @@ function setupPlay(next) {
   G.down = next.down;
   G.losYards = next.los;
   G.firstDownYards = next.fd;
+  // 📋 THE DRIVE CHART: a possession of yours starts at the first snap (idempotent — the
+  // later downs of the same drive do nothing). Not the two-point try, which is not a drive.
+  if (window.TDDrives && !G.twoPtTry) TDDrives.beginYou(next.los, driveWhen());
   G.losY = yardsToY(G.losYards);
   G.hasPassed = false;
   G.ballCarrier = offense[0];
@@ -5583,6 +5601,9 @@ function buildHUD(scene) {
   hud.clock = box('hud-clock');
   hud.help  = box('hud-help');
 }
+
+// 📋 "Q1 2:22" — when a drive started, for the Drive Chart (drives.js).
+function driveWhen() { return quarterLabel() + ' ' + formatClock(G.clock); }
 
 // 📏 What chains.js needs to paint the field this frame: the two lines are on while YOU
 // have the ball and are lining up or playing (not on kicks, returns, the defense map,
