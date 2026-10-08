@@ -510,6 +510,10 @@ function create() {
   G.pitchRing.fillStyle(0xffa94d, 0.12);
   G.pitchRing.fillCircle(0, 0, 17);
 
+  // 📏 THE CHAINS (chains.js): the blue line of scrimmage and the yellow line to gain,
+  // painted on the grass under the players. The field never had either.
+  if (window.TDChains) TDChains.attach(this);
+
   // A little "announcer" line that pops quick play-by-play call-outs.
   // The announcer's call-outs sit ON the field, so they need their own dark
   // plate behind them — white words straight over grass and yard numbers were
@@ -1947,7 +1951,25 @@ function endPlay(result, customMsg) {
   // …and going fast has to LOOK fast, or the mode is a number you're told
   // about rather than something you can feel.
   G.deadUntil = G.scene.time.now + (window.TDHurry ? TDHurry.deadMs(1600) : 1600);
-  showBanner(msg, big);
+  // 📏 BRING OUT THE CHAINS (chains.js). A ball stopped within 27 inches of the line to
+  // gain is MEASURED: a beat of suspense, then the verdict in inches. ⚠️ The verdict is
+  // the game's own rule (`next` above was decided from the same `spot`) — this only
+  // makes you wait for it. Not in the no-huddle, and never over the top of a penalty
+  // or a challenge that is about to park the game.
+  const chain = (window.TDChains && result === 'tackle' && !(window.TDHurry && TDHurry.isOn()))
+    ? TDChains.measure(spot, G.firstDownYards) : null;
+  let chainOk = true;       // false the moment a PENALTY has the game: never shout a verdict over a wiped play
+  if (chain) {
+    G.deadUntil += TDChains.HOLD_MS;
+    TDChains.hold(G.ballCarrier ? G.ballCarrier.s.y : yardsToY(spot), chain.inches + ' IN.');
+    showBanner('📏 CHAINS OUT…', false);
+    if (window.TDSound) TDSound.sting('stuff');
+    G.scene.time.delayedCall(TDChains.HOLD_MS - 200, () => {
+      if (!chainOk || G.state !== 'dead') return;      // a penalty took the play, or the game moved on
+      showBanner(chain.line1 + '\n' + chain.line2 + (msg === 'TURNOVER ON DOWNS' ? '\nTURNOVER ON DOWNS' : ''), true);
+      if (window.TDSound) TDSound.sting(chain.made ? 'td' : 'stuff');
+    });
+  } else showBanner(msg, big);
 
   // 🚩 COACH'S CHALLENGE — was the referee right about that one? flag.js decides
   // whether this call is close enough to be worth a flag, and if it is we park
@@ -1985,6 +2007,7 @@ function endPlay(result, customMsg) {
   // It is also just correct football: you do not argue the spot on a play that
   // a penalty has already wiped off the board.
   if (window.TDPenalty && TDPenalty.offered(call)) {
+    chainOk = false;                            // 📏 the play was wiped off the board — nothing to measure
     G.deadUntil = Number.MAX_SAFE_INTEGER;     // hold here until you answer
     TDPenalty.ask(ruling => {
       if (ruling && ruling.next) G.next = ruling.next;
@@ -1995,11 +2018,14 @@ function endPlay(result, customMsg) {
 
   if (window.TDFlag && TDFlag.offered(call)) {
     G.deadUntil = Number.MAX_SAFE_INTEGER;     // hold here until you answer
-    TDFlag.ask(verdict => {
+    const askChallenge = () => TDFlag.ask(verdict => {
       if (verdict && verdict.next) G.next = verdict.next;
       if (verdict && verdict.costTimeout && G.timeouts > 0) { G.timeouts--; updateTimeoutBtn(); }
       G.deadUntil = G.scene.time.now + 1000;   // let the game breathe, then play on
     });
+    // 📏 …but if the chains came out first, let them finish: the verdict ("SHORT BY 5
+    // INCHES") is the thing you are being asked to challenge, so it goes first.
+    if (chain) G.scene.time.delayedCall(TDChains.HOLD_MS + 600, askChallenge); else askChallenge();
   }
 }
 
@@ -5558,6 +5584,14 @@ function buildHUD(scene) {
   hud.help  = box('hud-help');
 }
 
+// 📏 What chains.js needs to paint the field this frame: the two lines are on while YOU
+// have the ball and are lining up or playing (not on kicks, returns, the defense map,
+// or the dead ball — except while the chains are out, which chains.js tracks itself).
+function chainState() {
+  const on = !G.cpu && ['presnap', 'live', 'pass', 'decision'].includes(G.state) && G.losY > 0;
+  return { on, losY: G.losY, fdY: (G.firstDownYards < 100) ? yardsToY(G.firstDownYards) : null, w: FIELD_WIDTH };
+}
+
 function updateHUD() {
   // Keep number labels glued to their players
   for (const o of offense) if (o.label) o.label.setPosition(o.s.x, o.s.y);
@@ -5566,6 +5600,9 @@ function updateHUD() {
   // Gray out the HAND button when you're too far from the RB to hand off.
   const handBtn = document.getElementById('btn-hand');
   if (handBtn) handBtn.classList.toggle('off', !canHandOff());
+
+  // 📏 THE CHAINS — repaint the two lines on the field (a no-op unless something moved).
+  if (window.TDChains) TDChains.sync(chainState());
 
   // 🔄 THE PITCH — show the button and ring the man who would get it, only
   // while a legal pitch exists (level or behind, in range, not blocking).
