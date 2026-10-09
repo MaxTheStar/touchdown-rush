@@ -438,7 +438,7 @@ let keys;          // keyboard
 // (just like pressing a key one time). See setupTouchButtons() below.
 const touch = {
   left: false, right: false, up: false, down: false,   // held arrows
-  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false, dive: false  // one-shot taps
+  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false, dive: false, pump: false  // one-shot taps
 };
 
 // Player 2's arrows (the defense player in 2-player mode)
@@ -533,7 +533,7 @@ function create() {
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T', dive: 'X',
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T', dive: 'X', pump: 'F',
     // Player 2 uses W A S D to drive the defender (handy for testing on a computer)
     w: 'W', a: 'A', s: 'S', d: 'D'
   });
@@ -585,7 +585,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -788,6 +788,7 @@ function snap(time) {
   G.hasPassed = false;
   G.pitchLoose = false;       // 🔄 no leftover dropped-pitch scramble
   G.groundingPenalty = false; // 🧤 …or a grounding call
+  G.pumped = false; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 one pump fake a play, fresh every snap
   G.onsideLoose = false;      // ⚡ …or onside scramble
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
@@ -923,6 +924,8 @@ function controlBallCarrier() {
   if (consume('throwaway') || Phaser.Input.Keyboard.JustDown(keys.throwaway)) throwAway();
   // 🤸 …and a runner a stretch short of the line can dive for it (dive.js).
   if (consume('dive') || Phaser.Input.Keyboard.JustDown(keys.dive)) dive();
+  // 🧢 …and a quarterback with a covered receiver can pump-fake first.
+  if (consume('pump') || Phaser.Input.Keyboard.JustDown(keys.pump)) pumpFake();
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
@@ -998,6 +1001,65 @@ function throwAway() {
     targets: ball, x: toLeft ? -26 : FIELD_WIDTH + 26, y: qb.y - 36, duration: 380, ease: 'Sine.Out',
     onComplete: () => endPlay('incomplete', st.grounding ? 'INTENTIONAL GROUNDING!' : 'THROWN AWAY'),
   });
+}
+
+// ============================================================
+// 🧢 THE PUMP FAKE
+// ------------------------------------------------------------
+// The corner is glued to your receiver. Pretend to throw, he flinches, and now your
+// receiver has a step — the oldest trick in football, for one tap. The coverage (the
+// DBs and linebackers, never the pass rush) loses speed for 450ms: to 45% on the first
+// fake of a drive, 70% on the second, and not at all on the third.
+// ⚠️ IT IS NOT THE 🎩 FLEA FLICKER'S BITE. That one sends the coverage BACKWARD toward
+// the line of scrimmage, and borrowing it here opened receivers by nine yards; the pump
+// fake only SLOWS them, and keeps their normal target.
+// ⚠️ THE POCKET IS ONLY ABOUT ONE SECOND. Measured, not guessed: a quarterback who stands
+// still is sacked 967ms after the snap, every snap (the rush is slowed by the line, then
+// walks through it). The first cut had a 560ms "arm is cocked" lockout, which meant the
+// fake could only be tapped in the first half-second — before the receivers had even
+// broken — and anybody who tapped it later was just sacked. So the lockout is 300ms, and
+// the button simply is not there once a rusher is within 4.4 yards: a fake you cannot
+// finish is not a choice, it is a trap.
+// ⚠️ IT STILL HAS THREE PRICES, OR IT IS A FREE WAY TO GET EVERYBODY OPEN: (1) for 300ms
+// after the fake you cannot throw (the arm is cocked) and the rush keeps coming at full
+// speed; (2) a quarterback who is hit while he still has the ball out in front of him
+// (the next 600ms) fumbles twice as often; (3) the defense learns: the second fake of a
+// drive fools them less, the third not at all. And it is ONE fake a play.
+// What it buys (8 plays, rushers parked so only the coverage is measured): the share of
+// receivers within 2.5 yards of a defender drops from ~60% to ~30% for about half a second,
+// and a contested catch (inside 1.5 yards) roughly halves. A step, not a gift.
+// ============================================================
+const PUMP_BITE_MS = 450, PUMP_LOCK_MS = 300;
+const PUMP_SLOW = [0.45, 0.70, 1.0];     // how much speed the coverage keeps: the 1st fake of a drive, the 2nd, the 3rd (they have seen it)
+const PUMP_STRIP = 2, PUMP_STRIP_MS = 600;   // a quarterback hit within 600ms of the fake is still holding the ball out: twice the fumbles
+const PUMP_ROOM = 44;                    // px — a rusher closer than this and there is no room to sell it (the button hides)
+function pumpState() {
+  if (G.state !== 'live' || G.cpu || G.pumped || G.trickActive || !canPass()) return false;
+  if (window.TDStar && TDStar.on()) return false;
+  if (G.ballCarrier !== offense[0]) return false;
+  const q = offense[0].s;
+  for (const d of defense) if (Phaser.Math.Distance.Between(d.s.x, d.s.y, q.x, q.y) < PUMP_ROOM) return false;   // the rush is on you
+  return true;
+}
+function pumpFake() {
+  if (!pumpState()) return;
+  const now = G.scene.time.now, s = offense[0].s;
+  const n = Math.min(G.pumpUses || 0, PUMP_SLOW.length - 1);
+  G.pumpUses = (G.pumpUses || 0) + 1;
+  G.pumped = true;
+  G.fakeBiteSlow = PUMP_SLOW[n];
+  G.fakeBiteUntil = now + PUMP_BITE_MS;
+  G.fakeLockUntil = now + PUMP_LOCK_MS;
+  G.fakeStripUntil = now + PUMP_STRIP_MS;
+  sayComment(n >= PUMP_SLOW.length - 1 ? 'They have seen that one — nobody bites.'
+           : pick(['Pump fake!', 'He pumps it — the corner jumps!', 'Looks off the defender…']));
+  if (window.TDSound) TDSound.sting('coin');
+  // a quick wind-up so you can SEE the fake: the passer stretches, then settles, with a "FAKE!" over him
+  const sx = s.scaleX, sy = s.scaleY;
+  G.scene.tweens.add({ targets: s, scaleX: sx * 1.18, scaleY: sy * 0.9, duration: 130, yoyo: true, ease: 'Sine.Out' });
+  const tag = G.scene.add.text(s.x, s.y - 34, 'FAKE!', { fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#9fd8ff',
+    stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(27);
+  G.scene.tweens.add({ targets: tag, y: tag.y - 22, alpha: 0, duration: 650, ease: 'Cubic.Out', onComplete: () => tag.destroy() });
 }
 
 // ============================================================
@@ -1147,6 +1209,7 @@ function resolvePitchScramble(byYou) {
 // PASSING — throw to the receiver wearing that number
 // ============================================================
 function throwTo(num) {
+  if (G.scene.time.now < G.fakeLockUntil) return;   // 🧢 mid pump-fake: the arm is still cocked, you cannot throw yet
   const wr = offense.find(o => (o.role === 'WR' || o.role === 'RB') && o.num === num);
   if (!wr || wr === G.ballCarrier) return;   // can't throw the ball to yourself!
 
@@ -1766,6 +1829,11 @@ function updateDefense(elapsed) {
       }
     }
 
+    // 🧢 THE PUMP FAKE: the coverage (never the rush) flinches. It keeps its normal target and
+    // just loses speed for a beat — NOT the flea flicker's bite, which sends them BACKWARD toward
+    // the line and opened receivers by nine yards when it was first tried here.
+    if (qbHasBall && d.role !== 'DL' && G.scene.time.now < G.fakeBiteUntil) speed *= G.fakeBiteSlow;
+
     steer(d.s, tx, ty, speed);
   }
 }
@@ -1830,7 +1898,9 @@ function checkTackle() {
       // A hard tackle sometimes knocks the ball loose = FUMBLE! 🔒 IRON GRIP
       // (shop) makes that much rarer.
       const grip = window.TDShop ? TDShop.gripFactor() : 0;
-      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble()) fumble();
+      // 🧢 …and a quarterback caught holding the ball out right after a pump fake coughs it up twice as often
+      const pumpRisk = (G.ballCarrier === offense[0] && G.scene.time.now < G.fakeStripUntil) ? PUMP_STRIP : 1;
+      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk) fumble();
       else {
         // 🧱 HEAVY — the whistle hasn't gone yet. Eight big bodies are all
         // leaning the same way, so the pile falls forward another yard and a
@@ -2678,6 +2748,7 @@ function startCpuDrive() {
   G.turnoverSpotCpu = null;
   G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
   if (window.TDDrives) TDDrives.beginOpp(spot, driveWhen());   // 📋 their drive starts here
+  G.pumpUses = 0;                                              // 🧢 a new possession: the defense forgets your pump fakes
   // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
   // Player 2 gets to run the red offense on their possession.
   if (!G.twoPlayer) { DefenseSim.start(); return; }
@@ -4398,6 +4469,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDFormation) TDFormation.newGame(); // 🧠 …or leftover formation
   G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
+  G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
@@ -4643,6 +4715,7 @@ function startKickoff(asPunt) {
   G.koLive = false;                          // the ball is in the air first
   G.replay = [];                             // start a fresh film reel for the return
   G.dashUntil = 0;                           // no leftover dash
+  G.pumpUses = 0;                            // 🧢 a kickoff is a new possession: the defense forgets your pump fakes (halftime too)
   document.body.classList.remove('kicking'); // make sure the run buttons are showing
   document.body.classList.add('returning');  // hide the pass/HIKE buttons — you only run a return
 
@@ -5202,7 +5275,7 @@ function setupPlay(next) {
   G.hasPassed = false;
   G.ballCarrier = offense[0];
   ballFollow = true;
-  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = touch.dive = false; // clear old taps
+  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = touch.dive = touch.pump = false; // clear old taps
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
@@ -5303,6 +5376,7 @@ function setupTouchButtons() {
   bindTap('btn-pitch', 'pitch');   // 🔄 THE PITCH (pitch.js)
   bindTap('btn-throwaway', 'throwaway');   // 🧤 THROW IT AWAY (throwaway.js)
   bindTap('btn-dive', 'dive');             // 🤸 DIVE FOR THE MARKER (dive.js)
+  bindTap('btn-pump', 'pump');             // 🧢 THE PUMP FAKE
 
   // Player 2 (defense) — just four arrows, moving the "P2" red player
   bindHold('btn2-up', 'up', touch2);
@@ -5708,6 +5782,10 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🧢 THE PUMP FAKE — the button, only while the quarterback could still throw and has not faked this play.
+  document.body.classList.toggle('can-pump', pumpState());
+  document.body.classList.toggle('pump-stale', (G.pumpUses || 0) >= PUMP_SLOW.length - 1);   // they have seen it
 
   // 🤸 DIVE FOR THE MARKER — the button, only while a stretch short of a line with a tackler closing.
   const dv = diveState();
