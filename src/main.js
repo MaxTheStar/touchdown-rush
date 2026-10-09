@@ -438,7 +438,7 @@ let keys;          // keyboard
 // (just like pressing a key one time). See setupTouchButtons() below.
 const touch = {
   left: false, right: false, up: false, down: false,   // held arrows
-  snap: false, one: false, two: false, three: false, hand: false, pitch: false  // one-shot taps
+  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false  // one-shot taps
 };
 
 // Player 2's arrows (the defense player in 2-player mode)
@@ -513,6 +513,7 @@ function create() {
   // 📏 THE CHAINS (chains.js): the blue line of scrimmage and the yellow line to gain,
   // painted on the grass under the players. The field never had either.
   if (window.TDChains) TDChains.attach(this);
+  if (window.TDThrowAway) TDThrowAway.attach(this);   // 🧤 the two pocket lines
 
   // A little "announcer" line that pops quick play-by-play call-outs.
   // The announcer's call-outs sit ON the field, so they need their own dark
@@ -532,7 +533,7 @@ function create() {
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P',
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T',
     // Player 2 uses W A S D to drive the defender (handy for testing on a computer)
     w: 'W', a: 'A', s: 'S', d: 'D'
   });
@@ -584,7 +585,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -786,6 +787,7 @@ function snap(time) {
   G.snapTime = time;
   G.hasPassed = false;
   G.pitchLoose = false;       // 🔄 no leftover dropped-pitch scramble
+  G.groundingPenalty = false; // 🧤 …or a grounding call
   G.onsideLoose = false;      // ⚡ …or onside scramble
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
@@ -917,6 +919,8 @@ function controlBallCarrier() {
   // 🔄 A pitch is a lateral, so it works in the open field too — not only behind
   // the line like a pass. (Read after the pass block so a tap is never both.)
   if (consume('pitch') || Phaser.Input.Keyboard.JustDown(keys.pitch)) pitch();
+  // 🧤 …and a quarterback under pressure can put it in the stands (throwaway.js).
+  if (consume('throwaway') || Phaser.Input.Keyboard.JustDown(keys.throwaway)) throwAway();
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
@@ -960,6 +964,38 @@ function handOff() {
   G.ballCarrier = rb;
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
   sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
+}
+
+// ============================================================
+// 🧤 THROW IT AWAY (throwaway.js has the rule; the throw lives here)
+// ------------------------------------------------------------
+// A quarterback with a rusher on him and nobody open puts it in the stands. From
+// OUTSIDE the pocket that is just an incompletion (you lose the down, not the yards);
+// from INSIDE it is intentional grounding — loss of down AND ten yards. The button
+// only exists while a rusher is within ~70px and you are still behind the line.
+// ============================================================
+function throwAwayState() {
+  if (!window.TDThrowAway || G.state !== 'live' || G.hasPassed || G.cpu) return null;
+  if (window.TDStar && TDStar.on()) return null;              // 🌟 you are one receiver there, not the quarterback
+  const qb = offense[0];
+  if (G.ballCarrier !== qb) return null;                      // he has handed it off / thrown it
+  return TDThrowAway.status({ x: qb.s.x, y: qb.s.y }, G.losY, defense.map(d => ({ x: d.s.x, y: d.s.y })));
+}
+function throwAway() {
+  const st = throwAwayState(); if (!st || !st.available) return;
+  const qb = offense[0].s;
+  G.state = 'pass';                  // the ball is in the air: nobody can be tackled this instant
+  G.hasPassed = true;                // …and it was a throw — a second forward pass is not on
+  G.groundingPenalty = !!st.grounding;
+  ballFollow = false;
+  const toLeft = qb.x < FIELD_WIDTH / 2;                       // toward the NEARER sideline
+  ball.setPosition(qb.x, qb.y);
+  sayComment(st.grounding ? pick(['He just throws it away…', 'Nobody there — he fires it away!'])
+                          : pick(['Out of the pocket — throws it away!', 'Lives to play another down!', 'Smart — he throws it out of bounds!']));
+  G.scene.tweens.add({
+    targets: ball, x: toLeft ? -26 : FIELD_WIDTH + 26, y: qb.y - 36, duration: 380, ease: 'Sine.Out',
+    onComplete: () => endPlay('incomplete', st.grounding ? 'INTENTIONAL GROUNDING!' : 'THROWN AWAY'),
+  });
 }
 
 // ============================================================
@@ -1885,9 +1921,12 @@ function endPlay(result, customMsg) {
     big = true;
     next = { los: 20, down: 1, fd: 30, fresh: true };
   } else {
+    // 🧤 INTENTIONAL GROUNDING (throwaway.js): the ball was thrown away from INSIDE the pocket, so the
+    // play is dead where it was snapped MINUS TEN yards and the down is lost — never into your own end zone.
     spot = (result === 'incomplete')
-      ? G.losYards
+      ? (G.groundingPenalty ? Math.max(1, G.losYards - 10) : G.losYards)
       : Phaser.Math.Clamp(yardsFromOwnGoal(G.ballCarrier.s.y), 0, 99);
+    G.groundingPenalty = false;
 
     // Announcer call-outs for how the run/tackle ended.
     if (result === 'tackle') {
@@ -5127,7 +5166,7 @@ function setupPlay(next) {
   G.hasPassed = false;
   G.ballCarrier = offense[0];
   ballFollow = true;
-  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = false; // clear old taps
+  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = false; // clear old taps
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
@@ -5226,6 +5265,7 @@ function setupTouchButtons() {
   bindTap('btn-3', 'three');
   bindTap('btn-hand', 'hand');
   bindTap('btn-pitch', 'pitch');   // 🔄 THE PITCH (pitch.js)
+  bindTap('btn-throwaway', 'throwaway');   // 🧤 THROW IT AWAY (throwaway.js)
 
   // Player 2 (defense) — just four arrows, moving the "P2" red player
   bindHold('btn2-up', 'up', touch2);
@@ -5624,6 +5664,13 @@ function updateHUD() {
 
   // 📏 THE CHAINS — repaint the two lines on the field (a no-op unless something moved).
   if (window.TDChains) TDChains.sync(chainState());
+
+  // 🧤 THROW IT AWAY — the button (green outside the pocket, red inside it) and the two pocket lines.
+  const ta = throwAwayState();
+  const taOn = !!(ta && ta.available);
+  document.body.classList.toggle('can-throwaway', taOn);
+  document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
+  if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
 
   // 🔄 THE PITCH — show the button and ring the man who would get it, only
   // while a legal pitch exists (level or behind, in range, not blocking).
