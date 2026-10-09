@@ -438,7 +438,7 @@ let keys;          // keyboard
 // (just like pressing a key one time). See setupTouchButtons() below.
 const touch = {
   left: false, right: false, up: false, down: false,   // held arrows
-  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false  // one-shot taps
+  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false, dive: false  // one-shot taps
 };
 
 // Player 2's arrows (the defense player in 2-player mode)
@@ -533,7 +533,7 @@ function create() {
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T',
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T', dive: 'X',
     // Player 2 uses W A S D to drive the defender (handy for testing on a computer)
     w: 'W', a: 'A', s: 'S', d: 'D'
   });
@@ -585,7 +585,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -921,6 +921,8 @@ function controlBallCarrier() {
   if (consume('pitch') || Phaser.Input.Keyboard.JustDown(keys.pitch)) pitch();
   // 🧤 …and a quarterback under pressure can put it in the stands (throwaway.js).
   if (consume('throwaway') || Phaser.Input.Keyboard.JustDown(keys.throwaway)) throwAway();
+  // 🤸 …and a runner a stretch short of the line can dive for it (dive.js).
+  if (consume('dive') || Phaser.Input.Keyboard.JustDown(keys.dive)) dive();
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
@@ -995,6 +997,40 @@ function throwAway() {
   G.scene.tweens.add({
     targets: ball, x: toLeft ? -26 : FIELD_WIDTH + 26, y: qb.y - 36, duration: 380, ease: 'Sine.Out',
     onComplete: () => endPlay('incomplete', st.grounding ? 'INTENTIONAL GROUNDING!' : 'THROWN AWAY'),
+  });
+}
+
+// ============================================================
+// 🤸 DIVE FOR THE MARKER (dive.js has the rule; the lunge lives here)
+// ------------------------------------------------------------
+// A runner a stretch short of the line to gain (or the goal line) with a tackler closing
+// can launch ~1.8 yards up the field. The play is over where he lands: past the line it is
+// a first down or a touchdown, short of it he is down short. ⚠️ A diver is easier to strip
+// (18% against 12%) — that is what keeps it from being free yards.
+// ============================================================
+function diveState() {
+  if (!window.TDDive || G.state !== 'live' || G.cpu || !G.ballCarrier || canPass()) return null;
+  const c = G.ballCarrier.s;
+  const fdY = (G.firstDownYards < 100) ? yardsToY(G.firstDownYards) : null;
+  return TDDive.status({ x: c.x, y: c.y }, fdY, ENDZONE, defense.map(d => ({ x: d.s.x, y: d.s.y })));
+}
+function dive() {
+  const st = diveState(); if (!st || !st.available) return;
+  const s = G.ballCarrier.s;
+  G.state = 'pass';                    // in the air: nobody can be tackled this instant
+  s.setVelocity(0, 0);
+  sayComment(st.kind === 'goal' ? pick(['He dives for the goal line!', 'Lays out for the pylon!', 'Stretches for the end zone!'])
+                                : pick(['He dives for the marker!', 'Stretches out for it!', 'Lays out for the first down!']));
+  const sx = s.scaleX, sy = s.scaleY;
+  G.scene.tweens.add({
+    targets: s, y: s.y - TDDive.DIVE_PX, scaleX: sx * 1.2, scaleY: sy * 0.72, duration: 240, ease: 'Cubic.Out',
+    onComplete: () => {
+      G.scene.time.delayedCall(700, () => s.setScale(sx, sy));     // he gets back up
+      if (checkTouchdown()) return;                               // the ball broke the plane
+      const grip = window.TDShop ? TDShop.gripFactor() : 0;
+      if (Math.random() < TDDive.stripChance(grip, wxFumble())) fumble();   // a diver is easier to strip
+      else endPlay('tackle');
+    },
   });
 }
 
@@ -5166,7 +5202,7 @@ function setupPlay(next) {
   G.hasPassed = false;
   G.ballCarrier = offense[0];
   ballFollow = true;
-  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = false; // clear old taps
+  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = touch.dive = false; // clear old taps
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
@@ -5266,6 +5302,7 @@ function setupTouchButtons() {
   bindTap('btn-hand', 'hand');
   bindTap('btn-pitch', 'pitch');   // 🔄 THE PITCH (pitch.js)
   bindTap('btn-throwaway', 'throwaway');   // 🧤 THROW IT AWAY (throwaway.js)
+  bindTap('btn-dive', 'dive');             // 🤸 DIVE FOR THE MARKER (dive.js)
 
   // Player 2 (defense) — just four arrows, moving the "P2" red player
   bindHold('btn2-up', 'up', touch2);
@@ -5671,6 +5708,11 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🤸 DIVE FOR THE MARKER — the button, only while a stretch short of a line with a tackler closing.
+  const dv = diveState();
+  document.body.classList.toggle('can-dive', !!(dv && dv.available));
+  document.body.classList.toggle('dive-goal', !!(dv && dv.available && dv.kind === 'goal'));
 
   // 🔄 THE PITCH — show the button and ring the man who would get it, only
   // while a legal pitch exists (level or behind, in range, not blocking).
