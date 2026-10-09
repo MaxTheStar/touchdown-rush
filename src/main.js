@@ -66,7 +66,8 @@ const LOOSE_BALL_DIST  = 34;   // this close to a bad throw's landing = you can 
 
 // ---- Fumbles — a big tackle can knock the ball loose ----
 const FUMBLE_CHANCE      = 0.12; // this often, a tackle pops the ball out
-const OFF_RECOVER_CHANCE = 0.5;  // ...and your team dives on its own fumble half the time
+const OFF_RECOVER_CHANCE = 0.5;  // ...and your team used to dive on its own fumble half the time (a coin flip). Now the recovery is a RACE
+                                 // (see THE FUMBLE SCRAMBLE below), and this is the number it is TUNED to match for an average player.
 // 🏃 A LOOSE BALL you can actually chase (a muffed punt — see updateLooseBall).
 const RECOVER_DIST  = 26;    // close enough to fall on it
 const LOOSE_MS      = 4200;  // the scramble cannot run forever
@@ -76,6 +77,21 @@ const LOOSE_CHASERS = 3;     // how many gunners dive for it (all 7 = hopeless)
 // wasn't, and why the ball now squirts PAST you instead of dropping at your feet.
 const MUFF_MIN      = RECOVER_DIST + 20;   // 46px — you always have to take steps
 const MUFF_MAX      = 64;                  // ~6 yards — far enough to be a race, not a marathon
+// 🏈 THE FUMBLE SCRAMBLE (Round 16, pick ⑥) — see fumble() for the whole story.
+// ⚠️ THESE NUMBERS ARE A SIMULATION: change them together or not at all. Win % for a player whose reaction
+// after "FALL ON IT" averages 0.05 / 0.25 / 0.40 / 0.55 / 0.75 s / never moves (±0.12s), 2500 fumbles per context,
+// you steering 8-way at 205px/s, mixed over where your teammates are when it comes out (20% a sack with the line
+// right there, 35% a run, 45% a catch-and-run):
+//     EASY    100  99  93  77  46  34
+//     MEDIUM  100  94  77  45  19  16
+//     HARD     99  84  51  19   7   6
+// MEDIUM at ~0.5s is about the old 50% coin flip, so an average player's turnovers are roughly unchanged and the whole
+// difference is SKILL: hold the D-pad toward the ball while it bounces and you win it back; a slow thumb loses it.
+// (Checked in the real game loop with a bot: reacting at 0.25s won 13/13 behind the line and 8/8 twelve yards downfield.)
+const FUMBLE_MIN = 44, FUMBLE_MAX = 80;                      // px — how far the ball squirts from the man who fumbled it
+const FUMBLE_SWING = 90;                                     // degrees either side of "straight away from the man who hit him"
+const FUMBLE_REACT = { easy: 620, medium: 500, hard: 420 };  // ms the pile-up holds the DEFENDERS before they go for it
+const FUMBLE_MATE_MS = 580;                                  // ms before your two nearest teammates pile in (so never moving still wins about one in six on MEDIUM)
 
 // ---- Kicking — on 4th down you can try a field goal or punt ----
 // A field goal is worth 3 points. How far is the kick? From where the ball
@@ -585,7 +601,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumbleScramble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -694,7 +710,7 @@ function update(time, delta) {
   }
 
   // FUMBLE suspense: everyone's frozen while the loose ball bounces and we
-  // wait to see who recovers (resolveFumble runs on a timer).
+  // wait for the ball to land, then 'loose' takes over (the fumble scramble).
   if (G.state === 'fumble') {
     freezeEveryone();
     return;
@@ -787,6 +803,7 @@ function snap(time) {
   G.snapTime = time;
   G.hasPassed = false;
   G.pitchLoose = false;       // 🔄 no leftover dropped-pitch scramble
+  G.fumbleLoose = false;      // 🏈 …or fumble scramble
   G.groundingPenalty = false; // 🧤 …or a grounding call
   G.pumped = false; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 one pump fake a play, fresh every snap
   G.onsideLoose = false;      // ⚡ …or onside scramble
@@ -1169,7 +1186,7 @@ function resolvePitch(rec, dist, from) {
 function dropThePitch(rec, from) {
   freezeEveryone();
   G.state = 'fumble';
-  G.pitchLoose = true;
+  G.pitchLoose = true; G.fumbleLoose = false;
   G.ballCarrier = rec;         // YOUR man — you chase it with the D-pad
   showBanner('PITCH DROPPED!!!', true);
   sayComment(pick(['The pitch is loose!', 'Nobody has it!', 'He dropped the pitch!']));
@@ -1919,27 +1936,88 @@ function checkTackle() {
 // in clear/night). Both fumble checks below multiply their odds by this.
 function wxFumble() { return window.TDWeather ? TDWeather.fumbleMult() : 1; }
 
-// The ball pops loose! Show a big "FUMBLE!!!" for suspense, make the ball
-// bounce free, then a moment later decide who dives on it.
+// ============================================================
+// 🏈 THE FUMBLE SCRAMBLE (Round 16, pick ⑥)
+// ------------------------------------------------------------
+// The ball pops loose. This used to be: freeze everybody for a second, then
+// `Math.random() < 0.5` — your team recovers half the time, whatever you did, while you
+// stood there. It was the same thing Max caught on the muffed punt and on the onside
+// kick (v4.8–v4.20 each fixed one), and the last place the ball was on the grass and
+// nobody could move. Now it is the same live race, in the middle of a play:
+//   · the ball squirts AWAY from the man who hit him (44–80px, up to 90° either side),
+//     inside the field — never into an end zone, so no recovery can be a safety or a
+//     touchdown by accident;
+//   · for a beat the DEFENDERS are still in the pile (0.62 / 0.50 / 0.42s by difficulty);
+//   · you drive the man who fumbled it with the D-pad, and your two nearest teammates
+//     pile in a beat later on their own (0.58s) — so a player who never moves still gets
+//     it back now and then (a real team dives on it: most of the time right behind the
+//     line, almost never twelve yards downfield), and one who goes straight for it wins;
+//   · first man within RECOVER_DIST falls on it. Yours: the play ends right there
+//     (a loss, a gain, a first down — wherever the ball is). Theirs: it is their ball there.
+// ⚠️ IT IS NEUTRAL FOR AN AVERAGE PLAYER AND THAT IS ON PURPOSE. Turnovers are 12% of
+// tackles × the old 50% = 6% a play; a recovery that a good player wins 90% of the time
+// would have made the whole offense far easier. MEDIUM at a ~0.5s reaction wins about
+// half — the old coin flip — and the numbers on either side are what the skill is worth.
+// ⚠️ NO NEW FUMBLE SOURCES: FUMBLE_CHANCE, the dive strip and the pump-fake risk still
+// decide WHETHER the ball comes out; this only changes who gets it.
+// ============================================================
 function fumble() {
   freezeEveryone();
   G.state = 'fumble';          // a special pause so the next play doesn't start yet
+  G.fumbleLoose = true;        // 🏈 …and the recovery is a race (updateLooseBall), not a coin flip
+  G.pitchLoose = false; G.onsideLoose = false; G.puntMuffed = false;   // ('loose' is shared: resolveMuff reads these)
   showBanner('FUMBLE!!!', true);
+  sayComment(pick(['FUMBLE! The ball is loose!', 'It is out! Fall on it!', 'He coughs it up!']));
+  if (window.TDSound) TDSound.sting('stuff');
 
-  // Bounce the loose ball a short random distance from the carrier
+  // The ball pops out AWAY from the man who made the hit.
   ballFollow = false;
   const c = G.ballCarrier.s;
-  const bx = Phaser.Math.Clamp(c.x + Phaser.Math.Between(-40, 40), 12, FIELD_WIDTH - 12);
-  const by = c.y + Phaser.Math.Between(-30, 30);
-  G.scene.tweens.add({ targets: ball, x: bx, y: by, duration: 500, ease: 'Bounce.Out' });
+  let hit = null, hd = Infinity;
+  for (const d of defense) {
+    const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y);
+    if (dd < hd) { hd = dd; hit = d; }
+  }
+  const away = hit ? Math.atan2(c.y - hit.s.y, c.x - hit.s.x) : Math.PI / 2;
+  const ang = away + Phaser.Math.DegToRad(Phaser.Math.Between(-FUMBLE_SWING, FUMBLE_SWING));
+  const far = Phaser.Math.Between(FUMBLE_MIN, FUMBLE_MAX);
+  const bx = Phaser.Math.Clamp(c.x + Math.cos(ang) * far, 12, FIELD_WIDTH - 12);
+  const by = Phaser.Math.Clamp(c.y + Math.sin(ang) * far, ENDZONE + 10, FIELD_LENGTH - ENDZONE - 10);   // on the field, both ends
+  G.scene.tweens.add({ targets: ball, x: bx, y: by, duration: 480, ease: 'Bounce.Out' });
 
-  // After the suspense, decide the recovery
-  G.scene.time.delayedCall(1100, resolveFumble);
+  // Let the bounce land, then everybody goes.
+  G.scene.time.delayedCall(520, () => {
+    if (G.state !== 'fumble' || !G.fumbleLoose) return;   // something else settled it
+    startFumbleScramble();
+  });
 }
 
-function resolveFumble() {
-  if (Math.random() < OFF_RECOVER_CHANCE) {
-    // Your team dives on it — you keep the ball right where it came loose.
+function startFumbleScramble() {
+  const now = G.scene.time.now;
+  G.state = 'loose';
+  G.looseUntil = now + LOOSE_MS;
+  G.looseChasers = nearestDefenders(ball.x, ball.y, LOOSE_CHASERS);
+  // a friend driving the red team gets to chase too (the muff scramble leaves him frozen if he is not one of the three)
+  if (G.twoPlayer && G.p2Defender && G.looseChasers.indexOf(G.p2Defender) === -1) G.looseChasers.push(G.p2Defender);
+  G.looseReactAt = now + (FUMBLE_REACT[G.difficulty] || FUMBLE_REACT.medium);
+  // your two nearest teammates (anybody but the man you are driving) pile in a beat after the whistle-less chaos starts
+  G.looseMates = offense
+    .filter(o => o !== G.ballCarrier)
+    .map(o => ({ o: o, d: Phaser.Math.Distance.Between(o.s.x, o.s.y, ball.x, ball.y) }))
+    .sort((a, b) => a.d - b.d).slice(0, 2).map(e => e.o);
+  G.looseMateAt = now + FUMBLE_MATE_MS;
+  showBanner('FALL ON IT!!!', true);
+}
+
+// The scramble is over (called from resolveMuff — 'loose' is shared). `byYou` is who actually got there.
+function resolveFumbleScramble(byYou) {
+  G.fumbleLoose = false; G.looseChasers = null; G.looseMates = null;
+  freezeEveryone();
+  if (byYou) {
+    // Your team has it: the play is over RIGHT WHERE THE BALL IS (the man who fumbled it stands there for the spot and the stat book,
+    // even when it was a teammate who fell on it).
+    G.ballCarrier.s.setPosition(ball.x, ball.y);
+    sayComment(pick(['Falls on it!', 'He gets it back!', 'Still our ball!']));
     endPlay('tackle', 'YOU RECOVERED IT!');
   } else {
     // The defense recovers — turnover! Their new drive starts right here.
@@ -2401,7 +2479,7 @@ const ONSIDE_SQ_MIN = 30, ONSIDE_SQ_MAX = 70;   // how far it squirts after land
 function startOnsideScramble() {
   freezeEveryone();
   G.state = 'fumble';          // frozen while the kick is in the air
-  G.onsideLoose = true; G.pitchLoose = false; G.puntMuffed = false;
+  G.onsideLoose = true; G.pitchLoose = false; G.puntMuffed = false; G.fumbleLoose = false;
   document.body.classList.remove('kicking');
   // Only your hands man is on the field of yours (the kickoff's trick: hide the rest).
   for (let i = 1; i < offense.length; i++) {
@@ -4470,6 +4548,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
+  G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
@@ -4715,6 +4794,7 @@ function startKickoff(asPunt) {
   G.koLive = false;                          // the ball is in the air first
   G.replay = [];                             // start a fresh film reel for the return
   G.dashUntil = 0;                           // no leftover dash
+  G.fumbleLoose = false;                     // 🏈 no leftover fumble scramble ('loose' is shared)
   G.pumpUses = 0;                            // 🧢 a kickoff is a new possession: the defense forgets your pump fakes (halftime too)
   document.body.classList.remove('kicking'); // make sure the run buttons are showing
   document.body.classList.add('returning');  // hide the pass/HIKE buttons — you only run a return
@@ -4833,11 +4913,11 @@ function catchThePunt() {
 
 // 💥 MUFFED IT. The ball is LIVE — this is the moment the fair catch existed to
 // avoid. Mirrors fumble()'s shape (bounce, suspense, resolve) but cannot use it:
-// `resolveFumble` finishes through `endPlay`, and a punt has no down yet.
+// the fumble scramble finishes through `endPlay`, and a punt has no down yet.
 function muffThePunt() {
   freezeEveryone();
   G.state = 'fumble';
-  G.puntMuffed = true;
+  G.puntMuffed = true; G.fumbleLoose = false;
   showBanner('MUFFED IT!!!', true);
   sayComment(pick(['He dropped it!', 'MUFFED! The ball is loose!', "He couldn't handle it!"]));
   if (window.TDSound) TDSound.sting('stuff');
@@ -4916,12 +4996,19 @@ function updateLooseBall(time) {
   const me = G.ballCarrier.s;
   controlReturner();                       // your legs, your D-pad
 
+  // 🏈 …and in a FUMBLE your two nearest teammates pile in too, a beat after the ball comes loose.
+  if (G.fumbleLoose && G.looseMates) for (const o of G.looseMates) {
+    if (time < G.looseMateAt) { o.s.setVelocity(0, 0); continue; }
+    steer(o.s, ball.x, ball.y, WR_SPEED);
+  }
+
   // The chasers run at the ball, not at you.
   for (const d of defense) {
     if (G.looseChasers && G.looseChasers.indexOf(d) === -1) { d.s.setVelocity(0, 0); continue; }
     if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
     // ⚡ an onside kick bounces unpredictably — their hands team needs a beat to read it
-    if (G.onsideLoose && time < G.looseReactAt) { d.s.setVelocity(0, 0); continue; }
+    // 🏈 …and after a fumble the men who made the hit are still in the pile
+    if ((G.onsideLoose || G.fumbleLoose) && time < G.looseReactAt) { d.s.setVelocity(0, 0); continue; }
     steer(d.s, ball.x, ball.y, diff().koCover);
   }
 
@@ -4929,6 +5016,10 @@ function updateLooseBall(time) {
   // the ball goes to the player, which is the friendly way to break it.
   if (Phaser.Math.Distance.Between(me.x, me.y, ball.x, ball.y) < RECOVER_DIST) {
     resolveMuff(true); return;
+  }
+  // 🏈 …then your teammates (still yours), then theirs.
+  if (G.fumbleLoose && G.looseMates) for (const o of G.looseMates) {
+    if (Phaser.Math.Distance.Between(o.s.x, o.s.y, ball.x, ball.y) < RECOVER_DIST) { resolveMuff(true); return; }
   }
   for (const d of defense) {
     if (G.looseChasers && G.looseChasers.indexOf(d) === -1) continue;
@@ -4940,6 +5031,7 @@ function updateLooseBall(time) {
   // Out of time: closest man wins the pile.
   if (time >= G.looseUntil) {
     let best = Phaser.Math.Distance.Between(me.x, me.y, ball.x, ball.y), mine = true;
+    if (G.fumbleLoose && G.looseMates) for (const o of G.looseMates) best = Math.min(best, Phaser.Math.Distance.Between(o.s.x, o.s.y, ball.x, ball.y));
     for (const d of defense) {
       if (G.looseChasers && G.looseChasers.indexOf(d) === -1) continue;
       const dist = Phaser.Math.Distance.Between(d.s.x, d.s.y, ball.x, ball.y);
@@ -4955,6 +5047,7 @@ function updateLooseBall(time) {
 function resolveMuff(byYou) {
   if (G.pitchLoose) { resolvePitchScramble(byYou); return; }   // 🔄 a dropped pitch, not a punt
   if (G.onsideLoose) { resolveOnside(byYou); return; }          // ⚡ the onside kick, not a punt
+  if (G.fumbleLoose) { resolveFumbleScramble(byYou); return; }  // 🏈 a fumble in the middle of a play, not a punt
   G.looseChasers = null;
   freezeEveryone();
   const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);
