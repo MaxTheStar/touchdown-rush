@@ -709,6 +709,14 @@ function update(time, delta) {
     return;
   }
 
+  // 🙏 THE HAIL MARY: the play is a film of tweens (hailMary()); nothing here steers anybody, and the panel at the
+  // end is jumpball.js's. The watchdog in hailMary() guarantees it finishes.
+  if (G.state === 'hail') {
+    freezeEveryone();
+    updateHUD();
+    return;
+  }
+
   // 🙌 JUMP BALL: everybody holds still over the ball while you time the leap (jumpball.js has its own panel and
   // finishes the play — the panel can never hang, it settles itself after a moment).
   if (G.state === 'jump') {
@@ -807,6 +815,7 @@ function update(time, delta) {
 function snap(time) {
   G.state = 'live';
   if (window.TDClock) TDClock.hide();   // ⏱️ the ball is gone: no spiking it now
+  if (window.TDHail) TDHail.hide();     // 🙏 …and no prayer either
   if (window.TDPlayClock) TDPlayClock.stop();   // ⏳ …and nothing left to be late for
   G.snapTime = time;
   G.hasPassed = false;
@@ -1331,6 +1340,123 @@ function jumpBall(wr, wx, wy, starThere) {
   ballFollow = false;                                   // the ball hangs where it is, over the two of them
   sayComment(pick(['Contested! They both go up!', 'Jump ball!', "It's up for grabs!"]));
   return true;
+}
+
+// ============================================================
+// 🙏 THE HAIL MARY (Round 16, pick ⑧) — hailmary.js has the rules, the button and the odds; the FILM lives here
+// ------------------------------------------------------------
+// On the last snap of a half (or of a game you are losing by a score or less) a 🙏 button appears. Tap it and the
+// real snap happens (the clock, the play clock, the self-scouting book — everything a snap does), and then the play is a
+// short film of tweens, because a Hail Mary is not a play you steer: the quarterback drops back, both receivers and the
+// back run for the same spot in the end zone, the five men in coverage collapse on it, the line holds the rush for just
+// long enough, and the ball goes up and hangs there. When it comes down it is 🙌 JUMP BALL's moment (TDJump) with much
+// longer odds of its own: catch it and it is a TOUCHDOWN; miss and it is knocked down (75%) or picked off for a
+// touchback (25%). Everything ends through `endPlay`, so the clock, the half, the game, the extra point and the drive
+// chart all behave exactly as they do after any other play.
+// ⚠️ IT CANNOT HANG: the film is a chain of tweens and timers, and a watchdog finishes the play (incomplete) if
+// anything in it ever fails to arrive. ⚠️ AND IT IS ONLY EVER THE LAST SNAP, so even a perfect thumb gets one prayer.
+// ============================================================
+const HAIL_DROP_MS = 900, HAIL_HOLD_MS = 350;      // the quarterback drops back, then sets his feet
+let hailSeq = 0;                                   // each film gets an id, so a timer left over from an EARLIER film can never end a later one
+function hailCtx() {
+  return { down: G.down, quarter: G.quarter, quarters: NUM_QUARTERS, clock: G.clock, my: G.score, opp: G.oppScore,
+           spot: Math.round(G.losYards), overtime: G.overtime, stopped: G.clockStopped, twoPt: G.twoPtTry };
+}
+// Show or hide the 🙏 button for THIS snap. Called wherever the line of scrimmage is settled and the snap is yours to take.
+function updateHailBtn() {
+  if (!window.TDHail) return;
+  const ok = G.state === 'presnap' && !G.cpu && !G.gameOver && !(window.TDStar && TDStar.on());
+  TDHail.update(ok ? hailCtx() : null);
+}
+function hailMary(play) {
+  if (G.state !== 'presnap' || !play) return;
+  const tw = G.scene.tweens;
+  snap(G.scene.time.now);                   // the real snap …
+  G.state = 'hail';                         // … and then the film takes over
+  G.hasPassed = true;                       // it is a forward pass
+  const land = { x: FIELD_WIDTH / 2 + Phaser.Math.Between(-24, 24), y: ENDZONE - 26 };   // a few yards deep in the end zone
+  const id = ++hailSeq;
+  G.hail = { id: id, play: play, factor: play.factor, land: land, ballScale: ball.scaleX };
+  showBanner('HAIL MARY!!!', true);
+  sayComment(pick(['HAIL MARY!', 'Everybody go deep!', 'One last heave!', 'Here comes the prayer…']));
+  if (window.TDSound) TDSound.sting('stuff');
+  const qb = offense[0].s;
+  // the quarterback drops back, and everybody who can run runs for the same spot
+  tw.add({ targets: qb, y: qb.y + 34, duration: HAIL_DROP_MS, ease: 'Sine.Out' });
+  const runners = [offense[1], offense[2], offense[3]];                 // two receivers and the back
+  const runSpots = [[-24, 4], [24, 0], [0, 22]];
+  runners.forEach((o, i) => tw.add({ targets: o.s, x: land.x + runSpots[i][0], y: land.y + runSpots[i][1], duration: 1500 + i * 60, ease: 'Sine.InOut' }));
+  // the five men in coverage collapse on it
+  const ring = [[-14, -6], [16, -8], [-6, 14], [10, 12], [0, -16]];
+  [defense[2], defense[3], defense[4], defense[5], defense[6]].forEach((d, i) =>
+    tw.add({ targets: d.s, x: land.x + ring[i][0], y: land.y + ring[i][1], duration: 1450 + i * 50, ease: 'Sine.InOut' }));
+  // the line holds the two rushers just long enough for the throw
+  [defense[0], defense[1]].forEach((d, i) =>
+    tw.add({ targets: d.s, x: qb.x + (i ? 24 : -24), y: qb.y + 24, duration: HAIL_DROP_MS + 200, ease: 'Sine.Out' }));
+  G.scene.time.delayedCall(HAIL_DROP_MS + HAIL_HOLD_MS, () => { if (G.hail && G.hail.id === id) hailThrow(); });
+  // ⚠️ THE FILM CAN NEVER HANG: if anything above fails to arrive, this finishes the play (and only THIS film's play).
+  G.scene.time.delayedCall(13000, () => { if (G.state === 'hail' && G.hail && G.hail.id === id) { if (window.TDJump) TDJump.cancel(); hailResolve(false, offense[1]); } });
+}
+function hailThrow() {
+  if (G.state !== 'hail' || !G.hail) return;
+  const qb = offense[0].s, land = G.hail.land;
+  ball.setPosition(qb.x, qb.y - 6);
+  ballFollow = false;
+  G.scene.cameras.main.startFollow(ball, true, 0.1, 0.1);
+  const flight = Phaser.Math.Clamp(Phaser.Math.Distance.Between(qb.x, qb.y, land.x, land.y) / 380 * 1000, 1500, 2600);   // a long, long time in the air
+  sayComment(pick(['It is in the air…', 'Way up there…', 'Up it goes!']));
+  G.scene.tweens.add({ targets: ball, x: land.x, y: land.y - 4, duration: flight, ease: 'Sine.InOut', onComplete: hailArrive });
+  // height: the ball grows as it climbs and shrinks as it comes down
+  G.scene.tweens.add({ targets: ball, scale: G.hail.ballScale * 2.3, duration: flight / 2, yoyo: true, ease: 'Sine.Out' });
+}
+function hailArrive() {
+  if (G.state !== 'hail' || !G.hail) return;
+  ball.setScale(G.hail.ballScale);
+  // the receiver who goes up for it is whichever of the three has the best hands (WR1 on a tie)
+  const idxOf = o => offense.indexOf(o);
+  const hands = o => (window.TDTraits ? TDTraits.catchFor(idxOf(o)) : 0) + (window.TDHot ? TDHot.catchAdd(idxOf(o)) : 0);
+  let wr = offense[1];
+  for (const o of [offense[2], offense[3]]) if (hands(o) > hands(wr)) wr = o;
+  const gl = window.TDShop ? TDShop.gloveBoost() : { catchBonus: 0 };
+  let wxCatch = window.TDWeather ? TDWeather.catchMult() : 1;
+  if (window.TDShop && TDShop.weatherResist) wxCatch += (1 - wxCatch) * TDShop.weatherResist();
+  const factor = G.hail.factor;
+  const perk = gl.catchBonus + hands(wr);
+  const id = G.hail.id;
+  const shown = window.TDJump && TDJump.begin({
+    title: '🙏 HAIL MARY!', sub: 'It is coming down in the pile — tap as it gets to his hands!', winText: '🙏 PRAYERS ANSWERED!!!',
+    low: true,                                                     // the pile is up in the end zone: keep the panel off it
+    success: TDHail.SUCCESS,
+    // gloves, Sure Hands and a hot hand count, at a third of their strength: it is a prayer. They widen the green zone and scale the
+    // odds up a little — NOT added to every grade (an additive bonus doubled an ordinary thumb's chance at full gear).
+    bonus: 0,
+    zoneBonus: perk * TDHail.PERK_SHARE,
+    mult: factor * wxCatch * (1 + Math.max(0, perk) * 0.8),       // how far away you are, the weather, and the hands
+  }, won => { if (G.hail && G.hail.id === id) hailResolve(won, wr); });
+  if (!shown) hailResolve(Math.random() < 0.1 * factor, wr);        // nowhere to draw the moment: one flat roll, same ballpark
+}
+function hailResolve(won, wr) {
+  if (G.state !== 'hail') return;
+  G.hail = null;
+  if (won) {
+    G.ballCarrier = wr; ballFollow = true;
+    ball.setPosition(wr.s.x, wr.s.y - 6);
+    G.scene.cameras.main.startFollow(wr.s, true, 0.12, 0.12);
+    if (window.TDSound) TDSound.sting('coin');
+    endPlay('touchdown');                                          // he is standing in the end zone with it
+  } else if (Math.random() < TDHail.PICK_OF_MISS) {
+    G.turnoverSpotCpu = 20;                                         // a touchback: their ball at their own 20
+    endPlay('interception', 'PICKED OFF IN THE END ZONE!');
+  } else {
+    endPlay('incomplete', 'KNOCKED DOWN!');
+  }
+}
+// A new game (or the menu) while a film is running: stop everything it started.
+function hailCancel() {
+  const tw = G.scene && G.scene.tweens;
+  if (tw) { offense.forEach(o => tw.killTweensOf(o.s)); defense.forEach(d => tw.killTweensOf(d.s)); if (ball) { tw.killTweensOf(ball); if (G.hail) ball.setScale(G.hail.ballScale); } }
+  G.hail = null;
+  if (window.TDHail) TDHail.hide();
 }
 
 function resolvePass(wr, x, y) {
@@ -2367,7 +2493,7 @@ function hideFourthDownChoice() {
 function chooseFourthDown(which) {
   if (G.state !== 'decision') return;   // ignore stray taps
   hideFourthDownChoice();
-  if (which === 'play') { G.state = 'presnap'; return; }
+  if (which === 'play') { G.state = 'presnap'; updateHailBtn(); return; }   // 🙏 going for it on the last snap: now the prayer is on the table
   // 🎭 FAKE PUNT / FAKE FIELD GOAL: it's a normal down, but the defense is about
   // to sell out for the block — the snap (below) hands them the fake.
   if (which === 'fake') {
@@ -2687,6 +2813,7 @@ function callTimeout() {
   if (!canCall || G.timeouts <= 0 || G.gameOver || G.clockStopped) return;
   G.timeouts--;
   G.clockStopped = true;
+  updateHailBtn();   // 🙏 a stopped clock means this snap is NOT the last one
   sayComment('Timeout! The clock stops.');
   showBanner('⏱ TIMEOUT  ·  ' + G.timeouts + ' left', false);
   // ⏳ …and it buys you a brand-new play clock, which is the REAL reason coaches
@@ -4600,6 +4727,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble
   if (window.TDJump) TDJump.cancel();                         // 🙌 …or a jump ball
+  hailCancel();                                               // 🙏 …or a Hail Mary in the air
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
@@ -5480,6 +5608,7 @@ function setupPlay(next) {
     stopped: G.clockStopped,
   };
   if (window.TDClock) TDClock.update(G.down === 4 ? null : clockCtx);
+  updateHailBtn();   // 🙏 …and the one play that belongs to the very last snap of a half or a game (not on 4th down yet: that panel comes first)
   // ⏰ HURRY-UP OFFENSE (hurry.js) — the same question one level up: not "is
   // this the play?" but "is this the TEMPO?". It gets the context on 4th down
   // too, because the no-huddle is about the whole drive rather than this one
@@ -5539,6 +5668,8 @@ function setupTouchButtons() {
   // ⏱️ SPIKE IT / KNEEL IT — clockplay.js owns the tap and hands back the play
   // it decided on; runClockPlay just performs it.
   if (window.TDClock) TDClock.setup(runClockPlay);
+  // 🙏 THE HAIL MARY — hailmary.js owns the button and the rule; hailMary() is the film.
+  if (window.TDHail) TDHail.setup(hailMary);
   // ⏳ THE PLAY CLOCK — same deal: playclock.js decides WHICH foul and where it
   // leaves the ball, and presnapFoul just performs it.
   if (window.TDPlayClock) TDPlayClock.setup(presnapFoul);

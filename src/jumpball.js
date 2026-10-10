@@ -73,9 +73,11 @@
     return pos < CENTER ? 'early' : 'late';
   }
   // The chance he comes down with it. `bonus` is added to every zone (gloves + Sure Hands + a hot hand),
-  // `mult` multiplies the lot (weather, Maxwell). Never 0 and never certain.
-  function chance(g, bonus, mult) {
-    const base = SUCCESS[g] != null ? SUCCESS[g] : SUCCESS.late;
+  // `mult` multiplies the lot (weather, Maxwell). Never 0 and never certain. `table` is optional: 🙏 THE HAIL MARY
+  // (hailmary.js) borrows this whole moment with much longer odds of its own.
+  function chance(g, bonus, mult, table) {
+    const t = table || SUCCESS;
+    const base = t[g] != null ? t[g] : (t.late != null ? t.late : SUCCESS.late);
     return clamp((base + (bonus || 0)) * (mult != null ? mult : 1), 0.02, MAX_CHANCE);
   }
 
@@ -92,14 +94,16 @@
     return el;
   }
 
-  function paint(el, bonus) {
+  function paint(el, bonus, o) {
+    o = o || {};
+    el.classList.toggle('jb-low', !!o.low);     // 🙏 the Hail Mary's pile is at the TOP of the screen (the end zone), so its panel sits LOW
     const z = zones(bonus);
     const left = (CENTER - z.yellow) * 100, wy = z.yellow * 200;
     const lg = (CENTER - z.green) * 100, wg = z.green * 200;
     el.innerHTML =
       '<div class="jb-card">' +
-        '<div class="jb-title">🙌 JUMP BALL!</div>' +
-        '<div class="jb-sub">Tap as the ball gets to his hands.</div>' +
+        '<div class="jb-title">' + (o.title || '🙌 JUMP BALL!') + '</div>' +
+        '<div class="jb-sub">' + (o.sub || 'Tap as the ball gets to his hands.') + '</div>' +
         '<div class="jb-track"><i class="jb-yellow" style="left:' + left + '%;width:' + wy + '%"></i>' +
           '<i class="jb-green" style="left:' + lg + '%;width:' + wg + '%"></i>' +
           '<span class="jb-hands" style="left:' + (CENTER * 100) + '%">🙌</span>' +
@@ -110,15 +114,19 @@
     el.style.display = 'flex';
   }
 
-  // Start the moment. `opts` = { bonus, mult }. `done(won, grade)` is called once, after a short
+  // Start the moment. `opts` = { bonus, mult } and, for 🙏 THE HAIL MARY, optionally { title, sub, winText, success, zoneBonus, low }
+  // (its own panel text and its own win-chance table; `zoneBonus` widens the green zone WITHOUT adding to the odds, because
+  // an additive bonus swamps a table whose biggest number is 24%). `done(won, grade)` is called once, after a short
   // beat so you can see what happened. Returns false if there is nowhere to draw it (the caller
   // then falls back to the old roll, so a missing page element can never break a pass).
   function begin(opts, done) {
     const el = overlay(); if (!el) return false;
     cancel();
     const o = opts || {};
-    paint(el, o.bonus || 0);
-    live = { t0: performance.now(), bonus: o.bonus || 0, mult: o.mult != null ? o.mult : 1, done, settled: false, timer: 0, raf: 0 };
+    const zb = o.zoneBonus != null ? o.zoneBonus : (o.bonus || 0);
+    paint(el, zb, o);
+    live = { t0: performance.now(), bonus: o.bonus || 0, zb: zb, mult: o.mult != null ? o.mult : 1, table: o.success || null, winText: o.winText || '',
+             done, settled: false, timer: 0, raf: 0 };
     const step = () => {
       if (!live || live.settled) return;
       const b = $('jb-ball');
@@ -137,7 +145,7 @@
     if (!live || live.settled) return false;
     const pos = posAt(performance.now() - live.t0);
     if (pos < IGNORE_BEFORE) return true;              // a habit tap — swallowed, nothing lost
-    settle(grade(pos, live.bonus));
+    settle(grade(pos, live.zb));
     return true;
   }
 
@@ -145,12 +153,12 @@
     if (!live || live.settled) return;
     live.settled = true;
     clearTimeout(live.timer); cancelAnimationFrame(live.raf);
-    const won = Math.random() < chance(g, live.bonus, live.mult);
+    const won = Math.random() < chance(g, live.bonus, live.mult, live.table);
     const res = $('jb-res');
     if (res) {
       res.className = 'jb-res ' + (won ? 'good' : 'bad');
       res.textContent = won
-        ? (g === 'green' ? '🙌 HE WENT UP AND GOT IT!' : '🙌 HE CAME DOWN WITH IT!')
+        ? (live.winText || (g === 'green' ? '🙌 HE WENT UP AND GOT IT!' : '🙌 HE CAME DOWN WITH IT!'))
         : (g === 'early' ? '✋ TOO EARLY!' : g === 'late' ? '✋ TOO LATE!' : '✋ SO CLOSE!');
     }
     const d = live.done;
@@ -172,6 +180,7 @@
     #jb-over { display: none; position: fixed; inset: 0; z-index: 60; background: rgba(6,10,20,0.34);
       align-items: flex-start; justify-content: center; touch-action: none; cursor: pointer;
       padding: calc(env(safe-area-inset-top, 0px) + 112px) 16px 16px; box-sizing: border-box; }
+    #jb-over.jb-low { align-items: flex-end; padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 236px); }
     .jb-card { width: 100%; max-width: 420px; box-sizing: border-box; border-radius: 16px; padding: 14px 16px 12px;
       background: rgba(10,16,30,0.94); border: 2px solid rgba(255,224,102,0.85); box-shadow: 0 8px 28px rgba(0,0,0,.55);
       display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
