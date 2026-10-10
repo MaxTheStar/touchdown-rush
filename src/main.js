@@ -709,6 +709,14 @@ function update(time, delta) {
     return;
   }
 
+  // 🙌 JUMP BALL: everybody holds still over the ball while you time the leap (jumpball.js has its own panel and
+  // finishes the play — the panel can never hang, it settles itself after a moment).
+  if (G.state === 'jump') {
+    freezeEveryone();
+    updateHUD();
+    return;
+  }
+
   // FUMBLE suspense: everyone's frozen while the loose ball bounces and we
   // wait for the ball to land, then 'loose' takes over (the fumble scramble).
   if (G.state === 'fumble') {
@@ -1280,6 +1288,51 @@ function wxIncompleteMsg() {
   return 'INCOMPLETE';
 }
 
+// The OLD contested-ball roll, unchanged: Maxwell contests from a hair farther and picks it off a lot more often,
+// 🎯 Cannon Arm makes picks rarer; otherwise the defender knocks it away. It is now what a FAILED jump ball falls back
+// to (and what happens when the moment cannot run), so a covered throw can never be worse than it used to be.
+function contestedRoll(wy, starThere) {
+  let intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
+  if (window.TDShop && TDShop.armAccuracy) intChance *= (1 - TDShop.armAccuracy());   // 🎯 Cannon Arm: fewer picks
+  if (Math.random() < intChance) {
+    G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(wy)), 1, 99);
+    endPlay('interception');
+  } else endPlay('incomplete', 'BROKEN UP!');
+}
+
+// 🙌 JUMP BALL — the whole field holds still over the two of them while you time the leap (jumpball.js owns the
+// panel and the numbers). Win it and he has the ball (the normal catch: you control him, the defender is right there);
+// lose it and the old contested roll decides what happened. Returns false when the moment cannot run.
+const JUMP_STAR_MULT = 0.8;     // Maxwell contests harder: his odds are 80% of anyone else's
+function jumpBall(wr, wx, wy, starThere) {
+  if (!window.TDJump) return false;
+  if (window.TDStar && TDStar.on()) return false;       // 🌟 Superstar mode has its own catch rules
+  // everything that already makes a receiver catch more now also counts on a covered ball (it never got this far before)
+  const idx = offense.indexOf(wr);
+  const gl = window.TDShop ? TDShop.gloveBoost() : { catchBonus: 0 };
+  const trCatch = window.TDTraits ? TDTraits.catchFor(idx) : 0;
+  const hotCatch = window.TDHot ? TDHot.catchAdd(idx) : 0;
+  let wxCatch = window.TDWeather ? TDWeather.catchMult() : 1;
+  if (window.TDShop && TDShop.weatherResist) wxCatch += (1 - wxCatch) * TDShop.weatherResist();
+  const started = TDJump.begin({
+    bonus: gl.catchBonus + trCatch + hotCatch,
+    mult: wxCatch * (starThere ? JUMP_STAR_MULT : 1),
+  }, (won) => {
+    if (G.state !== 'jump') return;                     // something else settled it (a new game, say)
+    if (won) {
+      if (window.TDSound) TDSound.sting('coin');
+      showBanner('WENT UP AND GOT IT!', true);
+      catchAndRun(wr, wx, wy, pick(['HE WENT UP AND GOT IT!', 'WHAT A CATCH!', 'Came down with it!']));
+    } else contestedRoll(wy, starThere);
+  });
+  if (!started) return false;                           // nowhere to draw it: the caller rolls the old way
+  G.state = 'jump';
+  freezeEveryone();
+  ballFollow = false;                                   // the ball hangs where it is, over the two of them
+  sayComment(pick(['Contested! They both go up!', 'Jump ball!', "It's up for grabs!"]));
+  return true;
+}
+
 function resolvePass(wr, x, y) {
   G.passTarget = null;   // the ball has arrived — stop the break-on-the-ball chase
   // Where the receiver ACTUALLY is when the ball arrives (he kept running).
@@ -1318,15 +1371,12 @@ function resolvePass(wr, x, y) {
   }
   const starThere = G.bossGame && nearestD === defense[6];   // 👑 is it Maxwell in coverage?
 
-  // A defender is right there — he either intercepts it or knocks it away.
-  // Maxwell contests from a hair farther and picks it off a lot more often.
+  // A defender is right there — a CONTESTED ball. 🙌 JUMP BALL (jumpball.js): it used to be a roll (an
+  // interception or a knock-away, never a catch); now you play the moment and winning it is a catch.
+  // If the moment cannot run (no module, Superstar mode) the old roll below happens exactly as it always did.
   if (nearestDef < (starThere ? CATCH_CONTEST + 6 : CATCH_CONTEST)) {
-    let intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
-    if (window.TDShop && TDShop.armAccuracy) intChance *= (1 - TDShop.armAccuracy());   // 🎯 Cannon Arm: fewer picks
-    if (Math.random() < intChance) {
-      G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(wy)), 1, 99);
-      endPlay('interception');
-    } else endPlay('incomplete', 'BROKEN UP!');
+    if (jumpBall(wr, wx, wy, starThere)) return;
+    contestedRoll(wy, starThere);
     return;
   }
 
@@ -4549,6 +4599,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble
+  if (window.TDJump) TDJump.cancel();                         // 🙌 …or a jump ball
   if (window.TDSpecial) TDSpecial.newGame();     // 🏈 two fresh fakes + onside available
   if (window.TDFlag) TDFlag.newGame();          // 🚩 two fresh coach's challenges
   if (window.TDPenalty) TDPenalty.newGame();    // 🟨 fresh flag count + cooldown
@@ -5351,6 +5402,7 @@ function updateFormationBtn() {
 }
 
 function setupPlay(next) {
+  if (window.TDJump) TDJump.cancel();    // 🙌 never carry a jump-ball panel into the next play
   // Bring everyone back onto the field (a kickoff return hides all but the returner).
   for (const o of offense) { o.s.setVisible(true); if (o.label) o.label.setVisible(true); o.trail = []; }
   for (const d of defense) { d.s.setVisible(true); if (d.label) d.label.setVisible(true); }
