@@ -2215,6 +2215,7 @@ function endPlay(result, customMsg) {
   freezeEveryone();
   const wasPickSix = G.pickSix;     // 🏅 grab this before we clear it (for the Pick Six badge)
   G.pickSix = false;                // a pick-six return that reached the endzone is done
+  G.pickRet = false;                // 🏃 …(and so is a one-player one)
   if (routeGfx) routeGfx.clear();   // the route lines vanish when the play ends
 
   // 🏈 TWO-POINT TRY? This snap isn't a normal down — reaching the end zone is
@@ -3838,7 +3839,7 @@ function finishCpuDrive() {
   if (G.overtime && G.score !== G.oppScore) { endGame(); return; }  // sudden death
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
-  if (t === 'halftime') { G.turnoverSpotYou = null; startBreak('half', secondHalfKick()); return; }  // 🪙 see secondHalfKick
+  if (t === 'halftime') { G.turnoverSpotYou = null; G.pickCaught = false; startBreak('half', secondHalfKick()); return; }  // 🪙 see secondHalfKick
   if (t === 'qbreak')   { startBreak('q', takeYourBall); return; }
   takeYourBall();
 }
@@ -3849,6 +3850,13 @@ function takeYourBall() {
   // 🧑‍🤝‍🧑 A new drive comes out in its base package — your substitutions were
   // for the drive that just ended, not for this one (personnel.js).
   if (window.TDPersonnel) TDPersonnel.newDrive();
+  // 🏃 AN INTERCEPTION IS A RETURN (pickreturn.js): the pick was caught in the field of play, so the field comes back and YOU run it.
+  if (G.turnoverSpotYou != null && G.pickCaught && !G.twoPlayer && window.TDPickRet && TDPickRet.ready()) {
+    const s = G.turnoverSpotYou; G.turnoverSpotYou = null; G.pickCaught = false;
+    startPickReturn(s);
+    return;
+  }
+  G.pickCaught = false;
   if (G.turnoverSpotYou != null) {
     const s = G.turnoverSpotYou; G.turnoverSpotYou = null;
     document.body.classList.remove('returning');
@@ -3981,10 +3989,14 @@ const DefenseSim = (function () {
       const tip = from => window.TDTipped
         ? { r: 'tip', y: 0, side: 'pass', hawk, win: winRes(), lose: loseRes() }
         : (from === 'int' ? winRes() : { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) });
-      if (r < (0.045 + dStop * 0.03) * TAKEAWAY_SCALE + hawk + D.intAdd) return tip('int');
+      // 🏃 …and an interception is a RETURN now (pickreturn.js), which makes each one worth more, so there are fewer of them: the base
+      // roll and the share of incompletions that are tipped both go through PICK_SCALE (×1 without the file). Ball Hawk gear and the
+      // defense you called still add on top, unscaled.
+      const ps = window.TDPickRet ? TDPickRet.pickScale() : 1;
+      if (r < (0.045 + dStop * 0.03) * TAKEAWAY_SCALE * ps + hawk + D.intAdd) return tip('int');
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
       if (Math.random() < inc) {
-        if (window.TDTipped && Math.random() < TDTipped.TIP_OF_INC) return tip('inc');
+        if (window.TDTipped && Math.random() < TDTipped.TIP_OF_INC * ps) return tip('inc');
         return { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
       }
       if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, tag: 'sack', side: 'pass', t: '<b>SACK!</b> ' + y + ' yards.' }; }
@@ -4037,7 +4049,9 @@ const DefenseSim = (function () {
       if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);
       splash(p.r);
       const where = takeawaySpot(p.r, p);                       // 📍 the ball is where it was taken, not on a kickoff
-      endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t + where);
+      // 🏃 A pick caught in the field of play is run back (pickreturn.js): takeYourBall() starts the return instead of your drive.
+      G.pickCaught = p.r === 'int' && !G.turnoverTouchback && !!(window.TDPickRet && TDPickRet.ready());
+      endDrive('turnover', p.r === 'int' ? (G.pickCaught ? 'INTERCEPTED — RUN IT BACK!' : 'INTERCEPTED — YOUR BALL!') : 'FUMBLE — YOUR BALL!', p.t + where);
       return;
     }
     G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
@@ -4087,14 +4101,18 @@ const DefenseSim = (function () {
   function yourLine(mine) { return mine === 50 ? 'at midfield' : mine < 50 ? 'on your own ' + mine : 'on their ' + (100 - mine); }
   function takeawaySpot(kind, p) {
     // 🙏 a Hail Mary that comes down in YOUR hands came down in your end zone: a touchback, wherever they heaved it from
-    if (p && p.tag === 'hail' && kind === 'int') { G.turnoverSpotYou = TAKEAWAY_TOUCHBACK; return ' <b>Touchback</b> — your ball at your own ' + TAKEAWAY_TOUCHBACK + '.'; }
+    if (p && p.tag === 'hail' && kind === 'int') { G.turnoverTouchback = true; G.turnoverSpotYou = TAKEAWAY_TOUCHBACK; return ' <b>Touchback</b> — your ball at your own ' + TAKEAWAY_TOUCHBACK + '.'; }
     let at = G.cpu.spot;                                          // their yards from THEIR goal: the line the play started on
     if (kind === 'int') at += Phaser.Math.Between(INT_DEPTH_MIN, INT_DEPTH_MAX);
     let mine = Math.round(100 - at);                              // …which is this many yards from YOUR goal
     let touchback = false;
     if (mine <= 0) { mine = TAKEAWAY_TOUCHBACK; touchback = true; }
     G.turnoverSpotYou = Phaser.Math.Clamp(mine, 1, 99);
-    return touchback ? ' <b>Touchback</b> — your ball at your own ' + TAKEAWAY_TOUCHBACK + '.' : ' <b>Your ball ' + yourLine(G.turnoverSpotYou) + '.</b>';
+    G.turnoverTouchback = touchback;                              // 🏃 a pick in your own end zone is not run back
+    if (touchback) return ' <b>Touchback</b> — your ball at your own ' + TAKEAWAY_TOUCHBACK + '.';
+    // 🏃 a pick caught in the field of play is run back (pickreturn.js)
+    if (kind === 'int' && window.TDPickRet && TDPickRet.ready()) return ' <b>Caught ' + yourLine(G.turnoverSpotYou) + ' — run it back!</b>';
+    return ' <b>Your ball ' + yourLine(G.turnoverSpotYou) + '.</b>';
   }
 
   // The drive is over — show the final line, then the NEXT tap hands off (via
@@ -4896,6 +4914,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
   G.dsimPile = null;                                          // 🙌 …or a loose ball (the TDJump.cancel() below clears its panel)
   G.dsimHail = null; if (window.TDKnock) TDKnock.cancel();    // 🙏 …or a Hail Mary in the air
+  G.pickCaught = false; G.pickRet = false; G.pickSpot = null;  // 🏃 …or an interception waiting to be run back
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble
@@ -5242,6 +5261,43 @@ function endKickoffTouchback() {
 }
 
 // ============================================================
+// 🏃 THE PICK-SIX RETURN (pickreturn.js) — an interception in the one-player game, run back on the field
+// ------------------------------------------------------------
+// Reuses the 'kickoff' state exactly as the punt return does: `controlReturner`, `updateKickoffCoverage`, `checkKickoffTackle`,
+// the replay recorder and `checkTouchdown` all work here untouched. `G.pickRet` says this one is an interception (the clock is not
+// charged twice, the banner counts the yards), `G.pickSix` is the old two-player flag the HUD line, the 🏅 badge and the film read.
+// The picker is `offense[0]`; the other team's seven men are `defense[0…6]`, each with a reaction delay (`holdUntil`).
+// ============================================================
+function startPickReturn(spot) {
+  const L = TDPickRet.layout();
+  startKickoff(true);                                  // everything a return needs, MINUS the kick (like a punt return)
+  G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
+  G.pickSix = true; G.pickRet = true;
+  G.pickSpot = spot; G.losYards = spot;                // a touchdown is 100 − spot yards long, for the records and the badge
+  G.koLive = false;                                    // a beat to find the arrows before anybody moves
+  const now = G.scene.time.now;
+  const y0 = yardsToY(spot);
+  place(offense[0], L.x0, y0);
+  for (let i = 0; i < defense.length; i++) {
+    const m = L.men[i];
+    place(defense[i], m.x, Phaser.Math.Clamp(y0 - m.dy, 24, FIELD_LENGTH - 30));   // (a pick near either goal line must not put a man outside the world)
+    defense[i].holdUntil = now + TDPickRet.READY_MS + m.delay * 1000;
+  }
+  G.ballCarrier = offense[0];
+  ballFollow = false;
+  ball.setPosition(L.x0, y0 - 6).setVisible(true);
+  G.scene.cameras.main.centerOn(L.x0, y0);
+  G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
+  showBanner('RUN IT BACK!', true);                    // (the drive-ending banner just said INTERCEPTED)
+  sayComment(pick(['Pick! Take it to the house!', 'INTERCEPTED — go, go, go!', 'It’s a PICK!']));
+  G.scene.time.delayedCall(TDPickRet.READY_MS, () => {
+    if (G.state !== 'kickoff' || !G.pickRet) return;   // the game moved on
+    ballFollow = true; G.koLive = true;
+  });
+  updateHUD();
+}
+
+// ============================================================
 // 🙋 A PUNT RETURN — the same machine as a kickoff, with three real differences
 // ------------------------------------------------------------
 // It deliberately REUSES the 'kickoff' state, so `controlReturner`,
@@ -5509,6 +5565,8 @@ function updateKickoffCoverage() {
   for (const d of defense) {
     // In 2-player mode, a friend drives one coverage player to hunt you down.
     if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
+    // 🏃 a man the interception caught flat-footed has not reacted yet (pickreturn.js; zero for every kickoff and punt)
+    if (d.holdUntil && G.scene.time.now < d.holdUntil) { d.s.setVelocity(0, 0); continue; }
     steer(d.s, c.x, c.y, diff().koCover);   // coverage speed depends on difficulty
   }
 }
@@ -5532,7 +5590,8 @@ function endKickoffReturn() {
   G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
   if (window.TDPunt) TDPunt.hide();
   G.pickSix = false;            // if this was an interception return, it's over now
-  advanceClock(TIME_KICKOFF);   // the kickoff + return took a few seconds
+  const wasPickRet = G.pickRet; G.pickRet = false;     // 🏃 …a ONE-PLAYER pick return (pickreturn.js): the interception play already charged its clock
+  if (!wasPickRet) advanceClock(TIME_KICKOFF);   // the kickoff + return took a few seconds
   if (window.TDTouchback) TDTouchback.hide();
   const yds = yardsFromOwnGoal(G.ballCarrier.s.y);
   // 🏈 …and a man brought down INSIDE his own end zone on a kickoff did not run into a safety: the kick put the ball there, so it is a TOUCHBACK
@@ -5543,6 +5602,11 @@ function endKickoffReturn() {
   G.next = { los: spot, down: 1, fd: Math.min(spot + 10, 100) };  // no 'fresh' → a normal drive next
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1400;
+  if (wasPickRet && !inEndZone) {
+    const gain = spot - (G.pickSpot != null ? G.pickSpot : spot);
+    showBanner(gain >= 1 ? 'RETURNED ' + gain + (gain === 1 ? ' YARD' : ' YARDS') + '!' : 'NO RETURN', false);
+    return;
+  }
   showBanner(inEndZone ? 'TOUCHBACK' : 'NICE RETURN!', false);
 }
 

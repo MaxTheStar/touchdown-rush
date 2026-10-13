@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.44 — cache-buster is `?v=216` in `index.html`.
+- **Version:** v4.45 — cache-buster is `?v=217` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,10 +218,33 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
     ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try **v4.42 ✅** · ⑤🙌 Fall On It **v4.43 ✅** ·
-    ⑥🙏 Knock It Down **v4.44 ✅** · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
+    ⑥🙏 Knock It Down **v4.44 ✅** · ⑦🏃 The Pick-Six Return **v4.45 ✅** · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🏃 v4.45 — THE PICK-SIX RETURN (Round 17, pick ⑦, `src/pickreturn.js` = `window.TDPickRet`, no save).** In the one-player game an interception was a line of text — "INTERCEPTED — YOUR
+    BALL" — and then your own first down (the live pick-six, `startPickSix()`, exists only for two-player defense). Now a pick caught in the field of play is **run back, live**: the tap-through panel gives
+    way to the field and you steer the runner with the arrows / D-pad (a swipe dashes) against the other team's seven men; a tackle spots your drive where it happens ("RETURNED 10 YARDS!"), the end zone
+    is a **pick-six** (6 points, the celebration, the film, the 🏅 Pick Six badge, the try). It reuses the kickoff / punt-return machinery untouched (`startPickReturn()` calls `startKickoff(true)` exactly like
+    `startPuntReturn()`: `controlReturner`, `updateKickoffCoverage`, `checkKickoffTackle`, `checkTouchdown`, the replay recorder), starts **where the ball was caught** (v4.40's spot, on a random lane), and a
+    pick in YOUR end zone is still a touchback (`G.turnoverTouchback`; a hail-mary pick too). The seams: `apply()` sets `G.pickCaught`, the dsim line says "Caught on your own 47 — run it back!", the drive
+    banner "INTERCEPTED — RUN IT BACK!", and `takeYourBall()` starts the return instead of `setupPlay` (so a quarter break in between still shows its break first; a halftime clears it); `G.pickRet` (the
+    one-player flag, so two-player `startPickSix` is untouched) makes `endKickoffReturn` skip the kickoff's 8 seconds (the pick already charged its 32) and say how far you got; `G.losYards = spot` so the
+    touchdown is 100 − spot yards long for the records. ⚠️ **IT MUST NOT TURN EVERY PICK INTO A TOUCHDOWN.** Pure pursuit at 198 px/s cannot catch a 205 px/s runner who is past it, so a thin chase is a
+    free touchdown (a first layout scored 92–98% of returns). The other team is laid out as a gauntlet: the covered receiver beside him, **four men across the lane 6–13 yards ahead, one more 15–26 yards
+    ahead, the quarterback back at the line**, each chasing after a reaction delay (0.15–0.9s; `holdUntil`, honoured by `updateKickoffCoverage`, zero for every kickoff and punt) at the usual
+    `koCover` speed (180 / 198 / 214). MEASURED with a pure simulation of the game's own rules (60 fps, a D-pad's 5 directions, tackle at 15px; 2,500 returns per row from the spots picks really happen
+    at; no dashes): an "ordinary" runner (looks 0.4s ahead, decides every 0.2s, errs a third of the time) averages **10.0 yards, median 8.4, 3.4% pick-sixes on Medium** (Easy 13.9 / 11.6%, Hard 7.9 / 0% —
+    Hard's chasers are faster than the runner, which is how kickoff returns already work there); a perfect-lookahead bot gets 26.6 yards and 39%. The real loop agrees: seven returns by the same bot in the real game
+    were 12, 5, 6, 1, 0, 3 and one 45-yard touchdown. ⚠️ **AND A RETURN IS WORTH POINTS, SO THERE ARE FEWER PICKS** (the v4.40 lesson again). Priced in expected points (0.058 a yard from your own 20,
+    80,000 drives of the real `DefenseSim`): the return alone is **+0.053 points a drive (+0.64 a game)**, a buff. `PICK_SCALE` multiplies the base interception roll AND the share of incompletions that
+    are tipped balls (`play()`'s `ps`; Ball Hawk gear and your defensive calls still add on top): **scale 1.00 −0.461 · 0.85 −0.506 · 0.80 −0.528 · 0.70 −0.548 against −0.511 before (SE 0.010) → 0.85**: interceptions
+    10.1 → 8.4 per 100 drives (they fall by less than the scale: a drive that no longer ends in a pick keeps going), takeaways 15.1 → 13.3, their scoring 1.383 → 1.415 points a drive, average return 9.4 yards,
+    2.8% of picks are scores. Verified in the real game: a forced pick → the dsim line + banner, the field comes back with the picker at the catch spot (47) and the chasers across the lane held for the
+    first beat; a straight run was tackled and the banner said "RETURNED 8 YARDS!" with your drive at the 55; a pick that ends the quarter shows the break first and the return after it; a pick in your end
+    zone is a touchback at the 20 with no return; with everybody asleep the runner scored (+6, "TOUCHDOWN!", `pendingXP`, the replay, the try, then your kickoff) and `pickRet`/`pickSix` cleared; at 375×812 the HUD
+    reads "INTERCEPTION! Run it back to THEIR endzone!" with the runner and the gauntlet on screen. ⚠️ HARNESS TRAP (added to the verify notes): `V.RUN` hand-steps the scene, and when the preview pane IS awake the
+    real loop is stepping it too — everything runs ~2×, which made the first bot "score" three times in a row. Check that `G.scene.time.now` advances on its own before choosing between `V.RUN` and plain waiting.
   - **🙏 v4.44 — KNOCK IT DOWN (Round 17, pick ⑥, `src/knockdown.js` = `window.TDKnock`, no save).** v4.37 gave YOU the Hail Mary; the computer never throws one — with its clock down
     to the last few seconds it ran one more ordinary play and the period ended on the next tap. Now it is **the offense's own rule asked from their side**: `TDKnock.advise()` is
     `TDHail.advise()` called with the computer as "my" (verified identical over 60,000 random contexts, plus twelve hand-written cases: the half at any score, the game only when they
