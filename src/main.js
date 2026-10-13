@@ -3951,7 +3951,7 @@ const DefenseSim = (function () {
       const tip = from => window.TDTipped
         ? { r: 'tip', y: 0, side: 'pass', hawk, win: winRes(), lose: loseRes() }
         : (from === 'int' ? winRes() : { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) });
-      if (r < 0.045 + dStop * 0.03 + hawk + D.intAdd) return tip('int');
+      if (r < (0.045 + dStop * 0.03) * TAKEAWAY_SCALE + hawk + D.intAdd) return tip('int');
       const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
       if (Math.random() < inc) {
         if (window.TDTipped && Math.random() < TDTipped.TIP_OF_INC) return tip('inc');
@@ -3963,7 +3963,7 @@ const DefenseSim = (function () {
       return { r: 'gain', y, side: 'pass', t: 'Pass complete for <b>' + y + '</b>.' };
     }
     // ---- RUN ----
-    if (r < (0.03 + dStop * 0.02 + hawk * 0.5 + D.fumbleAdd) * wxFumble) return { r: 'fum', y: 0, side: 'run', t: '<b>FUMBLE!</b> You recovered it!' };
+    if (r < ((0.03 + dStop * 0.02) * TAKEAWAY_SCALE + hawk * 0.5 + D.fumbleAdd) * wxFumble) return { r: 'fum', y: 0, side: 'run', t: '<b>FUMBLE!</b> You recovered it!' };
     if (Math.random() < 0.18 + dStop * 0.15 + D.stuff) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, side: 'run', t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
     let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain);
     if (Math.random() < 0.08 + D.bigRun) y += Phaser.Math.Between(10, 30);
@@ -3982,7 +3982,13 @@ const DefenseSim = (function () {
     // and the takeaway on a drive-ending play has to find its man already credited.
     // (A kneel is nobody's tackle.)
     if (window.TDGameStats && TDGameStats.noteDefense && p.tag !== 'kneel') TDGameStats.noteDefense(p);
-    if (p.r === 'int' || p.r === 'fum') { if (window.TDDrives) TDDrives.play('opp', G.cpu.spot); splash(p.r); endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
+    if (p.r === 'int' || p.r === 'fum') {
+      if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);
+      splash(p.r);
+      const where = takeawaySpot(p.r, p);                       // 📍 the ball is where it was taken, not on a kickoff
+      endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t + where);
+      return;
+    }
     G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
     if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);      // 📋 one more play of their drive
     if (G.cpu.spot >= 100) { endDrive('touchdown', null, '<b>TOUCHDOWN ' + (G.oppTeam ? G.oppTeam.abbr : '') + '!</b>'); return; }
@@ -3990,7 +3996,7 @@ const DefenseSim = (function () {
     let extra = '';
     if (G.cpu.togo <= 0) { G.cpu.down = 1; G.cpu.togo = 10; G.cpu.goFor = false; extra = ' <b>1st down.</b>'; }
     else G.cpu.down++;
-    if (G.cpu.down > 4) { if (window.TDSound) TDSound.sting('td'); splash('stop'); endDrive('turnover', 'STOPPED ON DOWNS — YOUR BALL!', p.t); return; }
+    if (G.cpu.down > 4) { if (window.TDSound) TDSound.sting('td'); splash('stop'); endDrive('turnover', 'STOPPED ON DOWNS — YOUR BALL!', p.t + takeawaySpot('downs', p)); return; }
     // 🕺 A sack that ALSO ended the drive is celebrated once, as the stop above.
     if (p.tag === 'sack') splash('sack');
     render(p.t + extra);
@@ -3999,6 +4005,44 @@ const DefenseSim = (function () {
   // 🕺 SACK DANCE (celebration.js): the defense gets the move you picked for
   // touchdowns. One call, one caption; a missing file is simply no dance.
   function splash(kind) { if (window.TDCeleb && TDCeleb.splash) TDCeleb.splash(kind); }
+
+  // 📍 TAKEAWAYS AT THE SPOT (Round 17, pick ②). An interception, a fumble recovery or a stop on downs used to hand you
+  // a KICKOFF — your returner, eight yards from your own goal line — whatever part of the field it happened in: a pick at
+  // their 30 was worth a return from your own 8. (`cpuDriveEnd` set a spot for a blocked kick, a missed field goal and a
+  // safety, but never for a turnover, so `takeYourBall()` fell through to `startKickoff()`.) Now the ball is where it was
+  // taken, exactly as it already was after a block or a miss.
+  //   · a stop on downs / a fumble: right where the play started (their yard line = `G.cpu.spot`)
+  //   · an interception: the pass was caught DOWNFIELD, INT_DEPTH yards past where they were
+  //   · caught in YOUR end zone: a touchback, your ball at your own 20
+  // (The live RETURN of an interception is pick ⑦; until then it is spotted where it was caught.)
+  // ⚠️ AND THEY HAD TO GET RARER, OR THE FIX IS A BUFF. Spotting takeaways at the real spot moves your average start after one
+  // from your own ~28 to your own ~47 — about +1.1 expected points a takeaway — and a takeaway happened on 23 of every 100 of
+  // their drives (the real number is nearer 11). Measured over 12,000 drives against all 32 opponents with this very panel code
+  // and the tipped ball's two numbers decided on the spot (expected points of a drive ≈ 0.058 per yard from your own 20): your
+  // margin per CPU drive went from −0.11 to +0.15 — about +2.2 points a game for nothing. Scaling the BASE interception and
+  // fumble rolls by 0.5 puts it back to −0.11 (takeaways 15 per 100 drives, their scoring up from 0.91 to 1.10 points a drive):
+  //     scale   takeaways/100   their pts/drive   your margin/drive
+  //     old        22.6             0.905             −0.111   (a takeaway was a kickoff from your own 8)
+  //     1.0        22.2             0.906             +0.149
+  //     0.8        19.1             0.987             +0.030
+  //     0.65       17.9             1.033             −0.028
+  //     0.5        15.4             1.095             −0.112   ← this one
+  // (An early run WITHOUT the tipped ball said 0.6: the picks that come out of tipped incompletions are not scaled, so the real
+  // game needs a harder cut.) Ball Hawk gear and your defensive calls still add on top, unscaled, so they are worth what they were.
+  const TAKEAWAY_SCALE = 0.5;
+  const INT_DEPTH_MIN = 4, INT_DEPTH_MAX = 22;          // yards downfield the pass was caught (mean 13)
+  const TAKEAWAY_TOUCHBACK = 20;                         // a pick in your own end zone starts you here
+  // "on your own 38" / "at midfield" / "on their 41" — from YOUR side of the ball
+  function yourLine(mine) { return mine === 50 ? 'at midfield' : mine < 50 ? 'on your own ' + mine : 'on their ' + (100 - mine); }
+  function takeawaySpot(kind, p) {
+    let at = G.cpu.spot;                                          // their yards from THEIR goal: the line the play started on
+    if (kind === 'int') at += Phaser.Math.Between(INT_DEPTH_MIN, INT_DEPTH_MAX);
+    let mine = Math.round(100 - at);                              // …which is this many yards from YOUR goal
+    let touchback = false;
+    if (mine <= 0) { mine = TAKEAWAY_TOUCHBACK; touchback = true; }
+    G.turnoverSpotYou = Phaser.Math.Clamp(mine, 1, 99);
+    return touchback ? ' <b>Touchback</b> — your ball at your own ' + TAKEAWAY_TOUCHBACK + '.' : ' <b>Your ball ' + yourLine(G.turnoverSpotYou) + '.</b>';
+  }
 
   // The drive is over — show the final line, then the NEXT tap hands off (via
   // cpuDriveEnd, exactly like the old live defense did).

@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.39 — cache-buster is `?v=211` in `index.html`.
+- **Version:** v4.40 — cache-buster is `?v=212` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,11 +217,36 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `4FpskZgsaoba7A1BYVh7BY`. **Theme: the other side of the ball** — everything you can do on offense, mirrored for defense and returns (the
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
-    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot · ③🏈 Touchback or Return · ④🛑 Stop the Two-Point Try · ⑤🙌 Fall On It ·
+    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return · ④🛑 Stop the Two-Point Try · ⑤🙌 Fall On It ·
     ⑥🙏 Knock It Down · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **📍 v4.40 — TAKEAWAYS AT THE SPOT (Round 17, pick ②, in `src/main.js`: `DefenseSim.takeawaySpot()` + `TAKEAWAY_SCALE`; no save, no new module).**
+    ⚠️ **A PLAIN BUG, OLDER THAN ANY BOARD:** `cpuDriveEnd()` set `G.turnoverSpotYou` for a blocked kick, a missed field goal and a safety, but never for a
+    turnover, so after an interception, a fumble or a stop on downs `takeYourBall()` fell through to `startKickoff()`. Confirmed in the real game: a pick with them on
+    their own 30 started a kickoff return **8 yards from my goal line**. (It is the open gap Round 15 found and left.) Now the ball is where it was taken: a stop on
+    downs and a fumble right where the play started (`G.cpu.spot`), an interception `INT_DEPTH` 4–22 yards downfield of it (mean 13 — the pass was caught
+    downfield), and a pass caught in YOUR end zone is a touchback, your ball at your own 20. The log line says where ("Your ball on their 42." / "Touchback — your ball
+    at your own 20."), the quarter break keeps the spot, halftime clears it (that rule already existed in `finishCpuDrive`). Verified in the real game: a natural fumble
+    at their 42 → `spotYou` 58 → the tap hands back → **presnap at my 58, 1st & 10 (fd 68), no kickoff**; an interception at spot 88 + max depth → "Touchback" and spot 20;
+    a stop on downs at the end of Q1 → the quarter break kept the 47 → presnap at 47 in Q2.
+    ⚠️ **AND THEY HAD TO GET RARER, OR THE FIX IS A BUFF — the part that took the measuring.** Spotting takeaways moves your average start after one from your own ~28
+    (a kickoff return) to your own ~47, about +1.1 expected points each, and a takeaway ended **23 of every 100 CPU drives** (the real number is nearer 11). I ran the
+    REAL `DefenseSim` code headlessly (`DefenseSim.start()` + `tap()` in a loop, 0.4ms a drive, every one of the 32 opponents in rotation so pass-heavy and run-heavy teams
+    both count, the tipped ball's two numbers decided on the spot instead of on its 1.5s real-time timer: `TIP_OF_INC` and an ordinary thumb's 0.595 grab) and priced a
+    drive with a flat expected-points line (0.058 per yard from your own 20; kickoff and punt starts 28 and 38). Margin per CPU drive, 12,000 drives each:
+        old (a takeaway is a kickoff)        takeaways/100 22.6   their pts/drive 0.905   your margin −0.111
+        spot, scale 1.0                                22.2                0.906                +0.149   ← +2.2 points a game for free
+        spot, scale 0.8                                19.1                0.987                +0.030
+        spot, scale 0.65                               17.9                1.033                −0.028
+        spot, scale 0.5                                15.4                1.095                −0.112   ← shipped
+    So `TAKEAWAY_SCALE = 0.5` multiplies the BASE interception (4.5% + defense) and fumble (3% + defense) rolls only; Ball Hawk gear and your defensive calls still add on top,
+    unscaled, so they are worth exactly what they were. The price is real and is the honest trade: **takeaways are rarer (23 → 15 per 100 drives) and worth a lot more, and their
+    offense scores about a fifth more often (0.91 → 1.10 points a drive)**; your margin per drive is unchanged to the third decimal. ⚠️ **THE FIRST RUN MADE THE WRONG
+    CALL:** measured with the tipped ball switched off (so every interception was the plain roll) the neutral scale came out at 0.6; with it emulated it is 0.5, because the
+    picks that come out of tipped INCOMPLETIONS are a separate stream that the scale does not touch. Measure the thing the player actually plays.
+    Not built here (and still open): the interception RETURN (pick ⑦ of this board) — until then a pick is spotted where it was caught.
   - **🧎 v4.39 — THEY KNEEL IT OUT (Round 17, pick ①, `src/kneel.js` = `window.TDKneel`, no save).** The computer's drive only ever decided run, pass or
     kick, so a team ahead by three with ninety seconds left kept throwing and handed you the ball back with time to win. Now `TDKneel.advise(ctx)` — a pure
     function like `TDClock.advise` / `TDHail.advise` — answers one question: **can they run it out?** Only in the LAST period, only when they are AHEAD, only
