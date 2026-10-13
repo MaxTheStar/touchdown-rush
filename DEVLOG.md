@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.46 — cache-buster is `?v=218` in `index.html`.
+- **Version:** v4.47 — cache-buster is `?v=219` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -222,6 +222,8 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **📍 v4.47 — OUT OF BOUNDS (Round 18, pick ①, `src/boundary.js` = `window.TDBounds`, no save).** Round 18 "The Fine Print Board" (artifact `claude.ai/artifact/H28ESddktaBoHUvPHFTUoh`; ①📍 Out of Bounds · ②🛝 QB Slide · ③🗣 Hard Count · ④🎯 Pooch Punt · ⑤🦶 Toe-Tap Catch · ⑥🔀 Both Teams Get the Ball · ⑦🎭 Draw Play · ⑧🧱 Screen Pass).
+    The headline finding: **the field has no out of bounds** — every runner is clamped inside the white line, pressing into it just slid along it. Now the man you are steering who keeps **pushing** into the sideline for 0.16s steps out: `checkOutOfBounds(delta)` in main.js (after `checkTouchdown`, before `checkTackle`) asks `TDBounds.push()`; play ends `endPlay('tackle', 'OUT OF BOUNDS')` at that spot. A runner's body stops dead at x=20 (measured), so `EDGE` = 24 ("leaning on the wall"); standing at the wall without pushing does nothing. ⚠️ **The clock is the real rule, not a free stop**: stepping out charges 12s (incomplete) instead of 32 ONLY in the last 2:00 of Q2/Q4 or in overtime (`stopsClock`); otherwise it is a normal 32s play. Human-driven carrier only (AI runners drift to the middle; a Superstar-mode teammate's carry is not yours to steer; never on a two-point try). Out of your own end zone is still a safety. Verified in the real game: Q1 cost 32, Q4 1:30 cost 12, Q2 2:20 cost 32, Q2 1:00 stops it, right edge works, hugging without a push stayed live, banner reads OUT OF BOUNDS, 0 errors.
   - **🙌 v4.46 — THE HANDS TEAM (Round 17, pick ⑧, `src/handsteam.js` = `window.TDHands`, no save).** Down by a score with the clock running out, the other team scored and then kicked off like it was the first
     quarter: the same deep boot. Now when **they score in the last period with 2:00 or less left and are STILL behind by 1–8 points**, they try an **onside kick** and you are the hands team. `TDHands.advise()` is a pure
     function of `{quarter, quarters, clock, my, opp, overtime}` (their side: `my` = their score after the score that just happened): last period only, `0 < clock ≤ 120`, never overtime, behind by 1…8 (swept: 12 hand-written

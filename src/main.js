@@ -804,9 +804,27 @@ function update(time, delta) {
 
   if (G.state === 'live') {
     if (checkTouchdown()) return;
+    if (checkOutOfBounds(delta)) return;
     checkTackle();
   }
   updateHUD();
+}
+
+// 📍 OUT OF BOUNDS (boundary.js) — the man YOU are steering keeps pushing into the white
+// line and steps out: the play ends right there. ⚠️ Only the human-driven carrier: the
+// AI's runners drift back to the middle on their own, and in 🌟 Superstar mode a teammate
+// holding the ball is not yours to steer.
+function checkOutOfBounds(delta) {
+  if (!window.TDBounds || G.twoPtTry || !G.ballCarrier) return false;
+  if (window.TDStar && TDStar.on() && G.ballCarrier !== TDStar.player()) return false;
+  const dash = dashVelocity();
+  const dir = dash ? Math.sign(dash.vx)
+            : (keys.left.isDown || touch.left) ? -1 : (keys.right.isDown || touch.right) ? 1 : 0;
+  if (!TDBounds.push(G.ballCarrier.s.x, dir, delta || 16, FIELD_WIDTH)) return false;
+  G.oobEnd = true;
+  sayComment(pick(['Steps out of bounds!', 'Out at the sideline!', 'Forced out!']));
+  endPlay('tackle', 'OUT OF BOUNDS');
+  return true;
 }
 
 // ============================================================
@@ -826,6 +844,7 @@ function snap(time) {
   G.onsideLoose = false;      // ⚡ …or onside scramble
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
+  G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
@@ -2343,7 +2362,9 @@ function endPlay(result, customMsg) {
   // PLUS the huddle, and the no-huddle is the huddle being skipped. ⚠️ Only
   // this branch: an incomplete already stopped the clock, so there is no
   // huddle left in its 12 seconds to skip.
-  advanceClock(result === 'incomplete' ? TIME_INCOMPLETE
+  // 📍 …and a runner who stepped out stops it too, but only where the real rule does (the last 2:00 of a half, overtime)
+  const oobStop = result === 'tackle' && G.oobEnd && TDBounds.stopsClock(G.quarter, NUM_QUARTERS, G.clock, G.overtime);
+  advanceClock(result === 'incomplete' || oobStop ? TIME_INCOMPLETE
              : (result === 'touchdown' || result === 'interception') ? TIME_SCORE_PLAY
              : (window.TDHurry ? TDHurry.runSecs(TIME_RUN_PLAY) : TIME_RUN_PLAY));
 
