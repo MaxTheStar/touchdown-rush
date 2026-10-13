@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.38 — cache-buster is `?v=210` in `index.html`.
+- **Version:** v4.39 — cache-buster is `?v=211` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -213,6 +213,37 @@ file is the *developer* view: current state, how the pieces fit, and what's next
   - **✅ AND THE ANSWER WAS: NO BUG.** On a clean load the ⏱️ button is absent in Q1, shows 🏈 SPIKE at
     Q4 0:40 behind, shows 🧎 KNEEL at Q4 1:00 ahead, and every play control is gone at game over.
 
+  - **🏁 Round 17 — "The Flip Side Board" (drawn 2026-10-12; Max: *"You can also build a new chart and work on it."*).** Artifact
+    `4FpskZgsaoba7A1BYVh7BY`. **Theme: the other side of the ball** — everything you can do on offense, mirrored for defense and returns (the
+    computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
+    Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
+    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot · ③🏈 Touchback or Return · ④🛑 Stop the Two-Point Try · ⑤🙌 Fall On It ·
+    ⑥🙏 Knock It Down · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
+    published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
+    Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
+  <!-- R17-ENTRIES: newest first -->
+  - **🧎 v4.39 — THEY KNEEL IT OUT (Round 17, pick ①, `src/kneel.js` = `window.TDKneel`, no save).** The computer's drive only ever decided run, pass or
+    kick, so a team ahead by three with ninety seconds left kept throwing and handed you the ball back with time to win. Now `TDKneel.advise(ctx)` — a pure
+    function like `TDClock.advise` / `TDHail.advise` — answers one question: **can they run it out?** Only in the LAST period, only when they are AHEAD, only
+    on downs 1–3 (three kneels), never in overtime, never when a timeout has just frozen the clock (a kneel on a stopped clock wastes a down), and only if
+    the clock cannot outlast the kneels they have left: `burn = 42 × (kneels left − your timeouts)` (42s is the cost of YOUR kneel in clockplay.js; each timeout
+    you hold stops the clock for one snap, so each takes a kneel off what they can burn) — `clock ≤ burn` means they kneel. In `DefenseSim.tap()` it sits after
+    the 4th-down decision and before the twelfth-man false-start roll; a kneel spends the roar and the formation read (nobody snaps it), costs −1 yard,
+    burns its own 42s (`apply()` now takes `p.secs`) and is nobody's tackle (the defensive box score skips `p.tag === 'kneel'`).
+    ⚠️ **A SECOND GAP HID BEHIND IT: YOU COULD NOT FIGHT BACK.** The ⏱ TIMEOUT button is in the top controls row, which is hidden for the whole of the computer's
+    drive (`body.returning`), so a defense that wanted to stop the clock simply could not — the one exception was 🧊 icing the kicker through its own button. A
+    kneel with no answer would have been a wall, so the panel now has a ⏱ TIMEOUT row (`#kn-row`, under the ice row; same rule as that one: its button
+    swallows its own tap because the whole panel is "tap to continue") that appears only while it can save you something: last period, they are ahead, the clock
+    is inside the 126s window, you hold a timeout, the drive is not already ending (a pending kick has the ice row). Its text says which situation it is: "🧎 THEY ARE
+    GOING TO RUN OUT THE CLOCK" when a kneel is imminent, "⏱ THE CLOCK IS AGAINST YOU" otherwise. `TDGame.defTimeout()` is the real timeout: one comes off,
+    `G.clockStopped = true`, banner, the top counter updated.
+    **VERIFIED** — pure sweep of **12,000** down × quarter × clock × score × timeouts × flag combinations against an independent restatement: 0 wrong; the row's
+    seven rules all right. Real flows on the 1-player panel: no timeouts, 100s left → kneel (clock 58, spot 49) → kneel (16, 48) → kneel (0, 47) → the next tap
+    ends the game "17–21 final"; **three timeouts in hand, 100s → no kneel, they play football** (a draw for 7, burned 32s) and the row reads "THE CLOCK IS AGAINST
+    YOU · 3 left"; **one timeout, 80s → they kneel (clock 38) and the row offers the timeout**; a real `pointerdown` on the button → timeouts 1→0, clock stopped, the
+    panel did NOT also run the next play; the next snap burned 0s and was a normal play (a tipped ball), then the kneel finished it. Layout at 375×812: the card
+    with calls + formation tell + twelfth-man bar + the new row is **648px** tall (82→730) and nothing scrolls; with a field-goal unit out the row hides (that
+    row belongs to the ice row). Not built: a kneel at the end of the first half (only the last period) — a lead at the half is not one to sit on.
   - **🏁 Round 16 — "The Hands-On Board" (drawn 2026-10-07, right after Round 15 swept).** Artifact
     `YBnBDfjwAXzKVFFZWAnZ6z`. Max: *"Yeah, do the next board. Make a new board… Do everything the same way, then
     just go ahead."* **Theme: the ball in your hands** — moments where the game still DECIDES something while you

@@ -3699,6 +3699,12 @@ function iceContext() {
   return { lead: G.score - G.oppScore, quarter: G.quarter, clock: G.clock,
            quarters: NUM_QUARTERS, timeouts: G.timeouts };
 }
+// 🧎 THEY KNEEL IT OUT (kneel.js) — what the rule needs to know about this snap. `my` is YOU, `opp` is the team with the ball.
+function kneelContext() {
+  return { down: G.cpu ? G.cpu.down : 1, quarter: G.quarter, quarters: NUM_QUARTERS, clock: G.clock,
+           my: G.score, opp: G.oppScore, overtime: G.overtime, stopped: G.clockStopped,
+           timeouts: G.timeouts, ending: !!G.dsimEnding };
+}
 
 // Their drive is OVER — tally it up, show the banner, then hand the ball back.
 // (Their touchdown counts 7 — the try after is automatic for the computer.)
@@ -3875,6 +3881,8 @@ const DefenseSim = (function () {
     // 🧊 …and icing.js gets the same last word about the kick row, which is
     // empty on every play except the one where they line up a field goal.
     if (window.TDIce) TDIce.refresh(iceContext());
+    // ⏱ …and kneel.js gets the row under that: the TIMEOUT that answers a team running out the clock.
+    if (window.TDKneel) TDKneel.refresh(kneelContext());
     // 🚫 …and blockkick.js gets the row under it: send everybody at THIS kick.
     // ⚠️ After endDrive has set `dsimEnding` and `dsimPending`, like the rows above.
     if (window.TDBlockKick) TDBlockKick.refresh(Object.assign(
@@ -3886,6 +3894,7 @@ const DefenseSim = (function () {
     G.state = 'dsim';
     G.dsimEnding = false; G.dsimPending = null;
     G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 no tipped ball left over from the last drive
+    if (window.TDKneel) TDKneel.clear();                        // ⏱ …or a timeout row
     document.body.classList.remove('kicking');
     document.body.classList.add('returning');
     const abbr = G.oppTeam ? G.oppTeam.abbr : 'CPU';
@@ -3967,11 +3976,12 @@ const DefenseSim = (function () {
     // use the call up: one call, one play, choose again next down. Covers both
     // the normal line AND a drive-ending one, because both read p.t.
     if (window.TDDefense) p.t = TDDefense.consume() + p.t;
-    advanceClock(p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY);
+    advanceClock(p.secs != null ? p.secs : (p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY));   // 🧎 a kneel brings its own number
     // 📊 THE DEFENSIVE BOX SCORE (gamestats.js): write down WHO made this play.
     // ⚠️ BEFORE the branches below, because every one of them can end the drive
     // and the takeaway on a drive-ending play has to find its man already credited.
-    if (window.TDGameStats && TDGameStats.noteDefense) TDGameStats.noteDefense(p);
+    // (A kneel is nobody's tackle.)
+    if (window.TDGameStats && TDGameStats.noteDefense && p.tag !== 'kneel') TDGameStats.noteDefense(p);
     if (p.r === 'int' || p.r === 'fum') { if (window.TDDrives) TDDrives.play('opp', G.cpu.spot); splash(p.r); endDrive('turnover', p.r === 'int' ? 'INTERCEPTED — YOUR BALL!' : 'FUMBLE — YOUR BALL!', p.t); return; }
     G.cpu.spot = Math.max(1, Math.min(100, G.cpu.spot + p.y));
     if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);      // 📋 one more play of their drive
@@ -4034,6 +4044,17 @@ const DefenseSim = (function () {
       if (!(G.cpu.togo <= 2 && G.cpu.spot > 40 && Math.random() < 0.5)) { endDrive('punt', null, '4th down — they <b>punt</b> it away…'); return; }
       G.cpu.goFor = true;                                   // GO FOR IT → run the 4th-down play now
       render("4th down — they're <b>GOING FOR IT!</b>");
+      return;
+    }
+    // 🧎 THEY KNEEL IT OUT (kneel.js): ahead in the last period with a clock the kneels they have left can run out →
+    // victory formation. The roar and the formation read belong to a snap nobody takes, so they are spent here.
+    const kneel = window.TDKneel ? TDKneel.advise(kneelContext()) : null;
+    if (kneel) {
+      if (window.TDTwelfth) TDTwelfth.take();
+      if (window.TDFormation) TDFormation.take();
+      if (window.TDSound) TDSound.sting('stuff');
+      apply({ r: 'gain', y: -1, side: 'run', tag: 'kneel', secs: kneel.secs,
+              t: pick(['🧎 They line up in the <b>victory formation</b> and take a knee.', '🧎 <b>Kneel down.</b> The clock keeps running.', '🧎 They <b>take a knee</b> and bleed the clock.']) });
       return;
     }
     // 📣 THE TWELFTH MAN: the roar you raised belongs to THIS snap only. A loud
@@ -4857,6 +4878,22 @@ window.TDGame = {
     if (window.TDSound) TDSound.sting('coin');
     updateTimeoutBtn();
     TDIce.refresh(iceContext());
+    return true;
+  },
+  // ⏱ THE TIMEOUT THAT ANSWERS A KNEEL (kneel.js) — the defense could not call one at all while the computer had the
+  // ball (the ⏱ button is in a row that is hidden for the whole drive). Same bookkeeping as every other timeout:
+  // one comes off, the clock is frozen for the next snap, and the top-row counter is updated.
+  defTimeout: () => {
+    if (G.state !== 'dsim' || !G.cpu || G.gameOver || G.clockStopped || G.timeouts <= 0) return false;
+    G.timeouts--;
+    G.clockStopped = true;
+    showBanner('⏱ TIMEOUT  ·  ' + G.timeouts + ' left', false);
+    sayComment(pick(['Timeout! The clock stops.', 'You stop the clock!']));
+    if (window.TDSound) TDSound.sting('coin');
+    updateTimeoutBtn();
+    const log = document.getElementById('dsim-log');
+    if (log) log.innerHTML = '⏱ <b>Timeout.</b> The clock is stopped for the next snap.';
+    if (window.TDKneel) TDKneel.refresh(kneelContext());
     return true;
   },
   // find a team (or an earned uniform) by its abbreviation
