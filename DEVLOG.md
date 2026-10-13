@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.40 — cache-buster is `?v=212` in `index.html`.
+- **Version:** v4.41 — cache-buster is `?v=213` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,11 +217,30 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `4FpskZgsaoba7A1BYVh7BY`. **Theme: the other side of the ball** — everything you can do on offense, mirrored for defense and returns (the
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
-    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return · ④🛑 Stop the Two-Point Try · ⑤🙌 Fall On It ·
+    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try · ⑤🙌 Fall On It ·
     ⑥🙏 Knock It Down · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🏈 v4.41 — TOUCHBACK OR RETURN (Round 17, pick ③, `src/touchback.js` = `window.TDTouchback`, no save).** Every kickoff against you came down in the same
+    place — your returner on his own 8-yard line — and you always ran it out; there was no touchback on a kick TO you at all (they exist only for your own kicks,
+    `fieldpos.js`). Now **38% of their kickoffs sail into the end zone** (`P_DEEP`; the ball is caught 1–8 yards deep, uniformly — measured 37.9% over 200,000 rolls).
+    While the ball is still falling a 🧎 TOUCHBACK button is up (`#btn-touchback`, the 🙋 FAIR CATCH's strip and the same idea — they never share the screen: one is a
+    punt in the air, the other a kickoff; like it, it must not inherit `body.returning {display:none}`); tap it and the play is over the instant the ball comes down:
+    **your ball on your own 25** (`TB_SPOT`, the same 25 your OWN booming kick gives them in fieldpos.js), the clock burns the usual 8s. Ignore it and you run it out of the
+    end zone against the same seven men.
+    ⚠️ **THE DECISION HAS TO BE REAL, SO THE NUMBERS WERE MEASURED.** Pure kinematics of the real rules (they steer straight at you at `koCover` 198px/s, a tackle is 15px,
+    you run 205px/s), a returner who re-picks the widest lane every 0.35s ("careful") or 0.15s ("sharp"), 2000–3000 returns each: from the usual start of a normal kick
+    they come out at **21–24**; from the end zone with the coverage at its usual place **14–19** — a knee would simply always win by eight. A kick that reaches the end zone
+    has OUTKICKED its coverage, so on a deep kick the seven men start `OUTKICK_PX` further back: 0px → 14–19 · 60px → 17–21 · 100px → 20–22 · **140px → 22–25**. Shipped at
+    **130px**: an ordinary returner who runs it out does a little worse than the free 25, a good one about as well, and everybody gets the variance — a tackle on the 12 or a
+    long one. (Real flows: from 2 yards deep a run came out at the 25, from 6 yards deep at the 23, standing still in the end zone → touchback.) The balance effect of the
+    whole thing is a yard or so on 38% of kickoffs either way — a flavour feature, not a lever.
+    ⚠️ **A SMALL REAL BUG ON THE WAY:** `endKickoffReturn()` clamped a tackle inside your own end zone to the 1-yard line (the worst of both worlds). A kickoff put the ball
+    there, so being brought down in the end zone is a TOUCHBACK, the 25 (not a safety — real football's momentum rule). Punts keep their old behaviour (`!G.puntPlay`).
+    Hooks: `startKickoff()` (roll, returner depth, `back` px for the coverage, the longer 900ms flight, the button), `touchbackKick()` + `endKickoffTouchback()` (new),
+    `endKickoffReturn()` (the end-zone rule + `TDTouchback.hide()`). Layout at 375×812: the button is at [12,381,78,431] (the fair catch's slot), the label is 48 of 62px, and
+    nothing else visible overlaps it.
   - **📍 v4.40 — TAKEAWAYS AT THE SPOT (Round 17, pick ②, in `src/main.js`: `DefenseSim.takeawaySpot()` + `TAKEAWAY_SCALE`; no save, no new module).**
     ⚠️ **A PLAIN BUG, OLDER THAN ANY BOARD:** `cpuDriveEnd()` set `G.turnoverSpotYou` for a blocked kick, a missed field goal and a safety, but never for a
     turnover, so after an interception, a fumble or a stop on downs `takeYourBall()` fell through to `startKickoff()`. Confirmed in the real game: a pick with them on

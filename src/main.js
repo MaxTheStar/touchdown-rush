@@ -5069,9 +5069,17 @@ function startKickoff(asPunt) {
   // Hide the scrimmage labels (QB/RUSH/1/2) — they don't apply on a kickoff.
   for (const d of defense) if (d.label) d.label.setVisible(false);
 
-  // The returner waits deep, near his own 8-yard line.
+  // 🏈 TOUCHBACK OR RETURN (touchback.js): about four kickoffs in ten sail INTO THE END ZONE. The returner then waits that many
+  // yards deep, the coverage (which a kick that long has outkicked) starts OUTKICK_PX further back, and while the ball is still
+  // falling a 🧎 TOUCHBACK button is up: knee it and the play is over at your own 25; ignore it and you run it out of the end zone.
+  const deepKick = (!asPunt && window.TDTouchback) ? TDTouchback.roll() : { deep: false, depth: 0 };
+  G.kickDeep = deepKick.deep; G.kickTb = false;
+  const catchY = deepKick.deep ? 1100 + deepKick.depth * 10 : 1014;          // where the ball comes down
+  const back = deepKick.deep ? TDTouchback.OUTKICK_PX : 0;
+
+  // The returner waits deep, near his own 8-yard line (or in the end zone on a deep kick).
   G.ballCarrier = offense[0];
-  place(offense[0], 266, 1020);
+  place(offense[0], 266, catchY + 6);
   offense[0].s.setVisible(true);
 
   // The coverage team: a spread wall downfield that converges on the returner.
@@ -5080,21 +5088,49 @@ function startKickoff(asPunt) {
     [130, 600], [270, 600], [410, 600],             // back row
   ];
   for (let i = 0; i < defense.length; i++) {
-    place(defense[i], cov[i][0], cov[i][1]);
+    place(defense[i], cov[i][0], cov[i][1] - back);
     defense[i].s.setVisible(true);
   }
 
   // Boot the ball down into the returner's hands, THEN let you run.
   ballFollow = false;
-  ball.setPosition(266, 680).setVisible(true);
+  ball.setPosition(266, 680 - back).setVisible(true);
   G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
   if (!asPunt) {
+    if (deepKick.deep) {
+      showBanner('IN THE END ZONE!', false);
+      sayComment(pick(['It sails into the end zone!', 'A booming kick — deep in the end zone!', 'Touchback or return?']));
+      TDTouchback.show(touchbackKick);
+    }
     G.scene.tweens.add({
-      targets: ball, x: 266, y: 1014, duration: 650, ease: 'Sine.In',
-      onComplete: () => { ballFollow = true; G.koLive = true; showBanner('RETURN IT!', false); }
+      targets: ball, x: 266, y: catchY, duration: deepKick.deep ? 900 : 650, ease: 'Sine.In',
+      onComplete: () => {
+        if (window.TDTouchback) TDTouchback.hide();
+        if (G.kickTb) { endKickoffTouchback(); return; }          // you waved it off: a knee
+        ballFollow = true; G.koLive = true; showBanner('RETURN IT!', false);
+      }
     });
   }
   updateHUD();
+}
+
+// 🏈 You tapped TOUCHBACK while the ball was falling. The play is over the instant it comes down (see startKickoff).
+function touchbackKick() {
+  if (G.state !== 'kickoff' || G.koLive || !G.kickDeep) return;
+  G.kickTb = true;
+  sayComment(pick(['Taking a knee.', 'He signals for the touchback.', 'Touchback — no need to risk it.']));
+}
+function endKickoffTouchback() {
+  freezeEveryone();
+  G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
+  advanceClock(TIME_KICKOFF);
+  const spot = window.TDTouchback ? TDTouchback.TB_SPOT : 25;
+  G.next = { los: spot, down: 1, fd: Math.min(spot + 10, 100) };
+  G.kickDeep = false; G.kickTb = false;
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1400;
+  showBanner('TOUCHBACK', false);
+  if (window.TDSound) TDSound.sting('coin');
 }
 
 // ============================================================
@@ -5389,11 +5425,17 @@ function endKickoffReturn() {
   if (window.TDPunt) TDPunt.hide();
   G.pickSix = false;            // if this was an interception return, it's over now
   advanceClock(TIME_KICKOFF);   // the kickoff + return took a few seconds
-  const spot = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(G.ballCarrier.s.y)), 1, 99);
+  if (window.TDTouchback) TDTouchback.hide();
+  const yds = yardsFromOwnGoal(G.ballCarrier.s.y);
+  // 🏈 …and a man brought down INSIDE his own end zone on a kickoff did not run into a safety: the kick put the ball there, so it is a TOUCHBACK
+  // (it used to be clamped to the 1-yard line, which is the worst of both).
+  const inEndZone = yds <= 0 && !G.puntPlay;
+  const spot = inEndZone ? (window.TDTouchback ? TDTouchback.TB_SPOT : 25) : Phaser.Math.Clamp(Math.round(yds), 1, 99);
+  G.kickDeep = false; G.kickTb = false;
   G.next = { los: spot, down: 1, fd: Math.min(spot + 10, 100) };  // no 'fresh' → a normal drive next
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1400;
-  showBanner('NICE RETURN!', false);
+  showBanner(inEndZone ? 'TOUCHBACK' : 'NICE RETURN!', false);
 }
 
 // ============================================================
