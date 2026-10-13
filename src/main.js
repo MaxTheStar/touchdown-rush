@@ -3922,6 +3922,7 @@ const DefenseSim = (function () {
     G.state = 'dsim';
     G.dsimEnding = false; G.dsimPending = null;
     G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 no tipped ball left over from the last drive
+    if (G.dsimPile) { G.dsimPile = null; if (window.TDJump) TDJump.cancel(); }   // 🙌 …or a loose one
     if (window.TDKneel) TDKneel.clear();                        // ⏱ …or a timeout row
     document.body.classList.remove('kicking');
     document.body.classList.add('returning');
@@ -3991,11 +3992,32 @@ const DefenseSim = (function () {
       return { r: 'gain', y, side: 'pass', t: 'Pass complete for <b>' + y + '</b>.' };
     }
     // ---- RUN ----
-    if (r < ((0.03 + dStop * 0.02) * TAKEAWAY_SCALE + hawk * 0.5 + D.fumbleAdd) * wxFumble) return { r: 'fum', y: 0, side: 'run', t: '<b>FUMBLE!</b> You recovered it!' };
-    if (Math.random() < 0.18 + dStop * 0.15 + D.stuff) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, side: 'run', t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
-    let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain);
-    if (Math.random() < 0.08 + D.bigRun) y += Phaser.Math.Between(10, 30);
-    return { r: 'gain', y, side: 'run', t: 'Run for <b>' + y + '</b> yards.' };
+    // The ordinary run — what this function hands back when nothing fumbles. It is a function because a fumble they FALL ON is this
+    // very run too (see below).
+    const ordinaryRun = () => {
+      if (Math.random() < 0.18 + dStop * 0.15 + D.stuff) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, side: 'run', t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
+      let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain);
+      if (Math.random() < 0.08 + D.bigRun) y += Phaser.Math.Between(10, 30);
+      return { r: 'gain', y, side: 'run', t: 'Run for <b>' + y + '</b> yards.' };
+    };
+    // 🙌 FALL ON IT (fallon.js). A fumble used to be YOUR ball every time. Now it is a loose ball and you play it, exactly like
+    // the tipped ball: the two outcomes are built up front (`win` = the recovery it always was, `lose` = they fall on it and the play
+    // is the run it was) and DefenseSim.tap() lets you decide. ⚠️ It must not change how often you take the ball away, so the
+    // chance of a fumble is multiplied by 1 / (an ordinary thumb's recovery) — everything that fed it (Ball Hawk, the defense you
+    // called, the weather) goes through the same factor, so it is worth what it was. ⚠️ AND A FAILED RECOVERY IS THE NORMAL RUN, not
+    // a 0-yard play: the extra fumbles it took to keep takeaways level were runs before, and a dead down costs a drive far more than
+    // its yards (measured: scoring fell 2.7% with a dead down, and matches the old game exactly with the run). With fallon.js missing
+    // nothing changes at all.
+    const fumP = ((0.03 + dStop * 0.02) * TAKEAWAY_SCALE + hawk * 0.5 + D.fumbleAdd) * wxFumble;
+    const loose = !!(window.TDFallOn && TDFallOn.ready());
+    if (r < (loose ? fumP * TDFallOn.FREQ : fumP)) {
+      const got = () => ({ r: 'fum', y: 0, side: 'run', t: loose ? pick(['<b>FUMBLE!</b> You fell on it!', '<b>FUMBLE!</b> You recovered it!', '<b>FUMBLE!</b> Your ball!']) : '<b>FUMBLE!</b> You recovered it!' });
+      if (!loose) return got();
+      const run = ordinaryRun();
+      return { r: 'pile', y: 0, side: 'run', hawk, win: got(),
+               lose: { r: 'gain', y: run.y, side: 'run', tag: 'fumlost', t: pick(['<b>FUMBLE</b> — but they fall on it.', '<b>FUMBLE</b> — it bounces right back to them.', '<b>FUMBLE</b> — and they pounce on it.']) + ' ' + run.t } };
+    }
+    return ordinaryRun();
   }
 
   // Apply a play to the drive: move the ball, update downs, end it if it's over.
@@ -4090,6 +4112,10 @@ const DefenseSim = (function () {
     if (G.state !== 'dsim') return;
     // 🙌 A tipped ball is live: every tap (and SPACE) is the GRAB, not a new play.
     if (G.dsimTip) { if (window.TDTipped) TDTipped.press(); return; }
+    // 🙌 …and so does a loose ball (fallon.js): the moment's own overlay is on top of this panel, so a tap normally never gets
+    // here — but SPACE reaches the game by another road, and it must press the moment, never start the next play.
+    // (If nothing is actually live — something cancelled the moment — the flag is stale: clear it and carry on, never strand the panel.)
+    if (G.dsimPile) { if (window.TDJump && TDJump.active()) { TDJump.press(); return; } G.dsimPile = null; }
     // A drive just ended? This tap hands the ball back.
     if (G.dsimEnding) {
       const pk = G.dsimPending; G.dsimEnding = false; G.dsimPending = null;
@@ -4146,7 +4172,7 @@ const DefenseSim = (function () {
     const played = play(tw, fm);
     if (fm && fm.bluff) {                                                  // 🎭 say so when they lied
       const pre = TDFormation.bluffLine(fm);
-      if (played.r === 'tip') { played.win.t = pre + played.win.t; played.lose.t = pre + played.lose.t; }
+      if (played.win) { played.win.t = pre + played.win.t; played.lose.t = pre + played.lose.t; }   // a tipped ball or a loose ball: two endings
       else played.t = pre + played.t;
     }
     // 🙌 …and a TIPPED ball is not decided yet: you decide it (tipped.js). If there is
@@ -4155,6 +4181,19 @@ const DefenseSim = (function () {
       G.dsimTip = played;
       const drawn = TDTipped.begin(played.hawk, caught => { G.dsimTip = null; apply(caught ? played.win : played.lose); });
       if (!drawn) { G.dsimTip = null; apply(played.win); }
+      return;
+    }
+    // 🙌 …and so is a LOOSE ball (fallon.js): the field holds still and you try to fall on it. `play()` only builds one when the
+    // moment can be drawn, and if the panel somehow cannot be, it is the recovery it always was.
+    if (played.r === 'pile') {
+      G.dsimPile = played;
+      render('<b>FUMBLE!</b> The ball is loose…');
+      const drawn = TDFallOn.begin(played.hawk, got => {
+        if (G.dsimPile !== played || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was bouncing
+        G.dsimPile = null;
+        apply(got ? played.win : played.lose);
+      });
+      if (!drawn) { G.dsimPile = null; apply(played.win); }
       return;
     }
     apply(played);
@@ -4816,6 +4855,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDTwelfth) TDTwelfth.newGame();     // 📣 no leftover roar from the last game
   if (window.TDFormation) TDFormation.newGame(); // 🧠 …or leftover formation
   G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
+  G.dsimPile = null;                                          // 🙌 …or a loose ball (the TDJump.cancel() below clears its panel)
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble

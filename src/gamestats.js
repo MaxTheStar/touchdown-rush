@@ -212,7 +212,7 @@
       for (const f of fields) d[f]++;
     };
     if (p.r === 'int')                    give('int',   ['int']);
-    else if (p.r === 'fum')               give('ff',    ['ff']);
+    else if (p.r === 'fum' || p.tag === 'fumlost') give('ff', ['ff']);   // 🙌 a forced fumble is a forced fumble even when THEY fall on it (fallon.js)
     else if (p.tag === 'sack')            give('sack',  ['sack', 'tkl', 'tfl']);   // a sack is also a tackle for loss
     else if (p.r === 'inc') { if (p.tag === 'tip' || Math.random() < PD_SHARE) give('pd', ['pd']); }   // a tipped ball is, by definition, a pass defended
     else if (p.side === 'run') {

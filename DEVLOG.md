@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.42 — cache-buster is `?v=214` in `index.html`.
+- **Version:** v4.43 — cache-buster is `?v=215` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,11 +217,30 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `4FpskZgsaoba7A1BYVh7BY`. **Theme: the other side of the ball** — everything you can do on offense, mirrored for defense and returns (the
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
-    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try **v4.42 ✅** · ⑤🙌 Fall On It ·
+    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try **v4.42 ✅** · ⑤🙌 Fall On It **v4.43 ✅** ·
     ⑥🙏 Knock It Down · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🙌 v4.43 — FALL ON IT (Round 17, pick ⑤, `src/fallon.js` = `window.TDFallOn`, no save).** When the computer fumbled, `DefenseSim.play()` returned "FUMBLE! You
+    recovered it!" and the drive ended in your favour — a 100% recovery, where the real number is nearer half, and you never touched it. Now a fumble is a **loose ball** and you play
+    it: the same timing panel as 🙌 Jump Ball / the tipped ball / 🛑 the goal-line stand ("🙌 FALL ON IT! The ball is loose! Tap as it gets to your hands." — marker 🙌, the log line
+    under the field map says "FUMBLE! The ball is loose…"). **Right at your hands 80%, close 55%, early/late 30%.** `play()` builds both endings up front like the tipped ball
+    (`{ r:'pile', win, lose }`; `win` is the old `{ r:'fum' }`) and `DefenseSim.tap()` lets you decide; a tap or SPACE during the moment belongs to the moment (`G.dsimPile`; a stale flag
+    heals itself on the next tap so the panel can never be stranded; if `TDJump.begin` throws or cannot draw, the old automatic recovery runs). 🖐 Ball Hawk gear widens the green zone
+    (12% → 22%) and the panel says so — `TDJump.begin` gained a `perk` line option for that. ⚠️ **IT MUST NOT CHANGE HOW OFTEN YOU TAKE THE BALL AWAY.** v4.28's ordinary thumb (40% green /
+    30% close / 30% off) recovers **57.5%**, so the chance of a fumble is multiplied by **1/0.575 = 1.74** (`TDFallOn.FREQ`) — Ball Hawk, the defense you called and the weather go through the
+    same factor, so they are worth what they were. ⚠️ **THE FIRST CUT FAILED THE MEASUREMENT.** A lost recovery was "they fall on it, no gain, the down is gone". Over 60,000 drives of the
+    real `DefenseSim` (all 32 opponents, expected points at 0.058 a yard, the tipped ball's own numbers in) takeaways were level (15.07 vs 15.09 per 100) but **their scoring fell from 1.387 to
+    1.349 points a drive** (−2.7%, 2.4 standard errors): the extra fumbles it took to keep takeaways level were ordinary runs before, and a dead down costs a drive far more than its yards. So a
+    lost recovery is now **the normal run it was** (`ordinaryRun()`, built up front — same yards, same stuffs and losses, "FUMBLE — it bounces right back to them. Run for 5 yards."; on 4th down
+    it can still convert). **80,000 drives each: takeaways 15.0 → 14.8 per 100 (fumble takeaways 4.17 → 4.04), their scoring 1.391 → 1.391 points a drive, your margin −0.519 → −0.524 (SE 0.010).**
+    Loose balls happen about 7 per 100 drives (about one a game; 4.2 fumbles before). By thumb (25,000 drives, fumble takeaways per 100): never taps **2.24** (30% recovered — ignoring it costs two in
+    five, never all) · ordinary 4.04 · careful **4.97** (70%) · perfect **5.80** (79%). A forced fumble is credited in the 📊 box score whether you or they recovered it (`noteDefense`: `r:'fum'` or
+    `tag:'fumlost'`). Verified in the real game: a forced run-fumble put the panel up with nothing applied (down/spot unchanged), stray taps and a habit SPACE at ~100ms did nothing, a green tap
+    with a winning roll ended the drive "FUMBLE — YOUR BALL!" (spot taken at the line: your ball on their 40) and a full real drive → banner → your first down in `presnap` with both panels hidden;
+    a losing roll left them 3rd & 2 at their 45; 4th-down lose → "STOPPED ON DOWNS — YOUR BALL!"; never tapping settles itself in about 2.4s; a throwing `TDJump.begin` fell back to the old
+    recovery; at 375×812 the panel sits at the top over the dimmed card with the log line visible below the field map.
   - **🛑 v4.42 — STOP THE TWO-POINT TRY (Round 17, pick ④, `src/goalline.js` = `window.TDGoalLine`, no save).** After a touchdown the computer went for two on a flat
     25% and then converted on a flat 45% (`cpuDriveEnd()`), with no input from you at all — the biggest goal-line stand in the sport and you were a spectator. Now when
     they go for two the banner says "CHI GO FOR TWO!", the field holds still and you get the same timing panel as 🙌 Jump Ball and the tipped ball from the defense's side
