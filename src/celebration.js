@@ -109,7 +109,7 @@
   // say SACK, not "Raise the Roof!"); the big emoji and the confetti are yours.
   const SPLASH = {
     sack: 'SACK!', int: 'PICKED OFF!', fum: 'FUMBLE — YOURS!',
-    stop: 'STOPPED ON DOWNS!', block: 'BLOCKED!',
+    stop: 'STOPPED ON DOWNS!', block: 'BLOCKED!', knock: 'KNOCKED DOWN!',
   };
   function splash(kind) { if (SPLASH[kind]) play(SPLASH[kind]); }
 

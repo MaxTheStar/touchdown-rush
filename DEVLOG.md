@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.43 — cache-buster is `?v=215` in `index.html`.
+- **Version:** v4.44 — cache-buster is `?v=216` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,10 +218,34 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
     ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try **v4.42 ✅** · ⑤🙌 Fall On It **v4.43 ✅** ·
-    ⑥🙏 Knock It Down · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
+    ⑥🙏 Knock It Down **v4.44 ✅** · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🙏 v4.44 — KNOCK IT DOWN (Round 17, pick ⑥, `src/knockdown.js` = `window.TDKnock`, no save).** v4.37 gave YOU the Hail Mary; the computer never throws one — with its clock down
+    to the last few seconds it ran one more ordinary play and the period ended on the next tap. Now it is **the offense's own rule asked from their side**: `TDKnock.advise()` is
+    `TDHail.advise()` called with the computer as "my" (verified identical over 60,000 random contexts, plus twelve hand-written cases: the half at any score, the game only when they
+    trail by 1–8, ≥25 yards out, clock 0<c≤12, never overtime, never a stopped clock, never Q1/Q3). On that snap `DefenseSim.tap()` does not call `play()`: the line under the field map
+    says "🙏 HAIL MARY! :06 left in the game — everybody runs for the end zone…", a beat later (900ms, taps swallowed) the same timing panel as 🙌 Jump Ball / 🙌 Fall On It drops in
+    ("🙏 HAIL MARY! They heave it! Tap as the ball comes down to knock it away.", marker 🖐) and what you did finishes the play through the ordinary `apply()`: a catch is a touchdown
+    (`y = their yards to go`, so their six, the try and the 🛑 goal-line moment all run as always), a ball you stop is **knocked down (75%) or intercepted in your end zone (25%, a touchback
+    at your own 20)**, the mirror of the offense's "knocked down or picked off". ⚠️ **ODDS = THE OFFENSE'S, FLIPPED.** Offence: perfect timing 24%, ignoring it 4%. Defence: they catch it
+    **6% / 14% / 24% / 24%** (green / close / early / late) × the SAME distance fade (`TDHail.factorFor`: 1.0 inside 45 yards, 0.45 at 95). An ordinary thumb (40/30/30) lets them catch 13.8%,
+    **11.5% at 60 yards — one in nine, exactly what your own Hail Mary is there**; never tapping 20%, careful 7.8%, perfect 5.0% (TDJump never lets a stop pass 95%). **🛑 PREVENT (v4.25) finally
+    does something on the one snap it exists for**: armed PREVENT ×0.65 on their catch chance, armed ZONE ×0.85, man/blitz/none ×1 (ordinary thumb at 60 yards: 11.5% → 7.5% / 9.8%); the
+    panel says "🛑 Your prevent is deep." 🖐 Ball Hawk gear widens the green zone like everywhere else (`perk` line). **IT IS RARE ON PURPOSE.** Measured with the REAL `DefenseSim` and its real clock
+    (a simple model of your own drives: 32s a play, 12s on an incompletion, ~5.5 plays a drive; 20,000 halves each): a Hail Mary fires in **22% of halves** (the computer has to be on
+    offence with the clock under 12s); they score on it **12.8% (ordinary) · 21.0% (never taps) · 8.0% (careful) · 5.3% (perfect)** = 2.84 / 4.76 / 1.80 / 1.17 touchdowns per 100 halves. Add the end of
+    the game (they must also be behind by one to eight, about a fifth of the time): **about one game in four, and it costs an ordinary thumb ≈ 0.03 touchdowns ≈ 0.2 points a game** —
+    it is a moment, not a balance change (unlike v4.43 there was no roll to replace: the computer simply never threw one). Box score: a knocked-down hail is always a pass defended
+    (`noteDefense`: `tag:'hail'`), a caught one tackled nobody (`apply()` skips the credit), a pick is an interception; `celebration.js` gained a `knock` splash ("KNOCKED DOWN!") and the
+    fanfare plays. `takeawaySpot()` special-cases a hail pick (touchback at the 20, not "your ball on your own 27"). ⚠️ NOT-HANG: a flag older than 6s heals itself on the next tap
+    (`HAIL_STALE_MS`), a `TDJump.begin` that throws or cannot draw decides the ball as if you had ignored it, a beat left over from an older Hail Mary can never start a newer one's moment
+    (`seq`), and `start()`/`beginGame` cancel everything. Verified in the real game: Q2 :08 (they trail 3–14) → the beat line, three stray taps did nothing, the panel came up at ~0.9s;
+    never tapping settled itself as a pick and the next tap ended the half (`state 'qbreak'`, quarter 3, a fresh clock); a green tap with a stop roll → "BATTED AWAY! … That is the half."; with
+    a catch roll → "TOUCHDOWN" (spot 100); Q4 :06 trailing 3 with PREVENT armed (it was offered, and `TDKnock.begin` received `call:'prevent'`) → "🛑 PREVENT · 🙏 BATTED AWAY! … That is the game!";
+    Q4 :06 trailing 3 with a catch → +7 and `state 'gameover'` after the banner (10–14, 0 errors); at 375×812 the panel sits at the top over the dimmed card with the Hail Mary line, the call
+    buttons and PREVENT visible below it.
   - **🙌 v4.43 — FALL ON IT (Round 17, pick ⑤, `src/fallon.js` = `window.TDFallOn`, no save).** When the computer fumbled, `DefenseSim.play()` returned "FUMBLE! You
     recovered it!" and the drive ended in your favour — a 100% recovery, where the real number is nearer half, and you never touched it. Now a fumble is a **loose ball** and you play
     it: the same timing panel as 🙌 Jump Ball / the tipped ball / 🛑 the goal-line stand ("🙌 FALL ON IT! The ball is loose! Tap as it gets to your hands." — marker 🙌, the log line

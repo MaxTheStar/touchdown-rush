@@ -3923,6 +3923,7 @@ const DefenseSim = (function () {
     G.dsimEnding = false; G.dsimPending = null;
     G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 no tipped ball left over from the last drive
     if (G.dsimPile) { G.dsimPile = null; if (window.TDJump) TDJump.cancel(); }   // 🙌 …or a loose one
+    if (G.dsimHail) { G.dsimHail = null; if (window.TDKnock) TDKnock.cancel(); }  // 🙏 …or a Hail Mary in the air
     if (window.TDKneel) TDKneel.clear();                        // ⏱ …or a timeout row
     document.body.classList.remove('kicking');
     document.body.classList.add('returning');
@@ -4031,7 +4032,7 @@ const DefenseSim = (function () {
     // ⚠️ BEFORE the branches below, because every one of them can end the drive
     // and the takeaway on a drive-ending play has to find its man already credited.
     // (A kneel is nobody's tackle.)
-    if (window.TDGameStats && TDGameStats.noteDefense && p.tag !== 'kneel') TDGameStats.noteDefense(p);
+    if (window.TDGameStats && TDGameStats.noteDefense && p.tag !== 'kneel' && !(p.tag === 'hail' && p.r === 'gain')) TDGameStats.noteDefense(p);   // (a kneel is nobody's tackle; neither is a Hail Mary caught in the end zone)
     if (p.r === 'int' || p.r === 'fum') {
       if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);
       splash(p.r);
@@ -4085,6 +4086,8 @@ const DefenseSim = (function () {
   // "on your own 38" / "at midfield" / "on their 41" — from YOUR side of the ball
   function yourLine(mine) { return mine === 50 ? 'at midfield' : mine < 50 ? 'on your own ' + mine : 'on their ' + (100 - mine); }
   function takeawaySpot(kind, p) {
+    // 🙏 a Hail Mary that comes down in YOUR hands came down in your end zone: a touchback, wherever they heaved it from
+    if (p && p.tag === 'hail' && kind === 'int') { G.turnoverSpotYou = TAKEAWAY_TOUCHBACK; return ' <b>Touchback</b> — your ball at your own ' + TAKEAWAY_TOUCHBACK + '.'; }
     let at = G.cpu.spot;                                          // their yards from THEIR goal: the line the play started on
     if (kind === 'int') at += Phaser.Math.Between(INT_DEPTH_MIN, INT_DEPTH_MAX);
     let mine = Math.round(100 - at);                              // …which is this many yards from YOUR goal
@@ -4116,6 +4119,13 @@ const DefenseSim = (function () {
     // here — but SPACE reaches the game by another road, and it must press the moment, never start the next play.
     // (If nothing is actually live — something cancelled the moment — the flag is stale: clear it and carry on, never strand the panel.)
     if (G.dsimPile) { if (window.TDJump && TDJump.active()) { TDJump.press(); return; } G.dsimPile = null; }
+    // 🙏 …and so does a Hail Mary in the air (knockdown.js): the beat before the moment swallows every tap, the moment itself takes them.
+    // (A flag older than the whole thing can possibly take is stale — clear it and carry on, never strand the panel.)
+    if (G.dsimHail) {
+      if (window.TDJump && TDJump.active()) { TDJump.press(); return; }
+      if (performance.now() - G.dsimHail.t0 < HAIL_STALE_MS) return;
+      G.dsimHail = null;
+    }
     // A drive just ended? This tap hands the ball back.
     if (G.dsimEnding) {
       const pk = G.dsimPending; G.dsimEnding = false; G.dsimPending = null;
@@ -4169,6 +4179,11 @@ const DefenseSim = (function () {
       return;
     }
     const fm = window.TDFormation ? TDFormation.take() : null;     // 🧠 this snap's look + what it really was
+    // 🙏 KNOCK IT DOWN (knockdown.js): the very last snap of a half, or of a game they are losing by a score or less, from 25+ yards
+    // out, is a Hail Mary — and you get the moment. It is the offense's own rule (`TDHail.advise`) asked from their side. ⚠️ AFTER the
+    // false-start check (a false start is not a snap) and the formation read (that look belonged to a play they are not running).
+    const hail = window.TDKnock ? TDKnock.advise(cpuHailContext()) : null;
+    if (hail) { startCpuHail(hail); return; }
     const played = play(tw, fm);
     if (fm && fm.bluff) {                                                  // 🎭 say so when they lied
       const pre = TDFormation.bluffLine(fm);
@@ -4197,6 +4212,30 @@ const DefenseSim = (function () {
       return;
     }
     apply(played);
+  }
+
+  // 🙏 What the Hail Mary rule needs to know, from THEIR side of the ball: `my` is THEM, `opp` is YOU, `spot` is their own-goal yard line.
+  const HAIL_STALE_MS = 6000;     // the beat (0.9s) + the flight (1.65s) + the result (0.65s) is about 3.2s; a flag older than 6s is a leftover
+  function cpuHailContext() {
+    return { down: G.cpu.down, quarter: G.quarter, quarters: NUM_QUARTERS, clock: G.clock, my: G.oppScore, opp: G.score,
+             spot: G.cpu.spot, overtime: G.overtime, stopped: G.clockStopped, twoPt: false };
+  }
+  // They heave it. The panel says so, a beat later the moment drops in, and whatever you did finishes the play through `apply()` —
+  // so the box score, the drive chart, the defense you called and every ending (their touchdown and try, the half, the final whistle)
+  // are exactly the ones an ordinary play uses.
+  function startCpuHail(h) {
+    G.dsimHail = { t0: performance.now() };
+    const lastPeriod = G.quarter >= NUM_QUARTERS;
+    const call = () => (window.TDDefense && TDDefense.armed ? TDDefense.armed() : null);   // read when the panel appears: the label and the effect always agree
+    const hawk = (window.TDShop && TDShop.hawkBoost) ? TDShop.hawkBoost() : 0;
+    render(TDKnock.line(G.clock, lastPeriod));
+    TDKnock.begin({ dist: h.dist, call, hawk }, won => {
+      if (!G.dsimHail || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was in the air
+      G.dsimHail = null;
+      const end = TDKnock.ending(won, h.dist, lastPeriod);
+      if (end.r === 'inc') { if (window.TDSound) TDSound.sting('td'); splash('knock'); }   // you knocked it down: the fanfare and your move
+      apply(end);
+    });
   }
 
   function wire() {
@@ -4856,6 +4895,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDFormation) TDFormation.newGame(); // 🧠 …or leftover formation
   G.dsimTip = null; if (window.TDTipped) TDTipped.cancel();   // 🙌 …or a tipped ball hanging in the air
   G.dsimPile = null;                                          // 🙌 …or a loose ball (the TDJump.cancel() below clears its panel)
+  G.dsimHail = null; if (window.TDKnock) TDKnock.cancel();    // 🙏 …or a Hail Mary in the air
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble
