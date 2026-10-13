@@ -3045,7 +3045,8 @@ function tickPeriodAtBoundary() {
   }
   // End of the 4th quarter (or an overtime period).
   if (G.score !== G.oppScore) return 'gameover';         // somebody's ahead → final
-  // Still tied → (keep playing) sudden-death overtime: the next score wins.
+  // Still tied → (keep playing) overtime: both teams get the ball unless somebody scores a touchdown first.
+  if (!G.overtime && window.TDOT) TDOT.start();          // 🔀 a fresh overtime (not the next 2:00 period of one)
   G.overtime = true;
   G.clock = OT_SECONDS;
   showBanner('OVERTIME!', true);
@@ -3054,6 +3055,18 @@ function tickPeriodAtBoundary() {
 }
 
 function quarterLabel() { return G.overtime ? 'OT' : 'Q' + G.quarter; }
+
+// 🔀 BOTH TEAMS GET THE BALL (overtime.js) — is an overtime game over? With the module missing it is the old rule:
+// any lead ends it. The "they get a drive" line is said the first time somebody leads but the game goes on.
+function otDecided() {
+  if (!G.overtime || G.score === G.oppScore) return false;
+  if (!window.TDOT) return true;
+  const margin = G.score - G.oppScore;
+  if (TDOT.decided(margin)) return true;
+  const line = TDOT.note(margin);
+  if (line) { sayComment(line); showBanner('OVERTIME — THEY GET A DRIVE', false); }
+  return false;
+}
 function formatClock(sec) {
   sec = Math.max(0, Math.round(sec));
   const m = Math.floor(sec / 60), s = sec % 60;
@@ -3794,7 +3807,7 @@ function redPlayEnd(result, customMsg, byYou) {
 // Between red plays: settle the clock/quarter (same boundaries as your
 // drives), let them make their 4th-down choice, then line up the next play.
 function defenseNextPlay() {
-  if (G.overtime && G.score !== G.oppScore) { endGame(); return; }
+  if (otDecided()) { endGame(); return; }
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
   if (t === 'halftime') { startBreak('half', secondHalfKick()); return; }  // 🪙 whoever did NOT get the opening kick
@@ -3952,7 +3965,8 @@ function cpuDriveEnd(kind, customMsg) {
 function finishCpuDrive() {
   G.cpu = null;
   document.body.classList.remove('returning');
-  if (G.overtime && G.score !== G.oppScore) { endGame(); return; }  // sudden death
+  if (G.overtime && window.TDOT) TDOT.driveEnded('cpu');             // 🔀 their possession is over
+  if (otDecided()) { endGame(); return; }  // sudden death (🔀 overtime.js: after both have had the ball, or on a touchdown)
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
   if (t === 'halftime') { G.turnoverSpotYou = null; G.pickCaught = false; startBreak('half', secondHalfKick()); return; }  // 🪙 see secondHalfKick
@@ -5021,6 +5035,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.pendingXP = false; G.twoPtTry = false;      // 🏈 no leftover try from a past game
   G.quarter = 1; G.clock = QUARTER_SECONDS;
   G.overtime = false; G.gameOver = false;
+  if (window.TDOT) TDOT.reset();         // 🔀 no overtime possessions yet
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
   G.trickAvailable = true; G.trickArmed = false; G.trickActive = false;   // 🎩 a fresh trick play each game
@@ -5863,8 +5878,9 @@ function endReplay() {
 // ============================================================
 function startNextPlay() {
   // This is a dead-ball boundary: settle the game clock / quarter first.
-  // Sudden death — a lead in overtime ends the game right here.
-  if (G.overtime && G.score !== G.oppScore) { endGame(); return; }
+  // Sudden death — a lead in overtime ends the game right here (🔀 overtime.js: a touchdown, or once both teams have had the ball).
+  if (G.overtime && G.next && G.next.fresh && window.TDOT) TDOT.driveEnded('you');   // 🔀 your possession is over
+  if (otDecided()) { endGame(); return; }
   const t = tickPeriodAtBoundary();
   if (t === 'gameover') { endGame(); return; }
 
