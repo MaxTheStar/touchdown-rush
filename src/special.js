@@ -44,7 +44,19 @@
   // ---- ⚡ The onside kick -------------------------------------------------
   // Only offered when a real coach would think about it: you're behind, or it's
   // late in the game and you need the ball back.
-  function onsideOffered(myScore, oppScore, quarter) {
+  //
+  // ⚠️ …AND ONLY WHEN THERE IS A KICKOFF TO GAMBLE ON. `ctx` = { clock, quarters, overtime } (all optional).
+  // A touchdown or field goal as the clock hits zero in the LAST period ends the game, one at the end of the
+  // HALF starts the second half with the kickoff the opening toss already decided, and a score in sudden-death
+  // overtime ends it on the spot — in every one of those the panel used to appear anyway and park the game on
+  // "⚡ ONSIDE KICK?" for a kickoff that was never going to be kicked. Found by the first Hail Mary that won a game
+  // (v4.38): any score on the last snap of Q4 hit it, because the rule only asked "is it Q4?".
+  function onsideOffered(myScore, oppScore, quarter, ctx) {
+    if (ctx) {
+      const quarters = ctx.quarters || 4;
+      if (ctx.overtime) return false;
+      if (ctx.clock <= 0 && (quarter >= quarters || quarter * 2 === quarters)) return false;
+    }
     return (myScore < oppScore) || quarter >= 4;
   }
   function rollOnside() { return Math.random() < ONSIDE_CHANCE; }

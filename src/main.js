@@ -2610,7 +2610,7 @@ function onKickDone(result) {
   // while the panel is up, then let the game roll on with whatever you chose.
   const justScored = (G.kickKind === 'xp' && result.made) || (result.mode === 'fg' && result.made);
   if (justScored && window.TDSpecial &&
-      TDSpecial.onsideOffered(G.score, G.oppScore, G.quarter)) {
+      TDSpecial.onsideOffered(G.score, G.oppScore, G.quarter, { clock: G.clock, quarters: NUM_QUARTERS, overtime: G.overtime })) {
     G.deadUntil = Number.MAX_SAFE_INTEGER;      // hold here until you answer
     TDSpecial.askOnside(choice => {
       if (choice === 'onside' && offense && offense[0]) {

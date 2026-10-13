@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.37 — cache-buster is `?v=209` in `index.html`.
+- **Version:** v4.38 — cache-buster is `?v=210` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -232,6 +232,15 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     of v4.28's tipped ball and v4.37; (3) the older gap from Round 15 is still open: a 1-player TAKEAWAY gives you a kickoff return from your own 8
     instead of the ball where it was taken (`G.turnoverSpotYou` is never set from the sim).
   <!-- R16-ENTRIES: newest first -->
+  - **🛠 v4.38 — NO ONSIDE KICK WHEN NO KICKOFF IS COMING (off-board bug fix, `src/special.js` + one argument in `src/main.js`).** Found the first time a
+    🙏 Hail Mary won a game in a natural run (Q4, 17–21, 40s left → a run burned 32s → the game offered the prayer → touchdown → extra point): instead of
+    ending, the game parked on **"⚡ ONSIDE KICK? Risky!…"** for a kickoff that was never going to be kicked. Cause: `TDSpecial.onsideOffered(my, opp, quarter)`
+    was `my < opp || quarter >= 4` — "is it Q4?" — so ANY made kick or touchdown+try on the last snap of the game opened it (and so did one at the end of the
+    half, and a score in sudden-death overtime). It is older than this round (v1.x); the Hail Mary just made the situation easy to reach. `onsideOffered` now takes an
+    optional `{ clock, quarters, overtime }` and answers false when the clock is at 0 in the last period or at the half, or in overtime. `main.js` passes it at the
+    one call site. Swept 250 quarter × clock × score × overtime combinations against an independent restatement of the rule: 0 wrong; the old two-argument call
+    behaves exactly as before; a trailing team with time left (Q4, 30s) is still offered it. Real chain re-run: 17–21, Hail Mary touchdown (23), extra point good (24),
+    the onside panel never shown, `gameover` → "SEAHAWKS WIN!".
   - **🙏 v4.37 — THE HAIL MARY (Round 16, pick ⑧, `src/hailmary.js` = `window.TDHail` + the film in `src/main.js`: `hailMary()` / `hailThrow()` / `hailArrive()` /
     `hailResolve()`; no save).** On the very last snap of a half — or of a game you are losing by 1–8 — a gold 🙏 HAIL MARY button appears under ⚡ POWER-UPS
     (right edge, PITCH's slot: pitch is live-only and this is pre-snap-only, so they are never up together; the SPIKE button on the left can be up at the
