@@ -106,15 +106,16 @@
         '<div class="jb-sub">' + (o.sub || 'Tap as the ball gets to his hands.') + '</div>' +
         '<div class="jb-track"><i class="jb-yellow" style="left:' + left + '%;width:' + wy + '%"></i>' +
           '<i class="jb-green" style="left:' + lg + '%;width:' + wg + '%"></i>' +
-          '<span class="jb-hands" style="left:' + (CENTER * 100) + '%">🙌</span>' +
-          '<b class="jb-ball" id="jb-ball">🏈</b></div>' +
+          '<span class="jb-hands" style="left:' + (CENTER * 100) + '%">' + (o.icon || '🙌') + '</span>' +
+          '<b class="jb-ball" id="jb-ball">' + (o.ball || '🏈') + '</b></div>' +
         '<div class="jb-res" id="jb-res">&nbsp;</div>' +
         (bonus > 0 ? '<div class="jb-perk">🧤 Good hands: a wider window</div>' : '') +
       '</div>';
     el.style.display = 'flex';
   }
 
-  // Start the moment. `opts` = { bonus, mult } and, for 🙏 THE HAIL MARY, optionally { title, sub, winText, success, zoneBonus, low }
+  // Start the moment. `opts` = { bonus, mult } and, for 🙏 THE HAIL MARY and 🛑 THE GOAL-LINE STAND (the defense's version, goalline.js),
+  // optionally { title, sub, winText, success, zoneBonus, low, icon, ball } (`icon` is the marker the ball is drifting toward)
   // (its own panel text and its own win-chance table; `zoneBonus` widens the green zone WITHOUT adding to the odds, because
   // an additive bonus swamps a table whose biggest number is 24%). `done(won, grade)` is called once, after a short
   // beat so you can see what happened. Returns false if there is nowhere to draw it (the caller

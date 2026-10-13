@@ -3763,12 +3763,14 @@ function cpuDriveEnd(kind, customMsg) {
   freezeEveryone();
   G.state = 'dwait';                 // hold everything while the banner lands
   const abbr = G.oppTeam.abbr;
-  let msg, pts = 0, big = false;
+  let msg, pts = 0, big = false, goalLine = false;
   if (kind === 'touchdown')      { big = true; pts = 6;   // the touchdown itself is 6
                                    if (window.TDSound) TDSound.sting('lose');
                                    // Then the CPU takes its try — usually a kick, sometimes bold.
                                    if (Math.random() < 0.25) {                 // 🏈 go for two!
-                                     if (Math.random() < 0.45) { pts += 2; msg = abbr + ' 2-POINT CONVERSION!  +8'; }
+                                     // 🛑 …and now YOU play it (goalline.js): the flat 45% below is what the moment REPLACES
+                                     if (window.TDGoalLine && TDGoalLine.ready()) goalLine = true;
+                                     else if (Math.random() < 0.45) { pts += 2; msg = abbr + ' 2-POINT CONVERSION!  +8'; }
                                      else                      {             msg = abbr + ' NO GOOD ON 2  +6'; }
                                    } else {                                    // kick the extra point
                                      if (Math.random() < 0.94) { pts += 1; msg = abbr + ' TOUCHDOWN  +7'; }
@@ -3793,12 +3795,38 @@ function cpuDriveEnd(kind, customMsg) {
                                    if (window.TDChallenge) TDChallenge.bump('takeaway');
                                    if (window.TDGameStats) TDGameStats.noteTakeaway(); }  // 🪙📈📋⭐ takeaway
 
-  G.oppScore += pts;
-  if (window.TDDrives) TDDrives.endOpp(kind, customMsg || msg, pts);   // 📋 how their drive ended
-  updateHUD();
-  if (window.TDAchieve) TDAchieve.oppScored(G.oppScore - G.score);   // 🏅 track the biggest hole (for the Comeback badge)
-  showBanner(msg, big);
-  G.scene.time.delayedCall(1700, finishCpuDrive);
+  // The tail of every drive: put the points on the board, write the drive down, show the line, hand the ball back.
+  const finish = () => {
+    G.oppScore += pts;
+    if (window.TDDrives) TDDrives.endOpp(kind, customMsg || msg, pts);   // 📋 how their drive ended
+    updateHUD();
+    if (window.TDAchieve) TDAchieve.oppScored(G.oppScore - G.score);   // 🏅 track the biggest hole (for the Comeback badge)
+    showBanner(msg, big);
+    G.scene.time.delayedCall(1700, finishCpuDrive);
+  };
+  // 🛑 STOP THE TWO-POINT TRY: they are going for it, the field holds still, and your timing decides whether it works. Until it is
+  // decided nothing is on the board but the six they just scored; `finish` runs from the moment's own callback (which cannot hang —
+  // the panel settles itself after about a second and a half).
+  if (goalLine) {
+    showBanner(abbr + ' GO FOR TWO!', true);
+    sayComment(pick(['They are going for two!', 'No kick — they go for it!', 'A two-point try!']));
+    G.scene.time.delayedCall(1100, () => {
+      const drawn = TDGoalLine.begin(stopped => {
+        if (stopped) {
+          msg = abbr + ' TRY STOPPED!  +6';
+          if (window.TDSound) TDSound.sting('td');
+          if (window.TDCeleb && TDCeleb.splash) TDCeleb.splash('stop');           // 🕺 the defense dances
+        } else { pts += 2; msg = abbr + ' 2-POINT CONVERSION!  +8'; }
+        finish();
+      });
+      if (!drawn) {                                                               // nowhere to draw it: the old coin, exactly as it was
+        if (Math.random() < 0.45) { pts += 2; msg = abbr + ' 2-POINT CONVERSION!  +8'; } else msg = abbr + ' NO GOOD ON 2  +6';
+        finish();
+      }
+    });
+    return;
+  }
+  finish();
 }
 
 // Ball back to you: settle the clock/quarter at this possession boundary, then

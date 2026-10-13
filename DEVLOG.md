@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.41 — cache-buster is `?v=213` in `index.html`.
+- **Version:** v4.42 — cache-buster is `?v=214` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -217,11 +217,23 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     `4FpskZgsaoba7A1BYVh7BY`. **Theme: the other side of the ball** — everything you can do on offense, mirrored for defense and returns (the
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
-    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try · ⑤🙌 Fall On It ·
+    ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try **v4.42 ✅** · ⑤🙌 Fall On It ·
     ⑥🙏 Knock It Down · ⑦🏃 The Pick-Six Return · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🛑 v4.42 — STOP THE TWO-POINT TRY (Round 17, pick ④, `src/goalline.js` = `window.TDGoalLine`, no save).** After a touchdown the computer went for two on a flat
+    25% and then converted on a flat 45% (`cpuDriveEnd()`), with no input from you at all — the biggest goal-line stand in the sport and you were a spectator. Now when
+    they go for two the banner says "CHI GO FOR TWO!", the field holds still and you get the same timing panel as 🙌 Jump Ball and the tipped ball from the defense's side
+    ("🛑 GOAL-LINE STAND! They go for two! Tap as the ball is snapped to stuff them at the line.", the marker is a 🛑): **right on the snap stops them 76%, close 54%, early/late 30%**.
+    ⚠️ **IT REPLACES THE 45%, IT DOES NOT ADD A SECOND ROLL.** v4.28's ordinary thumb (40% green / 30% close / 30% off) stops **55.6%**, so they convert **44.4%** — the coin it
+    replaced was 45%. By tap error (40,000 taps each, pure): never taps 29.7% stopped · mashing ±300ms 47.3 · ordinary ±130ms 61.5 · careful ±70ms 70.7 · perfect ±25ms 76.5.
+    Ignoring the moment still stops three in ten (the panel settles itself after about a second and a half), so it is never a punishment for not playing. Their 25% go-for-two rate
+    and the kick they take the other three times in four are untouched. Until the moment is decided only the six is on the board; `cpuDriveEnd()`'s tail is now a local `finish()`
+    that either runs at once (every other ending) or from the moment's callback; a stopped try says "CHI TRY STOPPED!  +6", plays the 🕺 stop dance (`TDCeleb.splash('stop')`) and
+    the fanfare; a converted one says "2-POINT CONVERSION!  +8". `TDJump.begin` gained `icon` (the marker the ball drifts toward) and `ball`. If there is nowhere to draw it the old
+    coin runs exactly as before (verified with `TDJump` removed: 0.2 < 0.45 → "+8"). Verified in the real game: stuffed (tap at 1000ms, winning roll → opp 0 → 6), converted (never
+    tap, losing roll → 8), and a kick (no panel, "TOUCHDOWN  +7").
   - **🏈 v4.41 — TOUCHBACK OR RETURN (Round 17, pick ③, `src/touchback.js` = `window.TDTouchback`, no save).** Every kickoff against you came down in the same
     place — your returner on his own 8-yard line — and you always ran it out; there was no touchback on a kick TO you at all (they exist only for your own kicks,
     `fieldpos.js`). Now **38% of their kickoffs sail into the end zone** (`P_DEEP`; the ball is caught 1–8 yards deep, uniformly — measured 37.9% over 200,000 rolls).
