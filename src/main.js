@@ -846,6 +846,7 @@ function snap(time) {
   G.dashUntil = 0;            // no leftover dash from the last play
   G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
+  if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
@@ -1811,6 +1812,7 @@ function routeVelocity(o, depth, side) {
     case 'wheel':    return depth < 26  ? { vx: S * 0.90, vy: -S * 0.16 } : { vx: S * 0.14, vy: -S * 0.95 };
     case 'flat':     return { vx: S * 0.82, vy: -S * 0.16 };                         // RB checkdown
     case 'hold':     return { vx: 0, vy: 0 };                                        // 🎭 the DRAW: the back stays home
+    case 'screen':   return Math.abs(o.s.x - o.startX) < 84 ? { vx: OUT * S * 0.85, vy: 0 } : { vx: 0, vy: 0 };   // 🧱 the SCREEN: out to the flat, then wait
     case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
     default:         return { vx: 0, vy: -S };                                        // 'streak'
   }
@@ -1930,6 +1932,7 @@ function routePath(o) {
     case 'wheel':    return [{ x: sx, y: sy }, { x: clampX(sx + 90), y: up(20) }, { x: clampX(sx + 120), y: up(230) }];
     case 'flat':     return [{ x: sx, y: sy }, { x: clampX(sx + 95), y: up(18) }];
     case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
+    case 'screen':   return [{ x: sx, y: sy }, { x: clampX(sx + OUT * 84), y: sy }];  // 🧱 the SCREEN: out to the flat and wait
     case 'swing': {  const ox = clampX(sx + 90);
                      return [{ x: sx, y: sy }, { x: ox, y: up(20) }, { x: clampX(ox + 35), y: up(210) }]; }
     default:         return [{ x: sx, y: sy }, { x: sx, y: up(300) }];   // 'streak' = straight up
@@ -1945,12 +1948,14 @@ function routePath(o) {
 // ============================================================
 function updateLine() {
   const qb = offense[0].s;
+  if (window.TDScreen) TDScreen.update();   // 🧱 the screen's two escorts run their own route
   const rushers = defense.filter(d => d.role === 'DL');
   // 🛡 PASS PROTECTION (protect.js) — on MAX PROTECT the running back stays in,
   // so the line is four men instead of three. ⚖️ BALANCED adds nobody, which is
   // exactly what this line did before the file existed.
   const linemen = offense.filter(o =>
-    (o.role === 'OL' || (window.TDProtect && TDProtect.blocking(o))) && o !== G.ballCarrier);
+    (o.role === 'OL' || (window.TDProtect && TDProtect.blocking(o))) && o !== G.ballCarrier
+    && !(window.TDScreen && TDScreen.escorting(o)));          // 🧱 …and a screen's escorts let their men go
   const claimed = new Set();
 
   for (const ol of linemen) {
@@ -2101,6 +2106,9 @@ function updateDefense(elapsed) {
     // just loses speed for a beat — NOT the flea flicker's bite, which sends them BACKWARD toward
     // the line and opened receivers by nine yards when it was first tried here.
     if (qbHasBall && d.role !== 'DL' && G.scene.time.now < G.fakeBiteUntil) speed *= G.fakeBiteSlow;
+
+    // 🧱 THE SCREEN (screen.js): a defender one of the two escorts has a hand on keeps only a blocked rusher's speed
+    if (window.TDScreen && TDScreen.sealed(d)) speed *= diff().rushSlow;
 
     steer(d.s, tx, ty, speed);
   }
@@ -6061,6 +6069,7 @@ function setupPlay(next) {
   if (window.TDMotion) TDMotion.newPlay();     // 👀 …and a fresh man available to send in motion
   if (window.TDHard) TDHard.newPlay();         // 🗣 …and a fresh hard count
   if (window.TDDraw) TDDraw.newPlay();         // 🎭 …and the draw is not called until you call it
+  if (window.TDScreen) TDScreen.newPlay();     // 🧱 …nor the screen
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -6548,6 +6557,7 @@ function updateHUD() {
   if (window.TDMotion) TDMotion.tick();
   if (window.TDHard) TDHard.paint();           // 🗣 the hard-count button (pre-snap only)
   if (window.TDDraw) TDDraw.paint();           // 🎭 …and the draw button
+  if (window.TDScreen) TDScreen.paint();       // 🧱 …and the screen button
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
