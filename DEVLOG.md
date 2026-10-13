@@ -237,7 +237,12 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     across the tee at y≈430–450 and my man at (322,721); a bot running straight at it recovered **4 of 4 in the real loop** (my ball at my 49–53, "🙌 YOU RECOVERED IT!", clock 80 → 72) and standing still lost (their ball at their 44, "⚡ They recovered it…",
     then their drive began in the defense panel at 1st & 10 on their 44 with 72s left).
     **🎉 ROUND 17 "THE FLIP SIDE BOARD" IS SWEPT 8/8 at v4.46 (`?v=218`).** ①🧎 They Kneel It Out v4.39 · ②📍 Takeaways at the Spot v4.40 · ③🏈 Touchback or Return v4.41 · ④🛑 Stop the Two-Point Try v4.42 · ⑤🙌 Fall On It v4.43 · ⑥🙏 Knock It Down v4.44 ·
-    ⑦🏃 The Pick-Six Return v4.45 · ⑧🙌 The Hands Team v4.46. (End-of-board regression below once it is run.)
+    ⑦🏃 The Pick-Six Return v4.45 · ⑧🙌 The Hands Team v4.46.
+    **End-of-board regression (2026-10-13): 108 modules (108 script tags = 108 `src/*.js`, none missing, none orphaned, every file parses), ONE cache version `?v=218` on all of them, 0 duplicate `window.TD*` globals;
+    56 `.ov` overlays all fit 375×812 with no sideways scroll, and so do this round's four moment panels (Fall On It, Knock It Down with PREVENT + Ball Hawk, the goal-line stand, the low Hail Mary); TWO full games
+    played to the final whistle by an autopilot that taps the defense panel (final 0–8 and 0–3 — both ended by 🧎 They Kneel It Out), the MVP card at game over fits, 0 console errors.** Not in the regression (rare by
+    design, verified by forcing the situation in each pick's own entry): the CPU's Hail Mary, the loose-ball fumble, the pick-six and the onside kick.
+    Open gaps, found and not fixed: landscape phones (812×375) — the left-edge buttons (🧤 THROW IT AWAY, 🧢 FAKE, ⚡ POWER) collide with the D-pad.
   - **🏃 v4.45 — THE PICK-SIX RETURN (Round 17, pick ⑦, `src/pickreturn.js` = `window.TDPickRet`, no save).** In the one-player game an interception was a line of text — "INTERCEPTED — YOUR
     BALL" — and then your own first down (the live pick-six, `startPickSix()`, exists only for two-player defense). Now a pick caught in the field of play is **run back, live**: the tap-through panel gives
     way to the field and you steer the runner with the arrows / D-pad (a swipe dashes) against the other team's seven men; a tackle spots your drive where it happens ("RETURNED 10 YARDS!"), the end zone
