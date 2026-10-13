@@ -1564,12 +1564,36 @@ function resolvePass(wr, x, y) {
     endPlay('incomplete', wxIncompleteMsg());
     return;
   }
-  // ...or catch it and drop it.
+  // ...or catch it and drop it. 🦶 TOE-TAP (toetap.js): near the sideline that roll becomes a moment you play.
+  if (toeTap(wr, wx, wy, gl.dropCut)) return;
   if (Math.random() < DROP_CHANCE - gl.dropCut)  { endPlay('incomplete', 'DROPPED IT!'); return; }
 
   // Clean catch! You now control this receiver.
   catchAndRun(wr, wx, wy, nearestDef > 120 ? pick(['WIDE OPEN!', 'ALL ALONE!', 'Nobody there!'])
                                            : pick(['Nice grab!', 'Caught it!', 'Reception!', 'What a catch!']));
+}
+
+// 🦶 THE TOE-TAP CATCH — an open catch within ~3.5 yards of the sideline holds the field still while you
+// time his feet (toetap.js owns the numbers). It REPLACES the 12% drop roll; if the moment cannot run, that roll happens.
+function toeTap(wr, wx, wy, dropCut) {
+  if (!window.TDToe || !TDToe.near(wx, FIELD_WIDTH)) return false;
+  if (window.TDStar && TDStar.on()) return false;          // 🌟 Superstar mode has its own catch rules
+  const started = TDToe.begin(dropCut, (won) => {
+    if (G.state !== 'jump') return;                        // something else settled it (a new game, say)
+    if (won) {
+      if (window.TDSound) TDSound.sting('coin');
+      catchAndRun(wr, wx, wy, pick(['Both feet down!', 'Toe-tap catch!', 'Tip-toed the sideline!']));
+    } else {
+      sayComment(pick(['One foot out!', 'Just out of bounds!', 'So close — his toe hit the line!']));
+      endPlay('incomplete', 'ONE FOOT OUT!');
+    }
+  });
+  if (!started) return false;
+  G.state = 'jump';
+  freezeEveryone();
+  ballFollow = false;
+  sayComment(pick(['Along the sideline…', 'Can he get both feet in?', 'Toe-tap territory!']));
+  return true;
 }
 
 // Put the ball in a receiver's hands and hand YOU the controls — shared by a
