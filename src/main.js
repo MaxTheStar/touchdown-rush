@@ -2634,7 +2634,7 @@ function onKickDone(result) {
     if (fp) {
       G.turnoverSpotCpu = fp.spot;
       if (result.mode === 'punt' && result.outcome !== 'blocked') {
-        msg += '\n' + (fp.kind === 'touchback' ? 'TOUCHBACK' : fp.kind === 'fair' ? 'FAIR CATCH' : 'RETURNED ' + fp.ret) +
+        msg += '\n' + (fp.kind === 'touchback' ? 'TOUCHBACK' : fp.kind === 'fair' ? 'FAIR CATCH' : fp.kind === 'downed' ? 'DOWNED · NO RETURN' : 'RETURNED ' + fp.ret) +
                ' · THEIR ' + fp.spot;
       }
     }

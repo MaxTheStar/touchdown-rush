@@ -37,6 +37,9 @@
 
   const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
   const TOUCHBACK = 20;       // where they start after a touchback
+  // 🎯 THE POOCH PUNT (Round 18, pick ④): a punt that comes down 3–12 yards short of the goal line is
+  // the coffin-corner kick — high and short, and the gunners are already there. Nobody returns it.
+  const COFFIN_LO = 3, COFFIN_HI = 12;
   const KICK_BACK = 7;        // the holder / punter stands about 7 yards behind the line
   const rint = (lo, hi, rnd) => lo + Math.floor(rnd() * (hi - lo + 1));
 
@@ -66,6 +69,9 @@
       return { spot: TOUCHBACK, kind: 'touchback', ret: 0, landed, text: 'Touchback — they start at their own 20.' };
     }
     const base = clamp(100 - landed, 1, 99);         // their yards from their goal
+    if (base >= COFFIN_LO && base <= COFFIN_HI) {     // 🎯 pinned: downed where it lands, no fair catch to wave for, no return
+      return { spot: base, kind: 'downed', ret: 0, landed, text: 'Downed at their ' + base + ' — no return.' };
+    }
     if (rnd() < fairCatchChance(base)) {
       return { spot: base, kind: 'fair', ret: 0, landed, text: 'Fair catch at their own ' + base + '.' };
     }
@@ -132,7 +138,7 @@
     return { spot, kind: 'return', ret: spot - base, landed, text: 'Returned ' + (spot - base) + ' — they start at their own ' + spot + '.' };
   }
 
-  window.TDFieldPos = { afterPunt, afterBlock, afterMiss, afterKickoff, legYards, fairCatchChance,
+  window.TDFieldPos = { COFFIN_LO, COFFIN_HI, afterPunt, afterBlock, afterMiss, afterKickoff, legYards, fairCatchChance,
                      KICKOFF_FROM, FREE_KICK_FROM,
                      _consts: { TOUCHBACK, KICK_BACK, TB_KICKOFF } };
 })();

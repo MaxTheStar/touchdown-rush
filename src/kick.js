@@ -103,6 +103,7 @@ window.KickGame = (function () {
     boot: false,       // 🏈 a punt OR a kickoff: power only, no aiming, no uprights
     noRush: false,     // 🏈 a kickoff has no rush, so no pocket either
     goalPower: null,   // 🦶 power at which a punt reaches the goal line (above it = touchback)
+    coffin: null,      // 🎯 {lo, hi}: the power band that comes down 3–12 yards short of the goal line (a pooch)
     hud: null, hint: null, distLabel: null, banner: null,
     flight: null,       // the ball-flight tween (so we can stop it)
 
@@ -168,13 +169,18 @@ window.KickGame = (function () {
     // start, and past the goal line it is a touchback — so the power bar shows where
     // that line is. `opts.losYards` is where the ball was snapped, from YOUR goal.
     K.legYds = (K.kicker && window.TDFieldPos) ? TDFieldPos.legYards(K.kicker.leg) : 0;
-    K.goalPower = null; K.toGoal = null;
+    K.goalPower = null; K.toGoal = null; K.coffin = null;
     if (K.boot && opts.losYards != null) {
       K.toGoal = Math.round(100 - opts.losYards);
       // power whose kick just reaches the goal line (a kickoff has its own, longer scale)
       K.goalPower = (K.mode === 'kickoff')
         ? (K.toGoal - KICKOFF_BASE - K.legYds) / KICKOFF_RANGE
         : (K.toGoal - 20 - K.legYds) / MAX_PUNT;
+      // 🎯 THE POOCH PUNT: a punt that lands 3–12 yards short of the goal line is downed where it lands
+      // (fieldpos.js owns the rule). The bar shows where that band is, so you can aim for it.
+      if (K.mode === 'punt' && window.TDFieldPos && K.goalPower > 0) {
+        K.coffin = { lo: K.goalPower - TDFieldPos.COFFIN_HI / MAX_PUNT, hi: K.goalPower - TDFieldPos.COFFIN_LO / MAX_PUNT };
+      }
     }
 
     makeTextures(scene);
@@ -400,6 +406,12 @@ window.KickGame = (function () {
     return Math.round(clamp(20 + K.lockedPower * MAX_PUNT + K.legYds, 12, 80));
   }
 
+  // 🎯 Did this punt come down in the coffin corner? (Same maths as fieldpos.js, off the locked power.)
+  function inCoffin() {
+    return !!(K.mode === 'punt' && K.coffin && !K.blocked && K.lockedPower != null
+      && K.lockedPower >= K.coffin.lo && K.lockedPower <= K.coffin.hi);
+  }
+
   // Work out the outcome from the locked-in aim + power.
   function judge() {
     // Got tackled? Nothing else matters — it's a blocked, lost kick.
@@ -421,7 +433,7 @@ window.KickGame = (function () {
       K.made++; K.streak++; K.best = Math.max(K.best, K.streak);
       showBanner("IT'S GOOD!  +" + K.points, '#ffe066');
     } else if (result === 'punt') {
-      showBanner((K.mode === 'kickoff' ? 'BOOM!  ' : 'NICE PUNT!  ') + puntYards() + ' YDS', '#ffe066');
+      showBanner(inCoffin() ? '🎯 POOCH!  ' + puntYards() + ' YDS' : (K.mode === 'kickoff' ? 'BOOM!  ' : 'NICE PUNT!  ') + puntYards() + ' YDS', '#ffe066');
     } else if (result === 'short') {
       K.streak = 0;
       showBanner('NO GOOD — SHORT!', '#ff8080');
@@ -494,6 +506,10 @@ window.KickGame = (function () {
       const gp = clamp(K.goalPower, 0, 1);
       const zoneBot = top + h * (1 - gp);
       g.fillStyle(0xff9b3d, 0.38); g.fillRect(x, top, w, zoneBot - top);
+      if (K.coffin) {                    // 🎯 the green coffin-corner band, just under the orange
+        const cLo = clamp(K.coffin.lo, 0, 1), cHi = clamp(K.coffin.hi, 0, 1);
+        g.fillStyle(0x3ddc84, 0.55); g.fillRect(x, top + h * (1 - cHi), w, h * (cHi - cLo));
+      }
       g.fillStyle(level > gp ? 0xff9b3d : 0xffcc00, 1);
     } else {
       // Green "reach zone": stop the bar in here (or higher) to reach the goal.
@@ -519,7 +535,7 @@ window.KickGame = (function () {
       : Math.round(K.distance) + ' yd');
 
     if (K.state === 'aim')         K.hint.setText('TAP to AIM  ⟵ ⟶');
-    else if (K.state === 'power')  K.hint.setText(K.boot ? 'TAP to BOOT it' : 'TAP to set POWER');
+    else if (K.state === 'power')  K.hint.setText(K.boot ? (K.coffin ? 'TAP in the GREEN to POOCH it' : 'TAP to BOOT it') : 'TAP to set POWER');
     else if (K.state === 'kick')   K.hint.setText('');
     else if (K.state === 'result') K.hint.setText(K.standalone ? 'TAP to kick again' : 'TAP to continue');
   }
@@ -583,6 +599,12 @@ window.KickGame = (function () {
     // 🦶 the touchback zone's label, sitting beside the orange part of the power bar
     if (K.goalPower != null && K.goalPower < 1) {
       const gp = clamp(K.goalPower, 0, 1);
+      if (K.coffin) {                    // 🎯 …and the green band's label, just under it
+        const cm = clamp((K.coffin.lo + K.coffin.hi) / 2, 0, 1);
+        keep(scene.add.text(66, 300 + (636 - 300) * (1 - cm), 'POOCH', {
+          fontFamily: 'Arial Black, Arial', fontSize: '11px', color: '#7dffb0',
+          stroke: '#000', strokeThickness: 3, align: 'left' }).setOrigin(0, 0.5));
+      }
       keep(scene.add.text(66, 300 + (636 - 300) * (1 - gp) / 2, K.mode === 'kickoff' ? 'END\nZONE' : 'TOUCH-\nBACK', {
         fontFamily: 'Arial Black, Arial', fontSize: '11px', color: '#ffb36b',
         stroke: '#000', strokeThickness: 3, align: 'left' }).setOrigin(0, 0.5));
@@ -712,6 +734,6 @@ window.KickGame = (function () {
                    powerToReach: K.powerToReach, distance: K.distance,
                    rushers: K.rushers.map(r => ({ p: r.p, hold: r.hold, beaten: r.beaten })), clock: K.clock,
                    rush: K.rush, rushMs: K.rushMs, blocked: K.blocked, wxBlew: K.wxBlew,
-                   POST_LEFT, POST_RIGHT }),
+                   POST_LEFT, POST_RIGHT, goalPower: K.goalPower, coffin: K.coffin }),
   };
 })();
