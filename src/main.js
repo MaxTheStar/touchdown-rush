@@ -601,7 +601,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumbleScramble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumbleScramble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, presnapFoul, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -2992,8 +2992,8 @@ function runClockPlay(play) {
 function presnapFoul(foul) {
   if (!foul || G.gameOver) return;
   sayComment(foul.shout);
-  showBanner('🟨 ' + foul.name + '  ·  -' + foul.yards, false);
-  if (window.TDSound) TDSound.sting('lose');
+  showBanner('🟨 ' + foul.name + '  ·  ' + (foul.good ? '+' : '-') + foul.yards, false);   // 🗣 foul.good = a flag on THEM (hardcount.js)
+  if (window.TDSound) TDSound.sting(foul.good ? 'coin' : 'lose');
   freezeEveryone();
   G.next = foul.next;
   G.state = 'dead';
@@ -5023,6 +5023,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDMomentum) TDMomentum.newGame();   // 🔥 the meter starts level
   if (window.TDProtect) TDProtect.newGame();     // 🛡 back to ⚖️ balanced protection
   if (window.TDPlayClock) TDPlayClock.newGame(); // ⏳ fresh play clock, fresh flag count
+  if (window.TDHard) TDHard.newGame();           // 🗣 …and they have not seen your hard count yet
   if (window.TDSilent) TDSilent.newGame();       // 🔇 back on the call
   if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
   if (window.TDWin) TDWin.newGame();             // 📈 a fresh 50/50 and an empty swing chart
@@ -6009,6 +6010,7 @@ function setupPlay(next) {
   if (window.TDProtect) TDProtect.newPlay();   // 🛡 keep the protection row in sync
   if (window.TDSilent) TDSilent.newPlay();     // 🔇 …and the snap-count row beside it
   if (window.TDMotion) TDMotion.newPlay();     // 👀 …and a fresh man available to send in motion
+  if (window.TDHard) TDHard.newPlay();         // 🗣 …and a fresh hard count
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -6494,6 +6496,7 @@ function updateHUD() {
   if (window.TDHot) TDHot.follow();
   // 👀 …and a man in motion keeps jogging across until he gets there (motion.js).
   if (window.TDMotion) TDMotion.tick();
+  if (window.TDHard) TDHard.paint();           // 🗣 the hard-count button (pre-snap only)
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.

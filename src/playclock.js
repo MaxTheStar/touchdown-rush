@@ -412,6 +412,7 @@
 
   window.TDPlayClock = {
     tick, judgeSnap, stop, reset, newGame, setup,
+    foulPacket,              // 🗣 hardcount.js asks for a FALSE START when the bark backfires
     spend,                   // 👀 motion.js bills the clock for a man in motion
     // pure rules, exposed so they can be swept without playing a down
     chanceAt, spotAfter, stepBack,
