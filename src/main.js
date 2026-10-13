@@ -454,7 +454,7 @@ let keys;          // keyboard
 // (just like pressing a key one time). See setupTouchButtons() below.
 const touch = {
   left: false, right: false, up: false, down: false,   // held arrows
-  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false, dive: false, pump: false  // one-shot taps
+  snap: false, one: false, two: false, three: false, hand: false, pitch: false, throwaway: false, dive: false, pump: false, slide: false  // one-shot taps
 };
 
 // Player 2's arrows (the defense player in 2-player mode)
@@ -549,7 +549,7 @@ function create() {
   // Keyboard: arrows to move, SPACE to snap, 1/2/3 to pass
   keys = this.input.keyboard.addKeys({
     up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT',
-    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T', dive: 'X', pump: 'F',
+    snap: 'SPACE', one: 'ONE', two: 'TWO', three: 'THREE', hand: 'H', pitch: 'P', throwaway: 'T', dive: 'X', pump: 'F', slide: 'V',
     // Player 2 uses W A S D to drive the defender (handy for testing on a computer)
     w: 'W', a: 'A', s: 'S', d: 'D'
   });
@@ -979,6 +979,8 @@ function controlBallCarrier() {
   if (consume('dive') || Phaser.Input.Keyboard.JustDown(keys.dive)) dive();
   // 🧢 …and a quarterback with a covered receiver can pump-fake first.
   if (consume('pump') || Phaser.Input.Keyboard.JustDown(keys.pump)) pumpFake();
+  // 🛝 …and a quarterback who has scrambled across the line can go down feet first (slide.js).
+  if (consume('slide') || Phaser.Input.Keyboard.JustDown(keys.slide)) slideDown();
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
@@ -1054,6 +1056,27 @@ function throwAway() {
     targets: ball, x: toLeft ? -26 : FIELD_WIDTH + 26, y: qb.y - 36, duration: 380, ease: 'Sine.Out',
     onComplete: () => endPlay('incomplete', st.grounding ? 'INTENTIONAL GROUNDING!' : 'THROWN AWAY'),
   });
+}
+
+// ============================================================
+// 🛝 THE QB SLIDE (slide.js has the rule; the slide lives here)
+// ------------------------------------------------------------
+// Scrambled past the line with a tackler closing: go down feet first. No fumble roll
+// (a tackle is 12%), but the play ends where he is, and GIVE_PX of the spot is handed back.
+// ============================================================
+function slideState() {
+  if (!window.TDSlide || G.state !== 'live' || G.hasPassed || G.cpu || G.twoPtTry) return null;
+  if (window.TDStar && TDStar.on()) return null;              // 🌟 you are one receiver there, not the quarterback
+  const qb = offense[0];
+  if (G.ballCarrier !== qb) return null;                      // he has handed it off
+  return TDSlide.status({ x: qb.s.x, y: qb.s.y }, G.losY, defense.map(d => ({ x: d.s.x, y: d.s.y })));
+}
+function slideDown() {
+  const st = slideState(); if (!st || !st.available) return;
+  const qb = offense[0].s;
+  qb.y = Math.min(qb.y + TDSlide.GIVE_PX, G.losY - 1);        // hand the spot back, never behind the line
+  sayComment(pick(['Slides! Lives to play another down.', 'Smart slide — keeps the ball.', 'Gives himself up!']));
+  endPlay('tackle', 'QB SLIDES');
 }
 
 // ============================================================
@@ -5916,7 +5939,7 @@ function setupPlay(next) {
   G.hasPassed = false;
   G.ballCarrier = offense[0];
   ballFollow = true;
-  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = touch.dive = touch.pump = false; // clear old taps
+  touch.snap = touch.one = touch.two = touch.three = touch.hand = touch.pitch = touch.throwaway = touch.dive = touch.pump = touch.slide = false; // clear old taps
 
   const L = G.losY;
   place(offense[0], 266, L + 60);   // QB
@@ -6019,6 +6042,7 @@ function setupTouchButtons() {
   bindTap('btn-throwaway', 'throwaway');   // 🧤 THROW IT AWAY (throwaway.js)
   bindTap('btn-dive', 'dive');             // 🤸 DIVE FOR THE MARKER (dive.js)
   bindTap('btn-pump', 'pump');             // 🧢 THE PUMP FAKE
+  bindTap('btn-slide', 'slide');           // 🛝 THE QB SLIDE (slide.js)
 
   // Player 2 (defense) — just four arrows, moving the "P2" red player
   bindHold('btn2-up', 'up', touch2);
@@ -6426,6 +6450,10 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🛝 THE QB SLIDE — the button, only once he has scrambled across the line with a tackler closing.
+  const sl = slideState();
+  document.body.classList.toggle('can-slide', !!(sl && sl.available));
 
   // 🧢 THE PUMP FAKE — the button, only while the quarterback could still throw and has not faked this play.
   document.body.classList.toggle('can-pump', pumpState());
