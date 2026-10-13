@@ -2705,8 +2705,10 @@ function startOnsideScramble() {
 // The scramble is over: it sets where the NEXT possession starts, exactly the
 // way the old coin flip did — only now it is where the ball really ended up.
 function resolveOnside(byYou) {
+  const theirs = G.cpuOnside; G.cpuOnside = false;     // 🙌 THEY kicked this one (handsteam.js)
   G.onsideLoose = false; G.looseChasers = null;
   freezeEveryone();
+  if (theirs) advanceClock(TIME_KICKOFF);              // …a kickoff takes a few seconds (yours was charged with your kick)
   const y = Phaser.Math.Clamp(Math.round(yardsFromOwnGoal(ball.y)), 1, 99);
   if (byYou) {
     G.next = { los: y, down: 1, fd: Math.min(y + 10, 100) };
@@ -2715,9 +2717,55 @@ function resolveOnside(byYou) {
     G.next = { los: 20, down: 1, fd: 30, fresh: true };
     G.turnoverSpotCpu = Phaser.Math.Clamp(100 - y, 1, 99);
   }
-  if (window.TDSpecial) TDSpecial.onsideFlash(byYou);
+  if (window.TDSpecial) TDSpecial.onsideFlash(byYou, theirs);
   G.state = 'dead';
   G.deadUntil = G.scene.time.now + 1100;
+}
+
+// ============================================================
+// 🙌 THE HANDS TEAM (handsteam.js) — THE COMPUTER'S ONSIDE KICK, with you on the receiving end
+// ------------------------------------------------------------
+// The mirror of startOnsideScramble(): the same 'loose' race (`G.onsideLoose` makes resolveMuff() call resolveOnside()), only now
+// THEY kick it and your hands man is the one racing their three nearest men to the ball. ⚠️ `takeYourBall()` asks `handsContext()`
+// instead of starting a kickoff, so it is only ever after THEIR score, in the last period, while they are still a score behind.
+// ============================================================
+function handsContext() {
+  return { quarter: G.quarter, quarters: NUM_QUARTERS, clock: G.clock, my: G.oppScore, opp: G.score, overtime: G.overtime };
+}
+function startCpuOnside() {
+  const L = TDHands.layout(yardsToY(65));              // the tee is THEIR own 35 = 65 yards from MY goal, and the ball comes down toward it
+  freezeEveryone();
+  G.state = 'fumble';                                  // frozen while the kick is in the air
+  G.onsideLoose = true; G.cpuOnside = true; G.pitchLoose = false; G.puntMuffed = false; G.fumbleLoose = false;
+  document.body.classList.remove('kicking');
+  // Only your hands man is on the field of yours (the kickoff's trick: hide the rest).
+  for (let i = 1; i < offense.length; i++) {
+    offense[i].s.setVisible(false); if (offense[i].label) offense[i].label.setVisible(false);
+  }
+  if (offense[0].label) offense[0].label.setVisible(false);
+  if (referee) referee.setVisible(false);
+  for (const d of defense) if (d.label) d.label.setVisible(false);
+  place(offense[0], L.mine.x, L.mine.y);
+  offense[0].s.setVisible(true);
+  G.ballCarrier = offense[0];
+  for (let i = 0; i < defense.length; i++) { place(defense[i], L.line[i].x, L.line[i].y); defense[i].s.setVisible(true); }
+  ballFollow = false;
+  ball.setPosition(L.tee.x, L.tee.y).setVisible(true);
+  G.scene.cameras.main.startFollow(offense[0].s, true, 0.12, 0.12);
+  showBanner('ONSIDE KICK!', true);
+  sayComment(pick(['They are kicking it onside!', 'Onside kick — here it comes!', 'Surprise! An onside kick!']));
+  if (window.TDSound) TDSound.sting('stuff');
+  G.scene.tweens.add({ targets: ball, x: L.land.x, y: L.land.y, duration: 520, ease: 'Sine.Out' });
+  G.scene.tweens.add({ targets: ball, x: L.rest.x, y: L.rest.y, duration: 520, delay: 520, ease: 'Bounce.Out' });
+  G.scene.time.delayedCall(1100, () => {
+    if (G.state !== 'fumble' || !G.onsideLoose || !G.cpuOnside) return;      // the game moved on
+    G.state = 'loose';
+    G.looseUntil = G.scene.time.now + LOOSE_MS;
+    G.looseReactAt = G.scene.time.now + TDHands.REACT_MS;
+    G.looseChasers = nearestDefenders(ball.x, ball.y, LOOSE_CHASERS);
+    showBanner('GO GET IT!!!', true);
+  });
+  updateHUD();
 }
 
 // ============================================================
@@ -3866,6 +3914,9 @@ function takeYourBall() {
     // a muff to be afraid of. Without puntreturn.js this falls through to the
     // kickoff it always was.
     startPuntReturn();
+  } else if (!G.twoPlayer && window.TDHands && (G.lastDriveEnd === 'touchdown' || G.lastDriveEnd === 'fieldgoal') && TDHands.advise(handsContext())) {
+    // 🙌 THE HANDS TEAM (handsteam.js): they just scored and are STILL a score behind, late — they do not kick it deep, they kick it onside.
+    startCpuOnside();
   } else {
     startKickoff();
   }
@@ -4915,6 +4966,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.dsimPile = null;                                          // 🙌 …or a loose ball (the TDJump.cancel() below clears its panel)
   G.dsimHail = null; if (window.TDKnock) TDKnock.cancel();    // 🙏 …or a Hail Mary in the air
   G.pickCaught = false; G.pickRet = false; G.pickSpot = null;  // 🏃 …or an interception waiting to be run back
+  G.cpuOnside = false;                                         // 🙌 …or their onside kick
   G.kickFrom = null;                                          // 🏈 …or a free kick left over from the last game
   G.pumpUses = 0; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 …or a pump fake
   G.fumbleLoose = false; G.looseMates = null;                 // 🏈 …or a fumble scramble

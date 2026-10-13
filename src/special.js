@@ -78,9 +78,11 @@
   }
 
   // A quick banner so the result of the gamble is unmistakable.
-  function onsideFlash(recovered) {
+  function onsideFlash(recovered, byThem) {
     const el = $('onside-flash'); if (!el) return;
-    el.textContent = recovered ? '⚡ YOU GOT IT BACK!' : '⚡ They recovered…';
+    // 🙌 `byThem`: it was THEIR onside kick (handsteam.js), so you did not "get it back" — you recovered it
+    el.textContent = byThem ? (recovered ? '🙌 YOU RECOVERED IT!' : '⚡ They recovered it…')
+                            : (recovered ? '⚡ YOU GOT IT BACK!' : '⚡ They recovered…');
     el.className = recovered ? 'show good' : 'show bad';
     setTimeout(() => { el.className = ''; }, 1800);
   }

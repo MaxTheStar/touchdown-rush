@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.45 — cache-buster is `?v=217` in `index.html`.
+- **Version:** v4.46 — cache-buster is `?v=218` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -218,10 +218,26 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     computer's side of the game is a list of rolls: a flat 45% for its two-point try, a flat 100% for your fumble recovery, no kneel, no Hail
     Mary, no return after an interception — and one plain bug: an interception puts you on a kickoff 8 yards from your goal line). Order:
     ①🧎 They Kneel It Out **v4.39 ✅** · ②📍 Takeaways at the Spot **v4.40 ✅** · ③🏈 Touchback or Return **v4.41 ✅** · ④🛑 Stop the Two-Point Try **v4.42 ✅** · ⑤🙌 Fall On It **v4.43 ✅** ·
-    ⑥🙏 Knock It Down **v4.44 ✅** · ⑦🏃 The Pick-Six Return **v4.45 ✅** · ⑧🙌 The Hands Team. Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
+    ⑥🙏 Knock It Down **v4.44 ✅** · ⑦🏃 The Pick-Six Return **v4.45 ✅** · ⑧🙌 The Hands Team **v4.46 ✅** — **🎉 ROUND 17 SWEPT 8/8.** Chart generator: `scratchpad/r17/chart.py` + `ship.py` (rebuilt from the
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🙌 v4.46 — THE HANDS TEAM (Round 17, pick ⑧, `src/handsteam.js` = `window.TDHands`, no save).** Down by a score with the clock running out, the other team scored and then kicked off like it was the first
+    quarter: the same deep boot. Now when **they score in the last period with 2:00 or less left and are STILL behind by 1–8 points**, they try an **onside kick** and you are the hands team. `TDHands.advise()` is a pure
+    function of `{quarter, quarters, clock, my, opp, overtime}` (their side: `my` = their score after the score that just happened): last period only, `0 < clock ≤ 120`, never overtime, behind by 1…8 (swept: 12 hand-written
+    cases + 60,000 random contexts, 4.1% of random contexts qualify). `takeYourBall()` asks it after a touchdown OR a field goal instead of `startKickoff()` (`G.lastDriveEnd`; not in two-player). `startCpuOnside()` is the
+    mirror of v4.20's `startOnsideScramble()`: the tee is THEIR 35 (65 yards from your goal), the ball comes DOWN the screen 110–130px and squirts 30–70px in ANY direction (`ONSIDE KICK!`, 1.1s of flight with everybody frozen),
+    then it is the very same `'loose'` race (`G.onsideLoose` makes `resolveMuff()` call `resolveOnside()`): you steer your hands man, their three nearest men run at the ball after a 0.30s read (`G.looseReactAt`), first one within
+    26px falls on it. Win it and it is your ball where it ended (about your 45–55) with the clock charged 8s ("🙌 YOU RECOVERED IT!"); lose it and it is their ball there and you are on defense ("⚡ They recovered it…"),
+    through the existing `fresh` / `turnoverSpotCpu` door. `special.js`'s `onsideFlash(recovered, byThem)` gained the second argument for the wording. ⚠️ **A RACE YOU CAN WIN, AND CANNOT WIN BY STANDING STILL** (the v4.8 rule): your man waits
+    **110–160px (11–16 yards) past the landing**, which a pure simulation of the race (the game's own constants: 205 px/s for you, `koCover` 180/198/214 for them, 26px to fall on it, three chasers, ball resting anywhere in a 30–70px
+    ring) turned into: going straight for it at once wins **74% (Medium; Easy 77, Hard 71)**, a 0.15s read plus a wobble **57%**, moving 0.2s late **54%**, 0.4s late **41%**, **standing still 0%** — an ordinary player wins a bit more often than not, a
+    good one about three in four, which is what real hands teams do (the first geometry, 20–50px back, was a 100% win). **RARE ON PURPOSE:** about 4 in a hundred random situations qualify, and in real games it needs them to score late while
+    two scores down, so expect it once in a few dozen games (it is the only way to test it: force the situation). Verified in the real game: Q4 1:20, 21–7, their touchdown (+7, they trail 7) → "ONSIDE KICK!" with their seven men
+    across the tee at y≈430–450 and my man at (322,721); a bot running straight at it recovered **4 of 4 in the real loop** (my ball at my 49–53, "🙌 YOU RECOVERED IT!", clock 80 → 72) and standing still lost (their ball at their 44, "⚡ They recovered it…",
+    then their drive began in the defense panel at 1st & 10 on their 44 with 72s left).
+    **🎉 ROUND 17 "THE FLIP SIDE BOARD" IS SWEPT 8/8 at v4.46 (`?v=218`).** ①🧎 They Kneel It Out v4.39 · ②📍 Takeaways at the Spot v4.40 · ③🏈 Touchback or Return v4.41 · ④🛑 Stop the Two-Point Try v4.42 · ⑤🙌 Fall On It v4.43 · ⑥🙏 Knock It Down v4.44 ·
+    ⑦🏃 The Pick-Six Return v4.45 · ⑧🙌 The Hands Team v4.46. (End-of-board regression below once it is run.)
   - **🏃 v4.45 — THE PICK-SIX RETURN (Round 17, pick ⑦, `src/pickreturn.js` = `window.TDPickRet`, no save).** In the one-player game an interception was a line of text — "INTERCEPTED — YOUR
     BALL" — and then your own first down (the live pick-six, `startPickSix()`, exists only for two-player defense). Now a pick caught in the field of play is **run back, live**: the tap-through panel gives
     way to the field and you steer the runner with the arrows / D-pad (a swipe dashes) against the other team's seven men; a tackle spots your drive where it happens ("RETURNED 10 YARDS!"), the end zone
