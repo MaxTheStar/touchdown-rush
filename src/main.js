@@ -845,6 +845,7 @@ function snap(time) {
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
   G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
+  if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
@@ -1024,6 +1025,7 @@ function handOff() {
   G.ballCarrier = rb;
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
   sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
+  if (window.TDDraw) TDDraw.handoff();   // 🎭 a LATE hand-off on a called draw catches the rush going the wrong way
 }
 
 // ============================================================
@@ -1808,6 +1810,7 @@ function routeVelocity(o, depth, side) {
     case 'drag':     return { vx: IN * S * 0.90, vy: -S * 0.22 };                    // shallow cross
     case 'wheel':    return depth < 26  ? { vx: S * 0.90, vy: -S * 0.16 } : { vx: S * 0.14, vy: -S * 0.95 };
     case 'flat':     return { vx: S * 0.82, vy: -S * 0.16 };                         // RB checkdown
+    case 'hold':     return { vx: 0, vy: 0 };                                        // 🎭 the DRAW: the back stays home
     case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
     default:         return { vx: 0, vy: -S };                                        // 'streak'
   }
@@ -1926,6 +1929,7 @@ function routePath(o) {
     case 'drag':     return [{ x: sx, y: sy }, { x: clampX(sx + IN * 180), y: up(45) }];
     case 'wheel':    return [{ x: sx, y: sy }, { x: clampX(sx + 90), y: up(20) }, { x: clampX(sx + 120), y: up(230) }];
     case 'flat':     return [{ x: sx, y: sy }, { x: clampX(sx + 95), y: up(18) }];
+    case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
     case 'swing': {  const ox = clampX(sx + 90);
                      return [{ x: sx, y: sy }, { x: ox, y: up(20) }, { x: clampX(ox + 35), y: up(210) }]; }
     default:         return [{ x: sx, y: sy }, { x: sx, y: up(300) }];   // 'streak' = straight up
@@ -2024,6 +2028,11 @@ function updateDefense(elapsed) {
       // he keeps exactly what a blocked pass rusher keeps — one rule for both
       // kinds of block, so the pocket and the run lane bend the same way.
       if (window.TDPersonnel && TDPersonnel.sealed(d)) speed *= diff().rushSlow;
+      // 🎭 THE DRAW (draw.js): for a beat the men who were rushing the passer are caught going the wrong way
+      if (G.drawBite && G.scene.time.now < G.drawUntil) {
+        if (d.role === 'DL' || (G.blitz && d === defense[2])) speed *= G.drawBite.rush;
+        else if (d.role === 'LB') speed *= G.drawBite.lb;
+      }
     } else if (isStar) {
       // 👑 MAXWELL roams the deep middle as a center-field robber: he hovers over
       // the top of your deepest receiver and reads the throw, ignoring man/zone.
@@ -6051,6 +6060,7 @@ function setupPlay(next) {
   if (window.TDSilent) TDSilent.newPlay();     // 🔇 …and the snap-count row beside it
   if (window.TDMotion) TDMotion.newPlay();     // 👀 …and a fresh man available to send in motion
   if (window.TDHard) TDHard.newPlay();         // 🗣 …and a fresh hard count
+  if (window.TDDraw) TDDraw.newPlay();         // 🎭 …and the draw is not called until you call it
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -6537,6 +6547,7 @@ function updateHUD() {
   // 👀 …and a man in motion keeps jogging across until he gets there (motion.js).
   if (window.TDMotion) TDMotion.tick();
   if (window.TDHard) TDHard.paint();           // 🗣 the hard-count button (pre-snap only)
+  if (window.TDDraw) TDDraw.paint();           // 🎭 …and the draw button
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
