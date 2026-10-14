@@ -56,6 +56,7 @@
     if (!armed) {                                       // a down is ONE of: play action, draw, screen
       if (window.TDDraw && TDDraw.armed()) TDDraw.toggle();
       if (window.TDScreen && TDScreen.armed()) TDScreen.toggle();
+      if (window.TDBoot && TDBoot.armed()) TDBoot.toggle();
     }
     armed = !armed;
     t.offense[1].route = armed ? 'hold' : g.concept.rb;

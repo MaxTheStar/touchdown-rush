@@ -863,6 +863,7 @@ function snap(time) {
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
+  if (window.TDBoot) TDBoot.snapped();                       // 🌀 …and the bootleg's roll-out if that was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
@@ -961,6 +962,12 @@ function controlStar() {
 
 function controlBallCarrier() {
   const p = G.ballCarrier.s;
+  // 🌀 THE BOOTLEG (bootleg.js): for the first half-second the quarterback rolls out on his own, away from the back
+  if (G.bootleg && G.ballCarrier === offense[0] && G.scene.time.now < G.bootUntil) {
+    p.setVelocity(G.bootDir * TDBoot.ROLL_V, -TDBoot.ROLL_V * 0.12);
+    p.setRotation(Math.atan2(-0.12, G.bootDir) + Math.PI / 2);
+    return;
+  }
   const dash = dashVelocity();
   if (dash) {
     // A swipe dash/cut is driving him — it overrides the D-pad for its moment.
@@ -1337,7 +1344,8 @@ function throwTo(num) {
 
   // 🎲 Sometimes the QB slips and throws a bad one — it sails off into open
   // space, where anyone nearby (a defender OR another receiver) can grab it.
-  if (Math.random() < BAD_THROW_CHANCE * (lob ? TDLob.BAD : 1)) {
+  const onRun = !!(G.bootleg && window.TDBoot && TDBoot.onTheRun(thrower.body.speed));   // 🌀 a throw on the move is less accurate
+  if (Math.random() < BAD_THROW_CHANCE * (lob ? TDLob.BAD : 1) * (onRun ? TDBoot.ON_RUN : 1)) {
     targetX = Phaser.Math.Clamp(targetX + Phaser.Math.Between(-95, 95), 10, FIELD_WIDTH - 10);
     targetY = targetY + Phaser.Math.Between(-80, 80);
     sayComment(pick(['Bad throw!', 'Off the mark!', 'That one sailed!', 'Wobbly pass!']));
@@ -2180,6 +2188,9 @@ function updateDefense(elapsed) {
     // just loses speed for a beat — NOT the flea flicker's bite, which sends them BACKWARD toward
     // the line and opened receivers by nine yards when it was first tried here.
     if (qbHasBall && d.role !== 'DL' && G.scene.time.now < G.fakeBiteUntil) speed *= G.fakeBiteSlow;
+
+    // 🌀 THE BOOTLEG (bootleg.js): the down linemen bit on the fake, so for a beat they chase at half speed
+    if (qbHasBall && d.role === 'DL' && G.bootleg && G.scene.time.now < G.bootDlUntil) speed *= TDBoot.DL_KEEPS;
 
     // 🎣 PLAY ACTION (playaction.js): for a beat the LINEBACKERS step up toward the line to stop the run, instead of dropping into their zones
     if (qbHasBall && d.role === 'LB' && G.paStrength && G.scene.time.now < G.paUntil) {
@@ -6156,6 +6167,7 @@ function setupPlay(next) {
   if (window.TDDraw) TDDraw.newPlay();         // 🎭 …and the draw is not called until you call it
   if (window.TDScreen) TDScreen.newPlay();     // 🧱 …nor the screen
   if (window.TDPA) TDPA.newPlay();             // 🎣 …nor play action
+  if (window.TDBoot) TDBoot.newPlay();         // 🌀 …nor a bootleg
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -6652,6 +6664,7 @@ function updateHUD() {
   if (window.TDDraw) TDDraw.paint();           // 🎭 …and the draw button
   if (window.TDScreen) TDScreen.paint();       // 🧱 …and the screen button
   if (window.TDPA) TDPA.paint();               // 🎣 …and the play-action button
+  if (window.TDBoot) TDBoot.paint();           // 🌀 …and the bootleg button
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.

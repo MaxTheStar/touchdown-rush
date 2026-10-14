@@ -62,6 +62,7 @@
     if (!can() && !armed) return false;
     if (!armed && window.TDDraw && TDDraw.armed()) TDDraw.toggle();     // a down is a draw OR a screen, never both
     if (!armed && window.TDPA && TDPA.armed()) TDPA.toggle();           // …or play action
+    if (!armed && window.TDBoot && TDBoot.armed()) TDBoot.toggle();         // …or a bootleg
     armed = !armed;
     t.offense[1].route = armed ? 'screen' : g.concept.rb;
     try { t.drawRoutePreview(); } catch (e) {}
