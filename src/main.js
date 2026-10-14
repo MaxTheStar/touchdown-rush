@@ -4299,10 +4299,22 @@ const DefenseSim = (function () {
     // ---- RUN ----
     // The ordinary run — what this function hands back when nothing fumbles. It is a function because a fumble they FALL ON is this
     // very run too (see below).
-    const ordinaryRun = () => {
+    const ordinaryRun = (allowChase) => {
       if (Math.random() < 0.18 + dStop * 0.15 + D.stuff) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, side: 'run', t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
       let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain);
-      if (Math.random() < 0.08 + D.bigRun) y += Phaser.Math.Between(10, 30);
+      // 💥 THE SHOESTRING TACKLE (chase.js): a BREAKAWAY is no longer a number — you chase him down, or you do not. It REPLACES the breakaway
+      // (they are 1.52× as common to keep an ordinary thumb's yards unchanged); a miss is exactly the old breakaway, a hit keeps 35% of the extra yards.
+      const chase = allowChase !== false && !!(window.TDChase && TDChase.ready());
+      if (Math.random() < (0.08 + D.bigRun) * (chase ? TDChase.FREQ : 1)) {
+        const extra = Phaser.Math.Between(10, 30);
+        if (!chase) { y += extra; }
+        else {
+          const gone = y + extra;
+          return { r: 'pile', kind: 'chase', y: 0, side: 'run', hawk: 0,
+                   win: { r: 'gain', y: TDChase.savedYards(y, extra), side: 'run', tag: 'chased', t: '<b>Shoestring tackle!</b> Run for <b>' + TDChase.savedYards(y, extra) + '</b> yards.' },
+                   lose: { r: 'gain', y: gone, side: 'run', t: 'Run for <b>' + gone + '</b> yards.' } };
+        }
+      }
       return { r: 'gain', y, side: 'run', t: 'Run for <b>' + y + '</b> yards.' };
     };
     // 🙌 FALL ON IT (fallon.js). A fumble used to be YOUR ball every time. Now it is a loose ball and you play it, exactly like
@@ -4318,7 +4330,7 @@ const DefenseSim = (function () {
     if (r < (loose ? fumP * TDFallOn.FREQ : fumP)) {
       const got = () => ({ r: 'fum', y: 0, side: 'run', t: loose ? pick(['<b>FUMBLE!</b> You fell on it!', '<b>FUMBLE!</b> You recovered it!', '<b>FUMBLE!</b> Your ball!']) : '<b>FUMBLE!</b> You recovered it!' });
       if (!loose) return got();
-      const run = ordinaryRun();
+      const run = ordinaryRun(false);          // (a lost recovery is a plain run: never a breakaway moment inside a fumble moment)
       return { r: 'pile', y: 0, side: 'run', hawk, win: got(),
                lose: { r: 'gain', y: run.y, side: 'run', tag: 'fumlost', t: pick(['<b>FUMBLE</b> — but they fall on it.', '<b>FUMBLE</b> — it bounces right back to them.', '<b>FUMBLE</b> — and they pounce on it.']) + ' ' + run.t } };
     }
@@ -4512,13 +4524,14 @@ const DefenseSim = (function () {
     // moment can be drawn, and if the panel somehow cannot be, it is the recovery it always was.
     if (played.r === 'pile') {
       G.dsimPile = played;
-      render('<b>FUMBLE!</b> The ball is loose…');
-      const drawn = TDFallOn.begin(played.hawk, got => {
+      render(played.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : '<b>FUMBLE!</b> The ball is loose…');
+      const startMoment = played.kind === 'chase' ? (cb => TDChase.begin(cb)) : (cb => TDFallOn.begin(played.hawk, cb));   // 💥 the same slot, a different moment
+      const drawn = startMoment(got => {
         if (G.dsimPile !== played || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was bouncing
         G.dsimPile = null;
         apply(got ? played.win : played.lose);
       });
-      if (!drawn) { G.dsimPile = null; apply(played.win); }
+      if (!drawn) { G.dsimPile = null; apply(played.kind === 'chase' ? played.lose : played.win); }   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
       return;
     }
     apply(played);
@@ -4566,7 +4579,7 @@ const DefenseSim = (function () {
     render(line);
   }
 
-  return { start, tap, wire, resume };
+  return { start, tap, wire, resume, _play: play };   // (_play: tests only — the headless sims call the real play() in a loop)
 })();
 
 // ============================================================
