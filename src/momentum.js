@@ -239,6 +239,7 @@
   window.TDMomentum = {
     play, theirDrive, newGame, paint,
     value: () => value, tilt, catchAdd, armAdd, cpuPowMult,
+    bump: n => { value = clamp(value + n, -MAX, MAX); paint(); },   // 🕺 celebbig.js: the crowd goes wild (a plain nudge, not a play)
     MAX, DECAY, DEADBAND, EFFECT, WORTH, BIG_PLAY,
     _set: v => { value = clamp(v, -MAX, MAX); paint(); },
     _scale: scale,

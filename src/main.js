@@ -2974,6 +2974,7 @@ function startCpuOnside() {
 // ============================================================
 function showPATChoice() {
   G.pendingXP = false;                 // the choice replaces the old auto-kick
+  G.celebBig = false; updateCelebBtn(); // 🕺 GO BIG is OFF each time
   G.twoPtTry = false;
   G.state = 'patdecision';
   // 🎯 THE TWO-POINT CHART (twopoint.js) — what a real coach's card says about
@@ -2992,8 +2993,25 @@ function choosePAT(which) {
   const panel = document.getElementById('pat-choice');
   if (panel) panel.style.display = 'none';
   if (window.TDTwo) TDTwo.clear();   // 🎯 wipe the chart's advice with the panel
+  // 🕺 EXCESSIVE CELEBRATION (celebbig.js): a BIG one fires up the crowd… and one time in eight the officials flag it
+  if (G.celebBig && window.TDCelebBig) {
+    G.celebBig = false;
+    if (window.TDShop) TDShop.earn(TDCelebBig.COINS);
+    if (window.TDProgress) TDProgress.addXP(TDCelebBig.XP);
+    if (window.TDMomentum && TDMomentum.bump) TDMomentum.bump(TDCelebBig.MOMENTUM);
+    if (TDCelebBig.flagged(Math.random())) { G.kickFrom = 20; G.celebFlagged = true; }     // 🟨 …kick off from the 20, not the 35
+    else sayComment(pick(['The crowd goes WILD!', 'What a celebration!', 'The stadium is shaking!']));
+  }
   if (which === 'kick') startExtraPoint();
   else                  startTwoPointTry();
+}
+
+// 🕺 the ③ GO BIG row on the touchdown panel (celebbig.js)
+function updateCelebBtn() {
+  const b = document.getElementById('btn-celeb'); if (!b) return;
+  b.style.display = window.TDCelebBig ? '' : 'none';
+  b.classList.toggle('on', !!G.celebBig);
+  b.textContent = G.celebBig ? '③ 🕺 GO BIG: ON · 12% FLAG' : '③ 🕺 GO BIG? · +15 🪙 · 12% FLAG';
 }
 
 // GO FOR 2: line up one real play from the 2-yard line. No downs, no clock —
@@ -3293,6 +3311,7 @@ function startCpuDrive() {
 // ============================================================
 function startKickoffKick() {
   const from = G.kickFrom || TDFieldPos.KICKOFF_FROM;
+  if (G.celebFlagged) { G.celebFlagged = false; showBanner('🟨 EXCESSIVE CELEBRATION  ·  KICK FROM THE 20', false); sayComment('Flag! Excessive celebration — fifteen yards.'); }
   G.kickFrom = null;
   G.state = 'kick';
   G.kickKind = 'kickoff';
@@ -5176,6 +5195,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.quarter = 1; G.clock = QUARTER_SECONDS;
   G.overtime = false; G.gameOver = false;
   G.twoMinDone = {};                    // 🕑 no warnings given yet
+  G.celebBig = false; G.celebFlagged = false;   // 🕺 no big celebration pending
   if (window.TDOT) TDOT.reset();         // 🔀 no overtime possessions yet
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
@@ -6263,6 +6283,7 @@ function setupTouchButtons() {
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
   bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
+  bindTapEl('btn-celeb', () => { if (G.state === 'patdecision') { G.celebBig = !G.celebBig; updateCelebBtn(); } });   // 🕺 GO BIG toggle
   bindTapEl('btn-lob', () => toggleLob());                 // 🏹 BULLET OR LOB (lob.js)
   bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
   bindTapEl('btn-sneak4', () => { if (G.state === 'decision') { G.state = 'presnap'; sneak(); } });   // …and the same from the 4th-down panel
