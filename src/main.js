@@ -860,6 +860,7 @@ function snap(time) {
   G.dashUntil = 0;            // no leftover dash from the last play
   G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
   G.lobArmed = false; G.lobThrow = false;                    // 🏹 a fresh play: no lob called, none in the air
+  G.hotMan = null; G.hotSpot = null;                         // 🪁 …and nobody has gone hot yet
   G.jetBurstUntil = 0;                                       // ✈️ …and no leftover jet burst
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
@@ -1899,6 +1900,8 @@ function routeVelocity(o, depth, side) {
     case 'wheel':    return depth < 26  ? { vx: S * 0.90, vy: -S * 0.16 } : { vx: S * 0.14, vy: -S * 0.95 };
     case 'flat':     return { vx: S * 0.82, vy: -S * 0.16 };                         // RB checkdown
     case 'hold':     return { vx: 0, vy: 0 };                                        // 🎭 the DRAW: the back stays home
+    case 'hot': {    const dx = G.hotSpot.x - o.s.x, dy = G.hotSpot.y - o.s.y, dd = Math.hypot(dx, dy);   // 🪁 HOT ROUTE: cut to the hole and stop
+                     return dd < 8 ? { vx: 0, vy: 0 } : { vx: dx / dd * S * 1.05, vy: dy / dd * S * 1.05 }; }
     case 'jet':      return Math.abs(o.s.x - o.startX) < 230 ? { vx: -G.jetSide * S, vy: 0 } : { vx: 0, vy: -S };   // ✈️ the JET sweep: across behind the quarterback, then upfield
     case 'screen':   return Math.abs(o.s.x - o.startX) < 84 ? { vx: OUT * S * 0.85, vy: 0 } : { vx: 0, vy: 0 };   // 🧱 the SCREEN: out to the flat, then wait
     case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
@@ -2020,6 +2023,7 @@ function routePath(o) {
     case 'wheel':    return [{ x: sx, y: sy }, { x: clampX(sx + 90), y: up(20) }, { x: clampX(sx + 120), y: up(230) }];
     case 'flat':     return [{ x: sx, y: sy }, { x: clampX(sx + 95), y: up(18) }];
     case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
+    case 'hot':      return [{ x: sx, y: sy }, { x: G.hotSpot.x, y: G.hotSpot.y }];   // 🪁 HOT ROUTE: to the hole
     case 'jet':      return [{ x: sx, y: sy }, { x: clampX(sx - G.jetSide * 230), y: sy }];   // ✈️ the JET sweep: across the formation
     case 'screen':   return [{ x: sx, y: sy }, { x: clampX(sx + OUT * 84), y: sy }];  // 🧱 the SCREEN: out to the flat and wait
     case 'swing': {  const ox = clampX(sx + 90);
@@ -6621,6 +6625,9 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🪁 HOT ROUTE — the button, only against a blitz while the rush is not home
+  if (window.TDHotRoute) TDHotRoute.paint();
 
   // 🏹 BULLET OR LOB — the button, only while a throw is possible; an armed lob lapses with the throw (or the play)
   { const on = lobState(); if (!on) G.lobArmed = false; if (window.TDLob) TDLob.paint(on, G.lobArmed); }
