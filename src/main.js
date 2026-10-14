@@ -2204,6 +2204,10 @@ function updateDefense(elapsed) {
     // 🌀 THE BOOTLEG (bootleg.js): the down linemen bit on the fake, so for a beat they chase at half speed
     if (qbHasBall && d.role === 'DL' && G.bootleg && G.scene.time.now < G.bootDlUntil) speed *= TDBoot.DL_KEEPS;
 
+    // 🎯 THE READ OPTION (option.js): the key defender chooses a target (the back or the quarterback) and REALLY chases it,
+    // whoever then has the ball — after leaning toward one for the first third of a second (the tell)
+    if (window.TDOption && G.optOn) { const o = TDOption.target(d); if (o) { tx = o.x; ty = o.y; speed = DEF_SPEED * boost * o.slow; } else speed *= TDOption.others(d); }
+
     // 🎣 PLAY ACTION (playaction.js): for a beat the LINEBACKERS step up toward the line to stop the run, instead of dropping into their zones
     if (qbHasBall && d.role === 'LB' && G.paStrength && G.scene.time.now < G.paUntil) {
       const s = G.paStrength;
