@@ -20,7 +20,7 @@
 //   ...KickGame calls your onDone(result) when the kick is finished.
 // ============================================================
 
-window.KickGame = (function () {
+window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, lives in here: K.wind / landAim())
   // ---- Where things sit on the 540x720 screen ----
   const W = 540, H = 720;
   const GOAL_Y      = 250;   // the crossbar height on screen (lower + nearer = a bigger goal)
@@ -104,6 +104,7 @@ window.KickGame = (function () {
     noRush: false,     // 🏈 a kickoff has no rush, so no pocket either
     goalPower: null,   // 🦶 power at which a punt reaches the goal line (above it = touchback)
     coffin: null,      // 🎯 {lo, hi}: the power band that comes down 3–12 yards short of the goal line (a pooch)
+    wind: 0,           // 🌬 this kick's cross-wind, -1 (blowing left) … +1 (right); 0 = none. Only in WINDY games, only field goals.
     hud: null, hint: null, distLabel: null, banner: null,
     flight: null,       // the ball-flight tween (so we can stop it)
 
@@ -170,6 +171,12 @@ window.KickGame = (function () {
     // that line is. `opts.losYards` is where the ball was snapped, from YOUR goal.
     K.legYds = (K.kicker && window.TDFieldPos) ? TDFieldPos.legYards(K.kicker.leg) : 0;
     K.goalPower = null; K.toGoal = null; K.coffin = null;
+    // 🌬 READ THE WIND: in a windy game every field goal gets its own cross-wind, shown as an arrow; it pushes the ball sideways
+    // by up to WIND_DRIFT px, so you aim into it. This REPLACES the old flat ×0.85 for wind (kick.js skips it for wind games).
+    K.wind = 0;
+    if (!K.standalone && !K.boot && window.TDWeather && TDWeather.current && TDWeather.current() === 'wind') {
+      K.wind = (Math.random() < 0.5 ? -1 : 1) * (0.4 + 0.6 * Math.random());
+    }
     if (K.boot && opts.losYards != null) {
       K.toGoal = Math.round(100 - opts.losYards);
       // power whose kick just reaches the goal line (a kickoff has its own, longer scale)
@@ -361,7 +368,7 @@ window.KickGame = (function () {
     let result = judge();
     // 🌦 Bad weather (rain/wind/blizzard) can push a perfect kick WIDE. Roll it
     // ONCE here and lock it in, so the ball's flight and the final call agree.
-    if (result === 'good' && window.TDWeather && window.TDWeather.fgMult) {
+    if (result === 'good' && window.TDWeather && window.TDWeather.fgMult && !K.wind) {   // 🌬 a windy game's penalty is the drift itself, not a second roll
       let fg = window.TDWeather.fgMult();
       const resist = (window.TDShop && window.TDShop.weatherResist) ? window.TDShop.weatherResist() : 0;
       fg += (1 - fg) * resist;                 // 🧥 All-Weather Gear steadies the kick
@@ -370,7 +377,7 @@ window.KickGame = (function () {
     K.lockedResult = result;
 
     // A punt always goes straight ahead; a field goal goes where you aimed.
-    const endX = K.boot ? GOAL_CENTER : K.lockedAim;
+    const endX = K.boot ? GOAL_CENTER : landAim();
     // Where the ball ends up depends on the outcome:
     //   good  -> sail UP through the uprights and rest BETWEEN them, above the crossbar (a clear make!)
     //   wide  -> arc to about crossbar height but off to the SIDE of a post (missed)
@@ -412,6 +419,14 @@ window.KickGame = (function () {
       && K.lockedPower >= K.coffin.lo && K.lockedPower <= K.coffin.hi);
   }
 
+  // 🌬 Where the ball comes down: the aim you locked, pushed by this kick's wind (All-Weather Gear shrinks the push).
+  const WIND_DRIFT = 60;                 // px at full strength: a centred kick fails above 75%, a blind one makes 85% of what it did (swept)
+  function landAim() {
+    if (!K.wind) return K.lockedAim;
+    const resist = (window.TDShop && window.TDShop.weatherResist) ? window.TDShop.weatherResist() : 0;
+    return K.lockedAim + K.wind * WIND_DRIFT * (1 - resist);
+  }
+
   // Work out the outcome from the locked-in aim + power.
   function judge() {
     // Got tackled? Nothing else matters — it's a blocked, lost kick.
@@ -423,7 +438,8 @@ window.KickGame = (function () {
     // A field goal needs enough power to reach, and good aim between the posts.
     const reaches = K.lockedPower >= K.powerToReach;
     if (!reaches) return 'short';
-    const between = K.lockedAim >= POST_LEFT && K.lockedAim <= POST_RIGHT;
+    const la = landAim();                                  // 🌬 where the wind actually drops it
+    const between = la >= POST_LEFT && la <= POST_RIGHT;
     return between ? 'good' : 'wide';
   }
 
@@ -596,6 +612,12 @@ window.KickGame = (function () {
     K.hud   = keep(scene.add.text(W / 2, 26, '', bigStyle(18, '#ffe066')).setOrigin(0.5));
     K.distLabel = keep(scene.add.text(GOAL_CENTER, GOAL_Y + 56, '', bigStyle(14, '#ffffff')).setOrigin(0.5));
     K.hint  = keep(scene.add.text(W / 2, 486, '', bigStyle(20, '#ffffff')).setOrigin(0.5));
+    if (K.wind) {                                    // 🌬 the wind arrow: how many arrows is how hard, and which way is which way
+      const n = Math.max(1, Math.round(Math.abs(K.wind) * 3));
+      const arrows = (K.wind < 0 ? '◀ ' : '▶ ').repeat(n).trim();
+      keep(scene.add.text(GOAL_CENTER, GOAL_Y + 84, '🌬 WIND  ' + arrows + '  ' + Math.round(Math.abs(K.wind) * 25) + ' MPH', {
+        fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#7dd3fc', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
+    }
     // 🦶 the touchback zone's label, sitting beside the orange part of the power bar
     if (K.goalPower != null && K.goalPower < 1) {
       const gp = clamp(K.goalPower, 0, 1);
@@ -734,6 +756,6 @@ window.KickGame = (function () {
                    powerToReach: K.powerToReach, distance: K.distance,
                    rushers: K.rushers.map(r => ({ p: r.p, hold: r.hold, beaten: r.beaten })), clock: K.clock,
                    rush: K.rush, rushMs: K.rushMs, blocked: K.blocked, wxBlew: K.wxBlew,
-                   POST_LEFT, POST_RIGHT, goalPower: K.goalPower, coffin: K.coffin }),
+                   POST_LEFT, POST_RIGHT, goalPower: K.goalPower, coffin: K.coffin, wind: K.wind, landAim: landAim() }),
   };
 })();
