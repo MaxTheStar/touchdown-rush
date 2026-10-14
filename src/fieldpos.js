@@ -116,8 +116,29 @@
   // about 23, so a BOOMING kick is worth about what the old flat 25 was — the whole
   // cost is in a short one (a kick that dies at their 20 is returned to their 42).
   const KICKOFF_FROM = 35, FREE_KICK_FROM = 20, TB_KICKOFF = 25;
-  function afterKickoff(from, yards, rnd) {
+  // 🎯 AIM THE KICKOFF (Round 20, pick ⑤): `zone` is where it was aimed ('mid' | 'corner' | 'sideline' — kick.js kickZone). A CORNER kick
+  // loses 3 yards of distance and its return is 15% shorter; a SIDELINE kick loses 5, cuts the return in half… and 35% of them go out of bounds
+  // (their ball at the 40, the real rule). A normal kick is exactly what it always was. Swept, a skilled aimer gains about a yard a kickoff
+  // from the corner and a sloppy one loses it from the sideline.
+  const KO_ZONES = { mid: { dist: 0, ret: 1, oob: 0 }, corner: { dist: 3, ret: 0.85, oob: 0 }, sideline: { dist: 5, ret: 0.5, oob: 0.35 } };
+  function afterKickoff(from, yards, rnd, zone) {
     rnd = rnd || Math.random;
+    const Z = KO_ZONES[zone] || KO_ZONES.mid;
+    yards = yards - Z.dist;
+    const landed0 = from + yards;
+    if (Z.oob && landed0 < 110 && rnd() < Z.oob) {
+      return { spot: 40, kind: 'oob', ret: 0, landed: landed0, text: 'Out of bounds — they start at their own 40.' };
+    }
+    const out = afterKickoffBase(from, yards, rnd);
+    if (Z.ret !== 1 && out.kind === 'return') {          // a shorter return, spotted from where it was caught
+      const base = out.spot - out.ret;
+      const ret = Math.round(out.ret * Z.ret);
+      const spot = clamp(base + ret, 1, 99);
+      return Object.assign(out, { spot, ret: spot - base, text: 'Returned ' + (spot - base) + ' — they start at their own ' + spot + '.' });
+    }
+    return out;
+  }
+  function afterKickoffBase(from, yards, rnd) {
     const landed = from + yards;                         // yards from MY goal where it came down
     if (landed >= 110) {
       return { spot: TB_KICKOFF, kind: 'touchback', ret: 0, landed, text: 'Out the back of the end zone — touchback.' };
@@ -138,7 +159,7 @@
     return { spot, kind: 'return', ret: spot - base, landed, text: 'Returned ' + (spot - base) + ' — they start at their own ' + spot + '.' };
   }
 
-  window.TDFieldPos = { COFFIN_LO, COFFIN_HI, afterPunt, afterBlock, afterMiss, afterKickoff, legYards, fairCatchChance,
+  window.TDFieldPos = { COFFIN_LO, COFFIN_HI, KO_ZONES, afterPunt, afterBlock, afterMiss, afterKickoff, legYards, fairCatchChance,
                      KICKOFF_FROM, FREE_KICK_FROM,
                      _consts: { TOUCHBACK, KICK_BACK, TB_KICKOFF } };
 })();

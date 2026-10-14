@@ -3326,11 +3326,11 @@ function startKickoffKick() {
 }
 function onKickoffKickDone(result, from) {
   document.body.classList.remove('kicking');
-  const r = TDFieldPos.afterKickoff(from, result.puntYards);
+  const r = TDFieldPos.afterKickoff(from, result.puntYards, undefined, result.zone);   // 🎯 where you aimed it matters
   G.turnoverSpotCpu = r.spot;                         // …the door a turnover already uses
   G.state = 'dwait';                                  // hold everything while the banner lands
   showBanner((from === TDFieldPos.FREE_KICK_FROM ? 'FREE KICK' : 'KICKOFF') + ' — ' + result.puntYards + ' YDS\n' +
-             (r.kind === 'touchback' ? 'TOUCHBACK' : 'RETURNED ' + r.ret) + ' · THEIR ' + r.spot, true);
+             (r.kind === 'touchback' ? 'TOUCHBACK' : r.kind === 'oob' ? 'OUT OF BOUNDS' : 'RETURNED ' + r.ret) + ' · THEIR ' + r.spot, true);
   G.scene.time.delayedCall(1700, startCpuDrive);      // now there IS a spot, so this goes straight to their drive
 }
 

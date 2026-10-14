@@ -196,7 +196,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
     // A punt is just "boot it far" — no aiming, so skip straight to power.
     K.aimX = GOAL_CENTER; K.aimDir = 1;
     K.power = 0; K.powerDir = 1;
-    K.state = K.boot ? 'power' : 'aim';
+    K.state = (K.boot && K.mode !== 'kickoff') ? 'power' : 'aim';   // 🎯 AIM THE KICKOFF: a punt is power only, a kickoff picks its side first
 
     // One tap (or SPACE) does the next step. We listen for a plain DOM tap
     // right on the game canvas — the SAME dependable way the on-screen D-pad
@@ -225,7 +225,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
     for (const o of K.objs) o.destroy();
     K.objs = [];
     K.rushers = []; K.blockers = [];
-    K.ball = K.crosshair = K.powerBar = K.rusher = K.hud = K.hint = K.distLabel = K.banner = null;
+    K.ball = K.crosshair = K.powerBar = K.rusher = K.hud = K.hint = K.distLabel = K.banner = K.zoneLabel = null;
     K.active = false;
   }
 
@@ -239,6 +239,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
     const dt = delta / 1000;
 
     if (K.state === 'aim') {
+      if (K.zoneLabel) { const z = kickZone(K.aimX); K.zoneLabel.setText(z === 'mid' ? '⬆ MIDDLE' : z === 'corner' ? '↗ CORNER KICK' : '⚠ SIDELINE — MAY GO OUT').setColor(z === 'sideline' ? '#ff9b6b' : z === 'corner' ? '#ffe066' : '#ffffff'); }
       K.aimX += K.aimDir * K.aimSpeed * dt;
       if (K.aimX > AIM_RIGHT) { K.aimX = AIM_RIGHT; K.aimDir = -1; }
       if (K.aimX < AIM_LEFT)  { K.aimX = AIM_LEFT;  K.aimDir = 1; }
@@ -377,7 +378,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
     K.lockedResult = result;
 
     // A punt always goes straight ahead; a field goal goes where you aimed.
-    const endX = K.boot ? GOAL_CENTER : landAim();
+    const endX = K.mode === 'kickoff' ? K.lockedAim : K.boot ? GOAL_CENTER : landAim();
     // Where the ball ends up depends on the outcome:
     //   good  -> sail UP through the uprights and rest BETWEEN them, above the crossbar (a clear make!)
     //   wide  -> arc to about crossbar height but off to the SIDE of a post (missed)
@@ -417,6 +418,14 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
   function inCoffin() {
     return !!(K.mode === 'punt' && K.coffin && !K.blocked && K.lockedPower != null
       && K.lockedPower >= K.coffin.lo && K.lockedPower <= K.coffin.hi);
+  }
+
+  // 🎯 AIM THE KICKOFF (Round 20, pick ⑤): where on the field a kickoff is aimed. The crosshair swings the whole width; the middle 56px is a
+  // normal kickoff, the next 38px each side a CORNER kick (shorter, harder to return), and the last 20px a SIDELINE kick (shorter still, hardest
+  // to return — and it can go out of bounds). fieldpos.js `afterKickoff(…, zone)` owns what each costs and buys.
+  function kickZone(aimX) {
+    const d = Math.abs(aimX - GOAL_CENTER);
+    return d <= 28 ? 'mid' : d <= 66 ? 'corner' : 'sideline';
   }
 
   // 🌬 Where the ball comes down: the aim you locked, pushed by this kick's wind (All-Weather Gear shrinks the push).
@@ -481,6 +490,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
       distance: K.distance,
       points: K.points,
       puntYards: puntYards(),
+      zone: K.mode === 'kickoff' ? kickZone(K.lockedAim != null ? K.lockedAim : GOAL_CENTER) : null,   // 🎯
     };
     exit();
     if (cb) cb(payload);
@@ -550,7 +560,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
       ? (K.toGoal != null ? 'BOOT IT!  ' + K.toGoal + ' TO THE GOAL LINE' : 'BOOT IT!')
       : Math.round(K.distance) + ' yd');
 
-    if (K.state === 'aim')         K.hint.setText('TAP to AIM  ⟵ ⟶');
+    if (K.state === 'aim')         K.hint.setText(K.mode === 'kickoff' ? 'TAP to AIM — corners are shorter but hard to return' : 'TAP to AIM  ⟵ ⟶');
     else if (K.state === 'power')  K.hint.setText(K.boot ? (K.coffin ? 'TAP in the GREEN to POOCH it' : 'TAP to BOOT it') : 'TAP to set POWER');
     else if (K.state === 'kick')   K.hint.setText('');
     else if (K.state === 'result') K.hint.setText(K.standalone ? 'TAP to kick again' : 'TAP to continue');
@@ -612,6 +622,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
     K.hud   = keep(scene.add.text(W / 2, 26, '', bigStyle(18, '#ffe066')).setOrigin(0.5));
     K.distLabel = keep(scene.add.text(GOAL_CENTER, GOAL_Y + 56, '', bigStyle(14, '#ffffff')).setOrigin(0.5));
     K.hint  = keep(scene.add.text(W / 2, 486, '', bigStyle(20, '#ffffff')).setOrigin(0.5));
+    K.zoneLabel = (K.mode === 'kickoff') ? keep(scene.add.text(GOAL_CENTER, GOAL_Y + 84, '', bigStyle(16, '#ffffff')).setOrigin(0.5)) : null;   // 🎯 which kick the crosshair is on
     if (K.wind) {                                    // 🌬 the wind arrow: how many arrows is how hard, and which way is which way
       const n = Math.max(1, Math.round(Math.abs(K.wind) * 3));
       const arrows = (K.wind < 0 ? '◀ ' : '▶ ').repeat(n).trim();
@@ -749,7 +760,7 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
   // What other files are allowed to call.
   // (peek() is just a window into the current kick, handy from the console.)
   return {
-    enter, exit, update, tap, isActive,
+    enter, exit, update, tap, isActive, kickZone,
     peek: () => ({ state: K.state, mode: K.mode, active: K.active,
                    outcome: judge(), aimX: K.aimX, power: K.power,
                    lockedAim: K.lockedAim, lockedPower: K.lockedPower, lockedResult: K.lockedResult,
