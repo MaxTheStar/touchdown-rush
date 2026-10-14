@@ -774,6 +774,7 @@ function update(time, delta) {
     updateBall();
     recordReplayFrame();        // remember this moment, in case it's a return TD
     if (checkTouchdown()) return;   // took it all the way = return TD!
+    if (checkReturnOutOfBounds(delta)) return;   // 📍 a return can step out too
     checkKickoffTackle();
     updateHUD();
     return;
@@ -814,6 +815,19 @@ function update(time, delta) {
 // line and steps out: the play ends right there. ⚠️ Only the human-driven carrier: the
 // AI's runners drift back to the middle on their own, and in 🌟 Superstar mode a teammate
 // holding the ball is not yours to steer.
+// 📍 …and so can a KICKOFF, PUNT or INTERCEPTION return (they run through controlReturner, not the scrimmage code).
+function checkReturnOutOfBounds(delta) {
+  if (!window.TDBounds || !G.ballCarrier || !G.koLive) return false;
+  const dash = dashVelocity();
+  const dir = dash ? Math.sign(dash.vx)
+            : (keys.left.isDown || touch.left) ? -1 : (keys.right.isDown || touch.right) ? 1 : 0;
+  if (!TDBounds.push(G.ballCarrier.s.x, dir, delta || 16, FIELD_WIDTH)) return false;
+  G.oobEnd = true;
+  sayComment(pick(['Steps out of bounds!', 'Out at the sideline!', 'Forced out!']));
+  endKickoffReturn();
+  return true;
+}
+
 function checkOutOfBounds(delta) {
   if (!window.TDBounds || G.twoPtTry || !G.ballCarrier) return false;
   if (window.TDStar && TDStar.on() && G.ballCarrier !== TDStar.player()) return false;
@@ -5760,7 +5774,8 @@ function endKickoffReturn() {
     showBanner(gain >= 1 ? 'RETURNED ' + gain + (gain === 1 ? ' YARD' : ' YARDS') + '!' : 'NO RETURN', false);
     return;
   }
-  showBanner(inEndZone ? 'TOUCHBACK' : 'NICE RETURN!', false);
+  showBanner(G.oobEnd ? 'OUT OF BOUNDS' : inEndZone ? 'TOUCHBACK' : 'NICE RETURN!', false);
+  G.oobEnd = false;
 }
 
 // ============================================================

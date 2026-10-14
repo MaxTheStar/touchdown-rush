@@ -27,8 +27,8 @@
 (function () {
   'use strict';
 
-  const EDGE    = 24;     // px from either edge where "at the line" begins (measured: a runner's body stops dead at x = 20, so this is "leaning on the wall")
-  const PUSH_MS = 160;    // how long a runner must keep pushing out
+  const EDGE    = 30;     // px from either edge where "at the line" begins (measured: a runner's body stops dead at x = 20, so this is "leaning on the wall")
+  const PUSH_MS = 90;     // how long a runner must keep pushing out (was 160: on a phone it felt like the wall was still there)
   const WINDOW  = 120;    // seconds left in the 2nd / 4th quarter when the clock stays stopped
 
   let held = 0;           // ms of continuous push
