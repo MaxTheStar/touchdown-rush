@@ -3160,6 +3160,18 @@ function presnapFoul(foul) {
 //   'halftime' — the 2nd quarter ended → show the HALFTIME screen
 //   'gameover' — time's up and someone is ahead → final whistle
 function tickPeriodAtBoundary() {
+  // 🕑 THE TWO-MINUTE WARNING (twomin.js): at 2:00 of the 2nd and 4th quarters the clock STOPS AT 2:00 (a play that carried it
+  // past gives the seconds back), both teams catch their breath and the play clock resets. Once a half. Not a timeout.
+  if (window.TDTwoMin && !G.drillGame && TDTwoMin.due(G.quarter, NUM_QUARTERS, G.clock, G.overtime, G.twoMinDone)) {
+    (G.twoMinDone = G.twoMinDone || {})[G.quarter] = true;
+    G.clock = TDTwoMin.AT;
+    G.clockStopped = false;
+    showBanner('🕑 TWO-MINUTE WARNING', true);
+    sayComment(pick(['Two-minute warning!', 'The clock stops at two minutes.', 'Two minutes left — time to catch a breath.']));
+    if (window.TDGas && TDGas.timeout) TDGas.timeout();
+    if (window.TDPlayClock) TDPlayClock.reset();
+    if (window.TDSound) TDSound.sting('coin');
+  }
   if (G.clock > 0) return 'continue';
   // ⏱️ TWO-MINUTE DRILL: there is no next quarter and no overtime. When this
   // clock hits zero the drill is over, however the score happens to look.
@@ -5163,6 +5175,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.pendingXP = false; G.twoPtTry = false;      // 🏈 no leftover try from a past game
   G.quarter = 1; G.clock = QUARTER_SECONDS;
   G.overtime = false; G.gameOver = false;
+  G.twoMinDone = {};                    // 🕑 no warnings given yet
   if (window.TDOT) TDOT.reset();         // 🔀 no overtime possessions yet
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
   G.timeouts = 3; G.clockStopped = false; G.formation = 0;   // ⏱ fresh timeouts, 🧩 back to SPREAD
