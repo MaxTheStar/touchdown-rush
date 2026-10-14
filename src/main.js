@@ -601,7 +601,7 @@ function create() {
   // helper they call has to be listed here. 🧑‍🤝‍🧑 personnel.js stands a
   // substitute somewhere new with `place` and walks the tight end to his block
   // with `steer`; both used to be main.js-only and both threw when called.
-  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumbleScramble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, presnapFoul, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
+  window.__td = { G, offense, defense, keys, touch, touch2, snap, place, steer, NUM_QUARTERS, QUARTER_SECONDS, throwTo, handOff, endPlay, setupPlay, toggleTwoPlayer, controlBallCarrier, controlP2Defender, fumble, resolveFumbleScramble, chooseFourthDown, startKick, startExtraPoint, onKickDone, pitch, pitchTarget, resolvePitch, dropThePitch, throwAway, throwAwayState, dive, diveState, pumpFake, pumpState, startOnsideScramble, showFourthDownChoice, showPATChoice, choosePAT, startTwoPointTry, resolveTwoPoint, inFieldGoalRange, fieldGoalDistance, NFL_TEAMS, enterMenu, menuNav, startGameWithTeam, startKickoff, endKickoffReturn, controlReturner, updateKickoffCoverage, canPass, passToNearest, canvasTapToWorld, recordReplayFrame, callPlay, PLAYBOOK, callTimeout, cycleFormation, toggleMaxwell, callTrick, updateTrickBtn, FORMATIONS, layoutSkill, RED_FORMATIONS, pickRedFormation, startReplay, updateReplay, endReplay, resolvePass, canHandOff, setDifficulty, diff, updateRouteTrails, drawRoutePreview, sayComment, presnapFoul, sneak, sneakAvailable, skipReplay, isRunning, applySwipeRun, dashVelocity, advanceClock, tickPeriodAtBoundary, startCpuDrive, setupDefensePlay, redSnap, redThrow, redPlayEnd, defenseNextPlay, updateDefensePlay, callRedPlay, redRouteVelocity, updateRedTeam, updateBlueTeammates, startPickSix, takeYourBall, catchAndRun, pickMyDefender, controlYourDefender, teamRating, stars10, resolveRedPass, cpuDriveEnd, finishCpuDrive, endGame, returnToMenuFromGameOver, startNextPlay, startBreak, endBreak, DefenseSim };
 }
 
 // ============================================================
@@ -1399,6 +1399,48 @@ function jumpBall(wr, wx, wy, starThere) {
   ballFollow = false;                                   // the ball hangs where it is, over the two of them
   sayComment(pick(['Contested! They both go up!', 'Jump ball!', "It's up for grabs!"]));
   return true;
+}
+
+// ============================================================
+// 🐢 THE QB SNEAK (Round 19, pick ①) — sneak.js has the table and the button; the play lives here
+// ------------------------------------------------------------
+// Within 2½ yards of the marker (or the goal line) the quarterback goes under centre, takes the snap and pushes. The pile moves
+// by sneak.js's table; a move puts the ball AT the marker (or in the end zone), a stop leaves it where it was, and 3% of the time
+// the ball comes out in the pile (the normal fumble scramble). It runs as a short film in 'pass' state, so nobody can be tackled
+// mid-lunge, and it always finishes through endPlay().
+// ============================================================
+function sneakTogo() { return TDSneak.togo(G.losYards, G.firstDownYards); }
+function sneakAvailable() {
+  return !!(window.TDSneak && G.state === 'presnap' && !G.cpu && !G.twoPtTry && TDSneak.available(G.losYards, G.firstDownYards)
+    && !(window.TDStar && TDStar.on()));
+}
+function sneak() {
+  if (!sneakAvailable()) return;
+  const d = sneakTogo();
+  const adj = G.difficulty === 'easy' ? 0.08 : G.difficulty === 'hard' ? -0.08 : 0;
+  const win = Math.random() < TDSneak.chance(d, adj);
+  const strip = Math.random() < TDSneak.FUMBLE;
+  const qb = offense[0];
+  place(qb, 266, G.losY + 22);                         // under centre
+  qb.startX = qb.s.x; qb.startY = qb.s.y;
+  hideFourthDownChoice();
+  if (window.TDSneak) TDSneak.paint(false);
+  snap(G.scene.time.now);                              // the real snap (clock, play clock, scouting book…)
+  G.state = 'pass';                                    // nobody is tackled mid-lunge
+  G.hasPassed = true;                                  // it is a hand-to-hand play: no forward pass after it
+  sayComment(pick(['QB sneak!', 'He sneaks it!', 'Quarterback sneak — here comes the pile!']));
+  showBanner('🐢 QB SNEAK!', false);
+  const goalCloser = G.firstDownYards >= 100;           // the end zone is the nearer line: a made sneak is a touchdown
+  const targetY = win ? (goalCloser ? ENDZONE - 4 : yardsToY(G.firstDownYards) - 3) : G.losY - 2;
+  G.scene.tweens.add({
+    targets: qb.s, y: targetY, duration: 520, ease: 'Cubic.Out',
+    onComplete: () => {
+      qb.s.setVelocity(0, 0);
+      if (strip) { fumble(); return; }
+      if (checkTouchdown()) return;
+      endPlay('tackle', win ? 'THE PILE MOVES!' : 'STOPPED AT THE LINE!');
+    },
+  });
 }
 
 // ============================================================
@@ -2548,6 +2590,9 @@ function showFourthDownChoice() {
       ? '② FIELD GOAL · ' + Math.round(fieldGoalDistance()) + ' yd'
       : '② PUNT';
   }
+  // 🐢 THE QB SNEAK (sneak.js): on the panel only when the last yard is all that is left
+  const sn4 = document.getElementById('btn-sneak4');
+  if (sn4) sn4.style.display = (window.TDSneak && TDSneak.available(G.losYards, G.firstDownYards)) ? '' : 'none';
   // 🎭 SPECIAL TEAMS TRICKS: the fake shows up while you've still got one left.
   const fakeBtn = document.getElementById('btn-fake');
   if (fakeBtn) {
@@ -6150,6 +6195,8 @@ function setupTouchButtons() {
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
   bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
+  bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
+  bindTapEl('btn-sneak4', () => { if (G.state === 'decision') { G.state = 'presnap'; sneak(); } });   // …and the same from the 4th-down panel
   bindTapEl('btn-xp', () => choosePAT('kick'));    // 🏈 after a TD: kick the extra point
   bindTapEl('btn-two', () => choosePAT('two'));    // 🏈 …or go for two
   DefenseSim.wire();                               // 🛡 the 1-player tap-to-progress defense map
@@ -6571,6 +6618,7 @@ function updateHUD() {
   // 👀 …and a man in motion keeps jogging across until he gets there (motion.js).
   if (window.TDMotion) TDMotion.tick();
   if (window.TDHard) TDHard.paint();           // 🗣 the hard-count button (pre-snap only)
+  if (window.TDSneak) TDSneak.paint(sneakAvailable() && !(function () { const h = document.getElementById('btn-hail'); return h && getComputedStyle(h).display !== 'none'; })());   // 🐢 …and the sneak button
   if (window.TDDraw) TDDraw.paint();           // 🎭 …and the draw button
   if (window.TDScreen) TDScreen.paint();       // 🧱 …and the screen button
 
