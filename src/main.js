@@ -860,6 +860,7 @@ function snap(time) {
   G.dashUntil = 0;            // no leftover dash from the last play
   G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
   G.lobArmed = false; G.lobThrow = false;                    // 🏹 a fresh play: no lob called, none in the air
+  G.jetBurstUntil = 0;                                       // ✈️ …and no leftover jet burst
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
@@ -928,6 +929,7 @@ function runSpeed() {
   // completely empty tank costs 6%, which trims your 11px cushion over a
   // chasing defender without erasing it. A full tank returns exactly 1.
   if (window.TDGas) s *= TDGas.speedMult();
+  if (window.TDJet) s *= TDJet.burst(G.scene.time.now, G.jetBurstUntil);   // ✈️ the jet man's burst after the exchange
   return s;
 }
 
@@ -1033,6 +1035,7 @@ function canHandOff() {
   if (window.TDProtect && TDProtect.blocking(offense[1])) return false;
   // 🧑‍🤝‍🧑 …and in 🙌 3 WIDE there is no running back at all — the man in his
   // spot is a receiver split out wide. Nobody to hand it to (personnel.js).
+  if (G.jetOn) return Phaser.Math.Distance.Between(offense[0].s.x, offense[0].s.y, offense[3].s.x, offense[3].s.y) <= HANDOFF_DIST;   // ✈️ the hand-off goes to the man coming across
   if (window.TDPersonnel && !TDPersonnel.hasBack()) return false;
   return Phaser.Math.Distance.Between(
     offense[0].s.x, offense[0].s.y, offense[1].s.x, offense[1].s.y) <= HANDOFF_DIST;
@@ -1046,10 +1049,11 @@ function handOff() {
   // 📊 SELF-SCOUTING — that is a RUN on your card. Counted AFTER the guard on
   // purpose: a hand-off the game refused was never a play call.
   if (window.TDSelf) TDSelf.call('run', null, G.formation);
-  const rb = offense[1];
+  const rb = G.jetOn ? offense[3] : offense[1];
   G.ballCarrier = rb;
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
-  sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
+  if (G.jetOn && window.TDJet) { G.jetBurstUntil = G.scene.time.now + TDJet.BURST_MS; sayComment('✈️ JET SWEEP! He takes it at full speed!'); }   // ✈️ he takes it at speed
+  else sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
   if (window.TDDraw) TDDraw.handoff();   // 🎭 a LATE hand-off on a called draw catches the rush going the wrong way
 }
 
@@ -1895,6 +1899,7 @@ function routeVelocity(o, depth, side) {
     case 'wheel':    return depth < 26  ? { vx: S * 0.90, vy: -S * 0.16 } : { vx: S * 0.14, vy: -S * 0.95 };
     case 'flat':     return { vx: S * 0.82, vy: -S * 0.16 };                         // RB checkdown
     case 'hold':     return { vx: 0, vy: 0 };                                        // 🎭 the DRAW: the back stays home
+    case 'jet':      return Math.abs(o.s.x - o.startX) < 230 ? { vx: -G.jetSide * S, vy: 0 } : { vx: 0, vy: -S };   // ✈️ the JET sweep: across behind the quarterback, then upfield
     case 'screen':   return Math.abs(o.s.x - o.startX) < 84 ? { vx: OUT * S * 0.85, vy: 0 } : { vx: 0, vy: 0 };   // 🧱 the SCREEN: out to the flat, then wait
     case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
     default:         return { vx: 0, vy: -S };                                        // 'streak'
@@ -2015,6 +2020,7 @@ function routePath(o) {
     case 'wheel':    return [{ x: sx, y: sy }, { x: clampX(sx + 90), y: up(20) }, { x: clampX(sx + 120), y: up(230) }];
     case 'flat':     return [{ x: sx, y: sy }, { x: clampX(sx + 95), y: up(18) }];
     case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
+    case 'jet':      return [{ x: sx, y: sy }, { x: clampX(sx - G.jetSide * 230), y: sy }];   // ✈️ the JET sweep: across the formation
     case 'screen':   return [{ x: sx, y: sy }, { x: clampX(sx + OUT * 84), y: sy }];  // 🧱 the SCREEN: out to the flat and wait
     case 'swing': {  const ox = clampX(sx + 90);
                      return [{ x: sx, y: sy }, { x: ox, y: up(20) }, { x: clampX(ox + 35), y: up(210) }]; }
