@@ -72,6 +72,7 @@
     const g = G(), t = td();
     if (!can() && !armed) return false;
     if (!armed && window.TDScreen && TDScreen.armed()) TDScreen.toggle();   // a down is a draw OR a screen, never both
+    if (!armed && window.TDPA && TDPA.armed()) TDPA.toggle();               // …or play action
     armed = !armed;
     t.offense[1].route = armed ? 'hold' : g.concept.rb;      // the back stays home, or goes back to his route
     try { t.drawRoutePreview(); } catch (e) {}

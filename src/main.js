@@ -861,6 +861,7 @@ function snap(time) {
   G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
+  if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
@@ -2162,6 +2163,13 @@ function updateDefense(elapsed) {
     // just loses speed for a beat — NOT the flea flicker's bite, which sends them BACKWARD toward
     // the line and opened receivers by nine yards when it was first tried here.
     if (qbHasBall && d.role !== 'DL' && G.scene.time.now < G.fakeBiteUntil) speed *= G.fakeBiteSlow;
+
+    // 🎣 PLAY ACTION (playaction.js): for a beat the LINEBACKERS step up toward the line to stop the run, instead of dropping into their zones
+    if (qbHasBall && d.role === 'LB' && G.paStrength && G.scene.time.now < G.paUntil) {
+      const s = G.paStrength;
+      ty = ty * (1 - s) + (G.losY - 6) * s;
+      speed *= (1 - 0.5 * s);
+    }
 
     // 🧱 THE SCREEN (screen.js): a defender one of the two escorts has a hand on keeps only a blocked rusher's speed
     if (window.TDScreen && TDScreen.sealed(d)) speed *= diff().rushSlow;
@@ -6130,6 +6138,7 @@ function setupPlay(next) {
   if (window.TDHard) TDHard.newPlay();         // 🗣 …and a fresh hard count
   if (window.TDDraw) TDDraw.newPlay();         // 🎭 …and the draw is not called until you call it
   if (window.TDScreen) TDScreen.newPlay();     // 🧱 …nor the screen
+  if (window.TDPA) TDPA.newPlay();             // 🎣 …nor play action
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -6621,6 +6630,7 @@ function updateHUD() {
   if (window.TDSneak) TDSneak.paint(sneakAvailable() && !(function () { const h = document.getElementById('btn-hail'); return h && getComputedStyle(h).display !== 'none'; })());   // 🐢 …and the sneak button
   if (window.TDDraw) TDDraw.paint();           // 🎭 …and the draw button
   if (window.TDScreen) TDScreen.paint();       // 🧱 …and the screen button
+  if (window.TDPA) TDPA.paint();               // 🎣 …and the play-action button
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
