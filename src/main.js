@@ -859,6 +859,7 @@ function snap(time) {
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
   G.oobEnd = false; if (window.TDBounds) TDBounds.reset();   // 📍 nobody has stepped out yet
+  G.lobArmed = false; G.lobThrow = false;                    // 🏹 a fresh play: no lob called, none in the air
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
@@ -1127,6 +1128,13 @@ const PUMP_BITE_MS = 450, PUMP_LOCK_MS = 300;
 const PUMP_SLOW = [0.45, 0.70, 1.0];     // how much speed the coverage keeps: the 1st fake of a drive, the 2nd, the 3rd (they have seen it)
 const PUMP_STRIP = 2, PUMP_STRIP_MS = 600;   // a quarterback hit within 600ms of the fake is still holding the ball out: twice the fumbles
 const PUMP_ROOM = 44;                    // px — a rusher closer than this and there is no room to sell it (the button hides)
+// 🏹 BULLET OR LOB: is the 🏹 button up (a throw is possible), and what does a tap do?
+function lobState() {
+  return !!(window.TDLob && G.state === 'live' && !G.cpu && !G.hasPassed && canPass() && G.ballCarrier === offense[0]
+    && !(window.TDStar && TDStar.on()));
+}
+function toggleLob() { if (lobState()) G.lobArmed = !G.lobArmed; }
+
 function pumpState() {
   if (G.state !== 'live' || G.cpu || G.pumped || G.trickActive || !canPass()) return false;
   if (window.TDStar && TDStar.on()) return false;
@@ -1320,13 +1328,16 @@ function throwTo(num) {
   // but on a halfback pass it's the RB doing the throwing.
   const thrower = G.ballCarrier.s;
   const dist = Phaser.Math.Distance.Between(thrower.x, thrower.y, wr.s.x, wr.s.y);
-  const flight = dist / BALL_SPEED;
+  // 🏹 BULLET OR LOB (lob.js): an armed 🏹 LOB makes THIS throw slow and high (the ordinary throw is the bullet)
+  const lob = !!(window.TDLob && G.lobArmed);
+  G.lobArmed = false; G.lobThrow = lob;
+  const flight = dist / (lob ? TDLob.SPEED : BALL_SPEED);
   let targetX = Phaser.Math.Clamp(wr.s.x + wr.s.body.velocity.x * flight, 10, FIELD_WIDTH - 10);
   let targetY = wr.s.y + wr.s.body.velocity.y * flight;
 
   // 🎲 Sometimes the QB slips and throws a bad one — it sails off into open
   // space, where anyone nearby (a defender OR another receiver) can grab it.
-  if (Math.random() < BAD_THROW_CHANCE) {
+  if (Math.random() < BAD_THROW_CHANCE * (lob ? TDLob.BAD : 1)) {
     targetX = Phaser.Math.Clamp(targetX + Phaser.Math.Between(-95, 95), 10, FIELD_WIDTH - 10);
     targetY = targetY + Phaser.Math.Between(-80, 80);
     sayComment(pick(['Bad throw!', 'Off the mark!', 'That one sailed!', 'Wobbly pass!']));
@@ -1339,10 +1350,15 @@ function throwTo(num) {
   G.scene.tweens.add({
     targets: ball,
     x: targetX, y: targetY,
-    duration: Math.max(220, flight * 1000),
+    duration: Math.max(lob ? TDLob.MIN_MS : 220, flight * 1000),
     ease: 'Sine.Out',
     onComplete: () => resolvePass(wr, targetX, targetY)
   });
+  if (lob) {                                          // 🏹 …and the lob is HIGH: the ball swells as it climbs, then shrinks back
+    const bs = ball.scaleX;
+    G.scene.tweens.add({ targets: ball, scaleX: bs * 1.7, scaleY: bs * 1.7, duration: Math.max(TDLob.MIN_MS, flight * 1000) / 2, yoyo: true, ease: 'Sine.Out' });
+    sayComment(pick(['He lofts it!', 'High, soft lob…', 'Over the top!']));
+  }
 }
 
 // A weather-flavored "incomplete" call, so the conditions really come through.
@@ -1594,6 +1610,7 @@ function resolvePass(wr, x, y) {
   // Who is closest to the RECEIVER when the ball arrives?
   let nearestDef = Infinity, nearestD = null;
   for (const d of defense) {
+    if (G.lobThrow && window.TDLob && !TDLob.canContest(d.role)) continue;   // 🏹 a lob is over the linebackers' heads
     const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, wx, wy);
     if (dd < nearestDef) { nearestDef = dd; nearestD = d; }
   }
@@ -2152,7 +2169,7 @@ function updateDefense(elapsed) {
     if (G.state === 'pass' && G.passTarget && d.role !== 'DL') {
       const toBall = Phaser.Math.Distance.Between(d.s.x, d.s.y, G.passTarget.x, G.passTarget.y);
       // Maxwell has a superstar's range — he breaks on the ball from much farther.
-      const reach = isStar ? 230 : G.difficulty === 'easy' ? 118 : G.difficulty === 'hard' ? 165 : 145;
+      const reach = (isStar ? 230 : G.difficulty === 'easy' ? 118 : G.difficulty === 'hard' ? 165 : 145) * (G.lobThrow && d.role === 'DB' && window.TDLob ? TDLob.REACH : 1);   // 🏹 the backs get to a hanging lob from further
       if (toBall < reach) {
         tx = G.passTarget.x; ty = G.passTarget.y;
         speed = DEF_SPEED * boost * (isStar ? 1.22 : G.difficulty === 'easy' ? 1.0 : 1.12);
@@ -6204,6 +6221,7 @@ function setupTouchButtons() {
   bindTapEl('btn-go', () => chooseFourthDown('play'));
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
   bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
+  bindTapEl('btn-lob', () => toggleLob());                 // 🏹 BULLET OR LOB (lob.js)
   bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
   bindTapEl('btn-sneak4', () => { if (G.state === 'decision') { G.state = 'presnap'; sneak(); } });   // …and the same from the 4th-down panel
   bindTapEl('btn-xp', () => choosePAT('kick'));    // 🏈 after a TD: kick the extra point
@@ -6582,6 +6600,9 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🏹 BULLET OR LOB — the button, only while a throw is possible; an armed lob lapses with the throw (or the play)
+  { const on = lobState(); if (!on) G.lobArmed = false; if (window.TDLob) TDLob.paint(on, G.lobArmed); }
 
   // 🛝 THE QB SLIDE — the button, only once he has scrambled across the line with a tackler closing.
   const sl = slideState();
