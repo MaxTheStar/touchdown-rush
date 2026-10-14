@@ -57,6 +57,7 @@
       if (window.TDDraw && TDDraw.armed()) TDDraw.toggle();
       if (window.TDScreen && TDScreen.armed()) TDScreen.toggle();
       if (window.TDBoot && TDBoot.armed()) TDBoot.toggle();
+      if (window.TDCalls) TDCalls.clear();
     }
     armed = !armed;
     t.offense[1].route = armed ? 'hold' : g.concept.rb;

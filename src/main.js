@@ -892,6 +892,7 @@ function snap(time) {
     G.trickActive = false;
   }
   updateTrickBtn();
+  if (window.TDCalls) TDCalls.afterSnap();   // 📋 a special call (wildcat, jet sweep, option) changes who has the ball RIGHT NOW
 
   // Read out what the defense is doing — a blitz is always called (fair
   // warning!), and the coverage is called out some of the time so you learn it.
@@ -1903,7 +1904,7 @@ function routeVelocity(o, depth, side) {
 function updateReceivers(elapsed) {
   const starMan = (window.TDStar && TDStar.on()) ? TDStar.player() : null;
   for (const o of offense) {
-    if (o.role !== 'WR' && o.role !== 'RB') continue;
+    if (o.role !== 'WR' && o.role !== 'RB' && !(G.wildcat && o === offense[0])) continue;   // 🐺 …except a wildcat's quarterback, who runs a decoy route
     if (o === G.ballCarrier) continue; // once caught / handed the ball, the player drives
     if (o === starMan) continue;       // 🌟 in Superstar Mode YOU run this man's route
     // 🛡 a back who stayed in to block is not running a route at all.
@@ -2111,6 +2112,7 @@ function updateDefense(elapsed) {
       // slower PURSUE_SPEED so a good runner can actually break away. (Maxwell,
       // the ballhawk, closes a touch faster than the rest.)
       tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED * boost * (isStar ? 1.12 : 1);
+      if (G.wildcat && G.scene.time.now < G.wildHoldUntil) speed *= 0.08;   // 🐺 the defense is guessing which man has it
       // 🧱 …unless the tight end has him sealed off on a HEAVY run, in which case
       // he keeps exactly what a blocked pass rusher keeps — one rule for both
       // kinds of block, so the pocket and the run lane bend the same way.
@@ -3245,7 +3247,7 @@ function startCpuDrive() {
   G.turnoverSpotCpu = null;
   G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
   if (window.TDDrives) TDDrives.beginOpp(spot, driveWhen());   // 📋 their drive starts here
-  G.pumpUses = 0;                                              // 🧢 a new possession: the defense forgets your pump fakes
+  G.pumpUses = 0; G.wildUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
   // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
   // Player 2 gets to run the red offense on their possession.
   if (!G.twoPlayer) { DefenseSim.start(); return; }
@@ -6168,6 +6170,7 @@ function setupPlay(next) {
   if (window.TDScreen) TDScreen.newPlay();     // 🧱 …nor the screen
   if (window.TDPA) TDPA.newPlay();             // 🎣 …nor play action
   if (window.TDBoot) TDBoot.newPlay();         // 🌀 …nor a bootleg
+  if (window.TDCalls) TDCalls.newPlay();       // 📋 …nor a special call
   if (window.TDPersonnel) TDPersonnel.newPlay();  // 🧑‍🤝‍🧑 …and read the down for a 💡 substitution
   updateTrickBtn();   // 🎩 show the 🎩 button if your trick is still available
 }
@@ -6665,6 +6668,7 @@ function updateHUD() {
   if (window.TDScreen) TDScreen.paint();       // 🧱 …and the screen button
   if (window.TDPA) TDPA.paint();               // 🎣 …and the play-action button
   if (window.TDBoot) TDBoot.paint();           // 🌀 …and the bootleg button
+  if (window.TDCalls) TDCalls.paint();         // 📋 …and the special-call button
 
   // ⭐ While YOU play defense: show THEIR down & distance, and float the
   // YOU tag over your defender so you never lose yourself in the pile.
