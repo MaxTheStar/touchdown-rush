@@ -4341,10 +4341,17 @@ const DefenseSim = (function () {
       }
       // 🏊 THE SWIM MOVE (swim.js): the sack is no longer one roll — you get past your man or you do not. It REPLACES the sack roll (the
       // moment comes up 1.74× as often so an ordinary thumb's sack rate is unchanged); a lost moment is the completion this play would have been.
+      // 🕵 THE SCRAMBLE (defcall.js, Round 21 pick ②): on 3rd/4th and 6+ the quarterback sometimes pulls it down and runs. A SPY shuts it.
+      if (G.cpu && G.cpu.down >= 3 && G.cpu.togo >= 6 && Math.random() < (G.scrambleP != null ? G.scrambleP : SCRAMBLE_P)) {   // (G.scrambleP: a tests-only knob)
+        if (D.spy) return { r: 'gain', y: Phaser.Math.Between(0, 2), side: 'pass', tag: 'spied', t: '<b>The spy has him!</b> Scramble stopped for ' + 'a short gain.' };
+        const sy = Math.round(Phaser.Math.Between(7, 18) * cpuPow);
+        return { r: 'gain', y: sy, side: 'pass', tag: 'scramble', t: 'Quarterback <b>scrambles</b> for <b>' + sy + '</b>!' };
+      }
+      const longDown = !!(G.cpu && G.cpu.down >= 3 && G.cpu.togo >= 6);        // 🕵 the downs a quarterback runs: their ordinary passes are a little less sure there, to pay for the scramble
       const sackP = 0.10 + dStop * 0.10 + D.sack;
       const swim = !!(window.TDSwim && TDSwim.ready());
       const completion = () => {
-        let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
+        let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain * (longDown ? (G.longFix != null ? G.longFix : LONG_FIX) : 1));
         if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
         return { r: 'gain', y, side: 'pass', t: 'Pass complete for <b>' + y + '</b>.' };
       };
@@ -4459,6 +4466,8 @@ const DefenseSim = (function () {
   // (An early run WITHOUT the tipped ball said 0.6: the picks that come out of tipped incompletions are not scaled, so the real
   // game needs a harder cut.) Ball Hawk gear and your defensive calls still add on top, unscaled, so they are worth what they were.
   const TAKEAWAY_SCALE = 0.5;
+  const LONG_FIX = 0.85;                                 // 🕵 the ordinary-pass yards factor on those downs that pays for the scramble (tuned below)
+  const SCRAMBLE_P = 0.20;                               // 🕵 the share of 3rd/4th-and-6+ pass plays that become a quarterback scramble (tuned in DEVLOG v4.73)
   const INT_DEPTH_MIN = 4, INT_DEPTH_MAX = 22;          // yards downfield the pass was caught (mean 13)
   const TAKEAWAY_TOUCHBACK = 20;                         // a pick in your own end zone starts you here
   // "on your own 38" / "at midfield" / "on their 41" — from YOUR side of the ball

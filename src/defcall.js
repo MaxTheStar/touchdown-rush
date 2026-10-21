@@ -55,7 +55,7 @@
   // that, and 🛡 zone quietly became the right answer to everything.
   const NEUTRAL = {
     sack: 0, stuff: 0, incomplete: 0, intAdd: 0, fumbleAdd: 0,
-    bigPass: 0, bigRun: 0, passGain: 1, runGain: 1,
+    bigPass: 0, bigRun: 0, passGain: 1, runGain: 1, spy: 0,
   };
 
   // ⚠️ EACH CALL HAS TO BE THE BEST ANSWER TO SOMETHING AND THE WORST ANSWER TO
@@ -146,6 +146,28 @@
     } catch (e) { return false; }
   }
 
+  // ============================================================
+  // 🕵 SPY THE QUARTERBACK (Round 21, pick ②) — the third conditional call
+  // ------------------------------------------------------------
+  // On third or fourth and long a quarterback who pulls it down and runs is the most frustrating play there is. DefenseSim.play() now has that
+  // play (a SCRAMBLE: on 3rd/4th and 6+ a passing play turns into one SCRAMBLE_P of the time, for 6–16 yards), and a SPY is the answer: one
+  // man shadows him, so the scramble is a 0–2 yard play. The price is the pass rush: with a man not rushing, sacks fall (−0.04) and the
+  // quarterback has a half-second longer (bigPass +0.03).
+  // ⚠️ THE SCRAMBLE IS NOT A FREE BUFF TO THEM: SCRAMBLE_P was tuned so a no-call defense concedes the SAME third-and-long conversion rate as
+  // before the scramble existed (DEVLOG v4.73), so the spy is worth exactly what it takes back.
+  // It exists only on 3rd/4th down with 6+ to go — the only downs a quarterback runs.
+  // ============================================================
+  const SPY = { id: 'spy', ic: '🕵', name: 'SPY', tag: '🕵 SPY',
+    blurb: '3rd/4th and long: one man shadows the quarterback. He cannot scramble — but your pass rush is thinner.',
+    mods: { spy: 1, sack: -0.08, bigPass: 0.08, incomplete: -0.03 } };
+  function spyOn() {
+    try {
+      const g = window.__td && __td.G;
+      if (!g || !g.cpu || g.state !== 'dsim' || g.dsimEnding) return false;
+      return g.cpu.down >= 3 && g.cpu.togo >= 6;
+    } catch (e) { return false; }
+  }
+
   let armed = null;   // the call for the play about to happen
 
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
@@ -171,8 +193,9 @@
     // 🛑 …plus PREVENT, on its own full-width row, only when it is on the table.
     let list = preventOn() || (armed && armed.id === 'prevent') ? CALLS.concat(PREVENT) : CALLS;
     if (goalOn() || (armed && armed.id === 'goalline')) list = list.concat(GOALLINE);   // 🛑 inside your 8 only
+    if (spyOn() || (armed && armed.id === 'spy')) list = list.concat(SPY);               // 🕵 third/fourth and long only
     row.innerHTML = list.map(c =>
-      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     row.querySelectorAll('.dc-btn').forEach(el => {
       el.addEventListener('pointerdown', e => {
@@ -188,7 +211,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : null); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -233,8 +256,8 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    goalOn, GOAL_SPOT,
-    _calls: () => CALLS.concat(PREVENT, GOALLINE).map(c => ({ id: c.id, mods: c.mods })),
+    goalOn, GOAL_SPOT, spyOn,
+    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 

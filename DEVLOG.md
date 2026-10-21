@@ -8,7 +8,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
 
 ## 📍 Where we are
 
-- **Version:** v4.72 — cache-buster is `?v=247` in `index.html`.
+- **Version:** v4.73 — cache-buster is `?v=249` in `index.html`.
   - Round 6 swept (v1.48–v1.57), **Round 7 swept** (v1.58–v1.67), v1.68 tidied the portrait menu.
   - **Round 8 — The Front Office Board: SWEPT 8/8.** 🌟 Player Nicknames v1.69 · 🍿 Concession
     Stands v1.70 · 🎙️ Broadcast Booth (already in game) · 🎯 Weekly Quests v1.77 · 🚌 Road Trip
@@ -222,6 +222,7 @@ file is the *developer* view: current state, how the pieces fit, and what's next
     published R16 HTML — the R16 generator had been cleaned out of the scratchpad; the ARTIFACT is the source of truth).
     Off-board so far: 🛠 v4.38 (no onside panel when no kickoff is coming — found by the first Hail Mary that won a game).
   <!-- R17-ENTRIES: newest first -->
+  - **🕵 v4.73 — SPY THE QUARTERBACK (Round 21, pick ②, `defcall.js` + `DefenseSim.play()` in `main.js`, no new file).** The third conditional call: a full-width 🕵 SPY button on **3rd or 4th down with 6+ to go** (`TDDefense.spyOn()`), mods `spy:1, sack −0.08, bigPass +0.08, incomplete −0.03`. It needed something to spy ON, so **the computer's quarterback now scrambles**: on those downs 20% of pass plays (`SCRAMBLE_P`) become "Quarterback scrambles for 7–18"; with a spy armed they become "The spy has him! 0–2 yds". ⚠️ **NOT A BUFF TO THEM:** the scramble is paid for by an `0.85×` factor on their ordinary-pass yards on those downs (`LONG_FIX`), tuned on the real `DefenseSim.play()` at 3rd & 8, 80,000 snaps each, 32 opponents, medium: **old (no scramble) 23.27% first downs / 4.94 yds a snap → no call now 23.61% / 4.79 (neutral, +0.3 pts)**. The calls on that down: **SPY 20.65% / 4.87 · blitz 22.69% / 4.13 · man 31.3% / 5.09 · zone 32.16% / 5.05** — so the spy is the best answer to the CONVERSION and the blitz to the YARDS (and man/zone are poor on 3rd and long, a finding about the existing calls, left alone). First cuts: P 0.08 left the spy a no-op (18.96 vs 19.51); P 0.20 with a mild spy (sack −0.04, bigPass +0.03) made it dominate every call (16.7% vs 22.9% blitz), so the rush cost was doubled. `G.scrambleP`/`G.longFix` are tests-only knobs. Verified in the real game: the button is up on 3rd & 8, absent on 3rd & 3 and on 1st down.
   - **🛑 v4.72 — GOAL-LINE DEFENSE (Round 21 "The Call Sheet Board", pick ①, inside `defcall.js`, no new file).** Round 21 (artifact `claude.ai/artifact/7a81BbSHGCjpbQxsz51AQ9`): ①🛑 Goal-Line D · ②🕵 Spy the QB · ③🤝 Double Their Star · ④⏱ The Computer Hurries Up · ⑤🏳 The Computer Spikes It · ⑥🧱 Call the Return · ⑦🧩 Nickel and Dime · ⑧🧠 They Scout You Back. The second CONDITIONAL call (the pattern PREVENT set): a full-width 🛑 GOAL LINE button appears in the defense panel only while their ball is **inside your 8** (`G.cpu.spot ≥ 92`, `TDDefense.goalOn()`), mods `stuff +0.20, runGain 0.55, bigRun −0.08, incomplete −0.10, passGain 1.25`. **Measured on the real `DefenseSim.play()`** (20,000 snaps each, 32 opponents, from their 5, the chance the snap is a touchdown; the opponent's run/pass lean forced through `TDScout.passLean`):
         they pass   none   blitz   man    zone   GOAL LINE
         30%         39.8   20.4    46.3   40.1   **14.1**   ← best by far against a running team
