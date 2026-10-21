@@ -168,6 +168,26 @@
     } catch (e) { return false; }
   }
 
+  // ============================================================
+  // 🤝 DOUBLE THEIR STAR (Round 21, pick ③) — the fourth conditional call
+  // ------------------------------------------------------------
+  // Every opponent has one receiver the whole offense is built around. Real defenses put two men on him and dare everyone else to beat them: the
+  // big ball is gone, the short ball is a gift. It exists only against a team that REALLY throws (the Scouting Report's lean, `TDScout.passLean`,
+  // 62% or more): against a team that runs it is two men standing around.
+  // ⚠️ IT TRADES THE DEEP BALL FOR THE SHORT ONE, and has to lose to a plain blitz or man against some teams: measured in DEVLOG v4.74.
+  // ============================================================
+  const DOUBLE_LEAN = 0.62;
+  const DOUBLE = { id: 'double', ic: '🤝', name: 'DOUBLE', tag: '🤝 DOUBLE',
+    blurb: 'Against a team that throws: two men on their star. The big ball is gone — but the short one is a gift.',
+    mods: { bigPass: -0.07, incomplete: -0.04, passGain: 0.97, sack: -0.02, intAdd: 0.004, runGain: 1.08 } };
+  function doubleOn() {
+    try {
+      const g = window.__td && __td.G;
+      if (!g || !g.cpu || g.state !== 'dsim' || g.dsimEnding) return false;
+      return !!(window.TDScout && TDScout.passLean && TDScout.passLean(g.oppTeam) >= DOUBLE_LEAN);
+    } catch (e) { return false; }
+  }
+
   let armed = null;   // the call for the play about to happen
 
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
@@ -194,8 +214,9 @@
     let list = preventOn() || (armed && armed.id === 'prevent') ? CALLS.concat(PREVENT) : CALLS;
     if (goalOn() || (armed && armed.id === 'goalline')) list = list.concat(GOALLINE);   // 🛑 inside your 8 only
     if (spyOn() || (armed && armed.id === 'spy')) list = list.concat(SPY);               // 🕵 third/fourth and long only
+    if (doubleOn() || (armed && armed.id === 'double')) list = list.concat(DOUBLE);       // 🤝 only against a team that throws
     row.innerHTML = list.map(c =>
-      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     row.querySelectorAll('.dc-btn').forEach(el => {
       el.addEventListener('pointerdown', e => {
@@ -211,7 +232,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : null); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -256,8 +277,8 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    goalOn, GOAL_SPOT, spyOn,
-    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY).map(c => ({ id: c.id, mods: c.mods })),
+    goalOn, GOAL_SPOT, spyOn, doubleOn, DOUBLE_LEAN,
+    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 
