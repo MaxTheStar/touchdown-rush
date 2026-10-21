@@ -124,6 +124,28 @@
     } catch (e) { return false; }
   }
 
+  // ============================================================
+  // 🛑 GOAL-LINE DEFENSE (Round 21, pick ①) — the second conditional call
+  // ------------------------------------------------------------
+  // They are on your 3-yard line and your calls were the same three you use at midfield. Real defenses have a goal-line package: everybody
+  // on the line, nothing deep. It exists only inside your 8, and ONLY there, because it is the best answer to a run into the end zone and
+  // the worst to a pass: nobody is deep and nobody is covering, so a throw to the corner is a touchdown.
+  // ⚠️ IT HAS TO BE THE WRONG CALL SOMETIMES, like the others: measured in DEVLOG v4.72 (touchdown chance of a snap from their 5 against a
+  // team that runs 70%, 56% and 30% of the time).
+  // ============================================================
+  const GOAL_SPOT = 92;            // their yards from THEIR goal: 92+ = inside your 8
+  const GOALLINE = { id: 'goalline', ic: '🛑', name: 'GOAL LINE', tag: '🛑 GOAL LINE',
+    blurb: 'Inside your 8: everybody on the line. They cannot run it in — but a throw to the corner has nobody home.',
+    mods: { sack: -0.02, stuff: 0.20, incomplete: -0.10, intAdd: -0.01, fumbleAdd: 0.01,
+            bigPass: 0.0, bigRun: -0.08, passGain: 1.25, runGain: 0.55 } };
+  function goalOn() {
+    try {
+      const g = window.__td && __td.G;
+      if (!g || !g.cpu || g.state !== 'dsim' || g.dsimEnding) return false;
+      return g.cpu.spot >= GOAL_SPOT;
+    } catch (e) { return false; }
+  }
+
   let armed = null;   // the call for the play about to happen
 
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
@@ -147,9 +169,10 @@
   function paint() {
     const row = $('dsim-calls'); if (!row) return;
     // 🛑 …plus PREVENT, on its own full-width row, only when it is on the table.
-    const list = preventOn() || (armed && armed.id === 'prevent') ? CALLS.concat(PREVENT) : CALLS;
+    let list = preventOn() || (armed && armed.id === 'prevent') ? CALLS.concat(PREVENT) : CALLS;
+    if (goalOn() || (armed && armed.id === 'goalline')) list = list.concat(GOALLINE);   // 🛑 inside your 8 only
     row.innerHTML = list.map(c =>
-      '<div class="dc-btn' + (c === PREVENT ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     row.querySelectorAll('.dc-btn').forEach(el => {
       el.addEventListener('pointerdown', e => {
@@ -165,7 +188,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : null); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -210,7 +233,8 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    _calls: () => CALLS.concat(PREVENT).map(c => ({ id: c.id, mods: c.mods })),
+    goalOn, GOAL_SPOT,
+    _calls: () => CALLS.concat(PREVENT, GOALLINE).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 
