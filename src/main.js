@@ -867,6 +867,7 @@ function snap(time) {
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
   if (window.TDBoot) TDBoot.snapped();                       // 🌀 …and the bootleg's roll-out if that was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
+  G.jukeUsed = false; G.jukeBad = false; G.jukeStun = null; G.jukeTripUntil = 0;   // 🪄 one juke a play, fresh every snap
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
   if (window.TDPersonnel) TDPersonnel.snapped();  // 🧑‍🤝‍🧑 whoever is out there has really played now
@@ -930,6 +931,7 @@ function runSpeed() {
   // completely empty tank costs 6%, which trims your 11px cushion over a
   // chasing defender without erasing it. A full tank returns exactly 1.
   if (window.TDGas) s *= TDGas.speedMult();
+  if (G.jukeTripUntil && G.scene.time.now < G.jukeTripUntil) s *= TDJuke.TRIP_KEEPS;   // 🪄 a failed juke: he stumbles
   if (window.TDJet) s *= TDJet.burst(G.scene.time.now, G.jetBurstUntil);   // ✈️ the jet man's burst after the exchange
   return s;
 }
@@ -1147,6 +1149,33 @@ function lobState() {
     && !(window.TDStar && TDStar.on()));
 }
 function toggleLob() { if (lobState()) G.lobArmed = !G.lobArmed; }
+
+// 🪄 THE JUKE (juke.js has the table; the move lives here)
+function jukeState() {
+  if (!window.TDJuke || G.state !== 'live' || G.cpu || G.jukeUsed || !G.ballCarrier || (G.ballCarrier === offense[0] && canPass())) return null;   // (a quarterback still dropping back is a passer, not a runner)
+  if (window.TDStar && TDStar.on() && G.ballCarrier !== TDStar.player()) return null;
+  const c = G.ballCarrier.s; let best = null, bd = Infinity;
+  for (const d of defense) { const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y); if (dd < bd && d.s.y <= c.y + 10) { bd = dd; best = d; } }
+  return (best && bd >= TDJuke.MIN_PX && bd <= TDJuke.MAX_PX) ? { def: best, d: bd } : null;
+}
+function juke() {
+  const st = jukeState(); if (!st) return;
+  const now = G.scene.time.now, c = G.ballCarrier.s;
+  G.jukeUsed = true;
+  const win = Math.random() < TDJuke.chance(st.d, G.jukeUses || 0);
+  G.jukeUses = (G.jukeUses || 0) + 1;
+  if (win) {
+    G.jukeStun = { def: st.def, until: now + TDJuke.STUN_MS };
+    c.x = Phaser.Math.Clamp(c.x + (c.x >= st.def.s.x ? 1 : -1) * TDJuke.SLIDE_PX, 16, FIELD_WIDTH - 16);
+    G.stiffUntil = Math.max(G.stiffUntil, now + TDJuke.FREE_MS);
+    sayComment(pick(['💨 JUKED HIM OUT OF HIS SHOES!', 'Ankle-breaker!', 'He went right by him!']));
+    showBanner('🪄 JUKE!', false); if (window.TDSound) TDSound.sting('coin');
+  } else {
+    G.jukeTripUntil = now + TDJuke.TRIP_MS; G.jukeBad = true;
+    sayComment(pick(['He read it!', 'The juke did not fool him…', 'Slipped on the cut!']));
+    showBanner('✋ HE READ IT', false);
+  }
+}
 
 function pumpState() {
   if (G.state !== 'live' || G.cpu || G.pumped || G.trickActive || !canPass()) return false;
@@ -2122,6 +2151,7 @@ function updateDefense(elapsed) {
       // slower PURSUE_SPEED so a good runner can actually break away. (Maxwell,
       // the ballhawk, closes a touch faster than the rest.)
       tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED * boost * (isStar ? 1.12 : 1);
+      if (G.jukeStun && d === G.jukeStun.def && G.scene.time.now < G.jukeStun.until) speed *= 0.08;   // 🪄 juked out of his shoes
       if (G.wildcat && G.scene.time.now < G.wildHoldUntil) speed *= 0.08;   // 🐺 the defense is guessing which man has it
       // 🧱 …unless the tight end has him sealed off on a HEAVY run, in which case
       // he keeps exactly what a blocked pass rusher keeps — one rule for both
@@ -2284,7 +2314,7 @@ function checkTackle() {
       const grip = window.TDShop ? TDShop.gripFactor() : 0;
       // 🧢 …and a quarterback caught holding the ball out right after a pump fake coughs it up twice as often
       const pumpRisk = (G.ballCarrier === offense[0] && G.scene.time.now < G.fakeStripUntil) ? PUMP_STRIP : 1;
-      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk) fumble();
+      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk * (G.jukeBad ? TDJuke.FUMBLE_X : 1)) fumble();   // 🪄 a read juke leaves the ball loose
       else {
         // 🧱 HEAVY — the whistle hasn't gone yet. Eight big bodies are all
         // leaning the same way, so the pile falls forward another yard and a
@@ -3291,7 +3321,7 @@ function startCpuDrive() {
   G.turnoverSpotCpu = null;
   G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
   if (window.TDDrives) TDDrives.beginOpp(spot, driveWhen());   // 📋 their drive starts here
-  G.pumpUses = 0; G.wildUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
+  G.pumpUses = 0; G.wildUses = 0; G.jukeUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
   // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
   // Player 2 gets to run the red offense on their possession.
   if (!G.twoPlayer) { DefenseSim.start(); return; }
@@ -6297,6 +6327,7 @@ function setupTouchButtons() {
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
   bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
   bindTapEl('btn-celeb', () => { if (G.state === 'patdecision') { G.celebBig = !G.celebBig; updateCelebBtn(); } });   // 🕺 GO BIG toggle
+  bindTapEl('btn-juke', () => juke());                     // 🪄 THE JUKE (juke.js)
   bindTapEl('btn-lob', () => toggleLob());                 // 🏹 BULLET OR LOB (lob.js)
   bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
   bindTapEl('btn-sneak4', () => { if (G.state === 'decision') { G.state = 'presnap'; sneak(); } });   // …and the same from the 4th-down panel
@@ -6676,6 +6707,9 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🪄 THE JUKE — the button, only while a tackler is in range
+  { const jb = document.getElementById('btn-juke'); if (jb) jb.style.display = jukeState() ? 'flex' : 'none'; }
 
   // 🪁 HOT ROUTE — the button, only against a blitz while the rush is not home
   if (window.TDHotRoute) TDHotRoute.paint();
