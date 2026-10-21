@@ -867,6 +867,7 @@ function snap(time) {
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
   if (window.TDBoot) TDBoot.snapped();                       // 🌀 …and the bootleg's roll-out if that was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
+  G.spikeFakeUntil = 0;                                      // 🎭 nobody has been fooled this snap
   G.jukeUsed = false; G.jukeBad = false; G.jukeStun = null; G.jukeTripUntil = 0;   // 🪄 one juke a play, fresh every snap
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
   G.ballCarrier = offense[0]; // QB
@@ -2245,6 +2246,9 @@ function updateDefense(elapsed) {
       speed *= (1 - 0.5 * s);
     }
 
+    // 🎭 THE FAKE SPIKE (clockplay.js): the whole defense bit on the spike — for a beat they are standing there
+    if (G.spikeFakeUntil && G.scene.time.now < G.spikeFakeUntil) speed *= TDClock.FAKE_KEEPS;
+
     // 🧱 THE SCREEN (screen.js): a defender one of the two escorts has a hand on keeps only a blocked rusher's speed
     if (window.TDScreen && TDScreen.sealed(d)) speed *= diff().rushSlow;
 
@@ -3175,6 +3179,20 @@ function runClockPlay(play) {
   updateHUD();
 }
 
+// 🎭 THE FAKE SPIKE (clockplay.js, Round 20 pick ⑦): line up to spike, then SNAP it and throw. A real play, a real gamble.
+function fakeSpike() {
+  if (!window.TDClock || !TDClock.fakeOffered() || G.state !== 'presnap' || G.gameOver) return;
+  const bought = Math.random() < TDClock.fakeBuy(G.fakeUses || 0);
+  G.fakeUses = (G.fakeUses || 0) + 1;
+  TDClock.hide();
+  const fb = document.getElementById('btn-fakespike'); if (fb) fb.style.display = 'none';
+  snap(G.scene.time.now);
+  if (bought) {
+    G.spikeFakeUntil = G.scene.time.now + TDClock.FAKE_MS;
+    sayComment('🎭 FAKE SPIKE! Nobody is covering anybody!'); showBanner('🎭 FAKE SPIKE!', false);
+  } else sayComment('🎭 They saw it coming — it is a live play!');
+}
+
 // ⏳ A FOUL BEFORE THE SNAP (playclock.js) — DELAY OF GAME or a FALSE START.
 // playclock.js has already worked out which one it is and exactly where the
 // ball ends up (five yards back, half the distance honoured, same down); this
@@ -3321,7 +3339,7 @@ function startCpuDrive() {
   G.turnoverSpotCpu = null;
   G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
   if (window.TDDrives) TDDrives.beginOpp(spot, driveWhen());   // 📋 their drive starts here
-  G.pumpUses = 0; G.wildUses = 0; G.jukeUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
+  G.pumpUses = 0; G.wildUses = 0; G.jukeUses = 0; G.fakeUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
   // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
   // Player 2 gets to run the red offense on their possession.
   if (!G.twoPlayer) { DefenseSim.start(); return; }
@@ -6327,6 +6345,7 @@ function setupTouchButtons() {
   bindTapEl('btn-kick', () => chooseFourthDown('kick'));
   bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
   bindTapEl('btn-celeb', () => { if (G.state === 'patdecision') { G.celebBig = !G.celebBig; updateCelebBtn(); } });   // 🕺 GO BIG toggle
+  bindTapEl('btn-fakespike', () => fakeSpike());           // 🎭 THE FAKE SPIKE (clockplay.js)
   bindTapEl('btn-juke', () => juke());                     // 🪄 THE JUKE (juke.js)
   bindTapEl('btn-lob', () => toggleLob());                 // 🏹 BULLET OR LOB (lob.js)
   bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
@@ -6707,6 +6726,9 @@ function updateHUD() {
   document.body.classList.toggle('can-throwaway', taOn);
   document.body.classList.toggle('ta-grounding', taOn && !!ta.grounding);
   if (window.TDThrowAway) TDThrowAway.sync(taOn, G.losY, taOn && ta.grounding);
+
+  // 🎭 THE FAKE SPIKE — its button shows exactly when the spike's does
+  { const fb = document.getElementById('btn-fakespike'); if (fb) fb.style.display = (G.state === 'presnap' && window.TDClock && TDClock.fakeOffered()) ? 'flex' : 'none'; }
 
   // 🪄 THE JUKE — the button, only while a tackler is in range
   { const jb = document.getElementById('btn-juke'); if (jb) jb.style.display = jukeState() ? 'flex' : 'none'; }

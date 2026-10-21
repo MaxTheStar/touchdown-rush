@@ -194,7 +194,16 @@
     hide();
   }
 
+  // 🎭 THE FAKE SPIKE (Round 20, pick ⑦). The oldest trick in the two-minute drill: line up to spike, then THROW it. It is offered exactly
+  // when the spike is (never when it is not), and is a REAL SNAP — not a dead-ball play — so it is a gamble: if they buy it every defender is
+  // caught standing for 0.9 seconds; if they do not, you have burned the down and the clock on an ordinary play.
+  //   they BUY it 60% of the time, ×0.75 for every one already tried this possession (they have seen it).
+  const FAKE_BUY = 0.60, FAKE_LEARN = 0.75, FAKE_MS = 900, FAKE_KEEPS = 0.3;
+  const fakeBuy = uses => FAKE_BUY * Math.pow(FAKE_LEARN, Math.max(0, uses | 0));
+  const fakeOffered = () => !!(current && current.kind === 'spike');
+
   window.TDClock = {
+    fakeBuy, fakeOffered, FAKE_BUY, FAKE_LEARN, FAKE_MS, FAKE_KEEPS,
     advise, update, hide, setup,
     SPIKE_SECS, KNEEL_SECS, KNEEL_WINDOW, LATE,
   };
