@@ -4339,10 +4339,22 @@ const DefenseSim = (function () {
         if (window.TDTipped && Math.random() < TDTipped.TIP_OF_INC * ps) return tip('inc');
         return { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
       }
-      if (Math.random() < 0.10 + dStop * 0.10 + D.sack) { const y = -Phaser.Math.Between(3, 8); return { r: 'gain', y, tag: 'sack', side: 'pass', t: '<b>SACK!</b> ' + y + ' yards.' }; }
-      let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
-      if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
-      return { r: 'gain', y, side: 'pass', t: 'Pass complete for <b>' + y + '</b>.' };
+      // 🏊 THE SWIM MOVE (swim.js): the sack is no longer one roll — you get past your man or you do not. It REPLACES the sack roll (the
+      // moment comes up 1.74× as often so an ordinary thumb's sack rate is unchanged); a lost moment is the completion this play would have been.
+      const sackP = 0.10 + dStop * 0.10 + D.sack;
+      const swim = !!(window.TDSwim && TDSwim.ready());
+      const completion = () => {
+        let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain);
+        if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
+        return { r: 'gain', y, side: 'pass', t: 'Pass complete for <b>' + y + '</b>.' };
+      };
+      if (Math.random() < (swim ? Math.min(0.9, sackP * TDSwim.FREQ) : sackP)) {
+        const y = -Phaser.Math.Between(3, 8);
+        const sack = { r: 'gain', y, tag: 'sack', side: 'pass', t: '<b>SACK!</b> ' + y + ' yards.' };
+        if (!swim) return sack;
+        return { r: 'pile', kind: 'swim', y: 0, side: 'pass', hawk: 0, win: sack, lose: completion() };
+      }
+      return completion();
     }
     // ---- RUN ----
     // The ordinary run — what this function hands back when nothing fumbles. It is a function because a fumble they FALL ON is this
@@ -4572,14 +4584,14 @@ const DefenseSim = (function () {
     // moment can be drawn, and if the panel somehow cannot be, it is the recovery it always was.
     if (played.r === 'pile') {
       G.dsimPile = played;
-      render(played.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : '<b>FUMBLE!</b> The ball is loose…');
-      const startMoment = played.kind === 'chase' ? (cb => TDChase.begin(cb)) : (cb => TDFallOn.begin(played.hawk, cb));   // 💥 the same slot, a different moment
+      render(played.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : played.kind === 'swim' ? '<b>PASS RUSH!</b> You beat your man — get to the quarterback!' : '<b>FUMBLE!</b> The ball is loose…');
+      const startMoment = played.kind === 'chase' ? (cb => TDChase.begin(cb)) : played.kind === 'swim' ? (cb => TDSwim.begin(cb)) : (cb => TDFallOn.begin(played.hawk, cb));   // 💥 the same slot, a different moment
       const drawn = startMoment(got => {
         if (G.dsimPile !== played || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was bouncing
         G.dsimPile = null;
         apply(got ? played.win : played.lose);
       });
-      if (!drawn) { G.dsimPile = null; apply(played.kind === 'chase' ? played.lose : played.win); }   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
+      if (!drawn) { G.dsimPile = null; apply(played.kind === 'chase' ? played.lose : played.kind === 'swim' ? (Math.random() < TDSwim.ORDINARY ? played.win : played.lose) : played.win); }   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
       return;
     }
     apply(played);
