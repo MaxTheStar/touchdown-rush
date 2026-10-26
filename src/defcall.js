@@ -188,6 +188,24 @@
     } catch (e) { return false; }
   }
 
+  // ============================================================
+  // 🧩 NICKEL AND DIME (Round 21, pick ⑦) — two PACKAGES, each wrong in the other's spot
+  // ------------------------------------------------------------
+  // Your defense is the same seven men on every down. On third and long a real defense takes a lineman off for another defensive back (a DIME);
+  // on third and a yard it puts the extra big man in (a HEAVY). Both are conditional calls, and each is the worst call in the other's spot:
+  //   🧩 DIME   3rd/4th and 7+ to go:   passes are smothered (more incompletions, no deep ball) — but the box is thin: runs gain more
+  //   🧱 HEAVY  3rd/4th and 2 or less:  runs are stuffed — but nobody is back, so a pass finds grass
+  // ⚠️ Measured against the existing calls on the same downs in DEVLOG v4.78.
+  // ============================================================
+  const DIME = { id: 'dime', ic: '🧩', name: 'DIME', tag: '🧩 DIME',
+    blurb: '3rd/4th and 7+: an extra defensive back. Passes are smothered — but the box is thin and they can run it.',
+    mods: { incomplete: 0.13, bigPass: -0.06, passGain: 0.88, stuff: -0.03, runGain: 1.10, bigRun: 0.0 } };
+  const HEAVY = { id: 'heavy', ic: '🧱', name: 'HEAVY', tag: '🧱 HEAVY',
+    blurb: '3rd/4th and 2 or less: an extra big man. Runs are stuffed — but nobody is deep, so a pass finds grass.',
+    mods: { stuff: 0.26, runGain: 0.55, bigRun: -0.06, incomplete: -0.12, sack: -0.03, bigPass: 0.04, passGain: 1.2 } };
+  function dimeOn()  { try { const g = __td.G; return !!(g.cpu && g.state === 'dsim' && !g.dsimEnding && g.cpu.down >= 3 && g.cpu.togo >= 7); } catch (e) { return false; } }
+  function heavyOn() { try { const g = __td.G; return !!(g.cpu && g.state === 'dsim' && !g.dsimEnding && g.cpu.down >= 3 && g.cpu.togo <= 2); } catch (e) { return false; } }
+
   let armed = null;   // the call for the play about to happen
 
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
@@ -215,8 +233,10 @@
     if (goalOn() || (armed && armed.id === 'goalline')) list = list.concat(GOALLINE);   // 🛑 inside your 8 only
     if (spyOn() || (armed && armed.id === 'spy')) list = list.concat(SPY);               // 🕵 third/fourth and long only
     if (doubleOn() || (armed && armed.id === 'double')) list = list.concat(DOUBLE);       // 🤝 only against a team that throws
+    if (dimeOn() || (armed && armed.id === 'dime')) list = list.concat(DIME);             // 🧩 third and long
+    if (heavyOn() || (armed && armed.id === 'heavy')) list = list.concat(HEAVY);          // 🧱 third and short
     row.innerHTML = list.map(c =>
-      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE || c === DIME || c === HEAVY) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     row.querySelectorAll('.dc-btn').forEach(el => {
       el.addEventListener('pointerdown', e => {
@@ -232,7 +252,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : null); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : id === 'dime' ? DIME : id === 'heavy' ? HEAVY : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -277,8 +297,8 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    goalOn, GOAL_SPOT, spyOn, doubleOn, DOUBLE_LEAN,
-    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE).map(c => ({ id: c.id, mods: c.mods })),
+    goalOn, GOAL_SPOT, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn,
+    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE, DIME, HEAVY).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 
