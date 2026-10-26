@@ -4306,7 +4306,9 @@ const DefenseSim = (function () {
     // the very number the pre-kickoff Scouting Report showed you, so the card
     // is telling the truth. It was a flat 0.56 for every team in the league
     // before, and that is still exactly what you get with scout.js missing.
-    const passShare = (window.TDScout && TDScout.passLean) ? TDScout.passLean(G.oppTeam) : 0.56;
+    // ⏱ THE COMPUTER HURRIES UP (Round 21, pick ④): trailing late in a half, they stop playing like it is the first quarter — more throws, hurried ones.
+    const hurry = cpuHurry();
+    const passShare = Math.min(0.9, ((window.TDScout && TDScout.passLean) ? TDScout.passLean(G.oppTeam) : 0.56) + (hurry ? HURRY_PASS_ADD : 0));
     // 🛡️ THE DEFENSE YOU CALLED (defcall.js) — 🔥 blitz, 👤 man or 🛡 zone. It
     // does not add a second simulation: every one of these folds into the five
     // numbers this function was already rolling against. With no call made, or
@@ -4334,7 +4336,7 @@ const DefenseSim = (function () {
       // defense you called still add on top, unscaled.
       const ps = window.TDPickRet ? TDPickRet.pickScale() : 1;
       if (r < (0.045 + dStop * 0.03) * TAKEAWAY_SCALE * ps + hawk + D.intAdd) return tip('int');
-      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0));
+      const inc = Math.min(0.72, (0.34 + (1 - wxCatch) * 0.6 + dStop * 0.10) / Math.max(0.6, cpuPow) + D.incomplete + (tw ? tw.incomplete : 0) + (hurry ? HURRY_INC_ADD : 0));
       if (Math.random() < inc) {
         if (window.TDTipped && Math.random() < TDTipped.TIP_OF_INC * ps) return tip('inc');
         return { r: 'inc', y: 0, side: 'pass', t: pick(['Incomplete pass.', 'Pass broken up!', 'Overthrown — incomplete.']) };
@@ -4351,7 +4353,7 @@ const DefenseSim = (function () {
       const sackP = 0.10 + dStop * 0.10 + D.sack;
       const swim = !!(window.TDSwim && TDSwim.ready());
       const completion = () => {
-        let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain * (longDown ? (G.longFix != null ? G.longFix : LONG_FIX) : 1));
+        let y = Math.round(Phaser.Math.Between(4, 16) * cpuPow * D.passGain * (longDown ? (G.longFix != null ? G.longFix : LONG_FIX) : 1) * (hurry ? HURRY_YARDS : 1));
         if (Math.random() < 0.08 + D.bigPass) y += Phaser.Math.Between(10, 26);
         return { r: 'gain', y, side: 'pass', t: 'Pass complete for <b>' + y + '</b>.' };
       };
@@ -4368,7 +4370,7 @@ const DefenseSim = (function () {
     // very run too (see below).
     const ordinaryRun = (allowChase) => {
       if (Math.random() < 0.18 + dStop * 0.15 + D.stuff) { const y = Phaser.Math.Between(-3, 1); return { r: 'gain', y, side: 'run', t: y < 0 ? ('Tackled for a loss (' + y + ').') : (y === 0 ? 'Stuffed — no gain!' : 'Run for ' + y + '.') }; }
-      let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain);
+      let y = Math.round(Phaser.Math.Between(1, 8) * cpuPow * D.runGain * (hurry ? HURRY_YARDS : 1));
       // 💥 THE SHOESTRING TACKLE (chase.js): a BREAKAWAY is no longer a number — you chase him down, or you do not. It REPLACES the breakaway
       // (they are 1.52× as common to keep an ordinary thumb's yards unchanged); a miss is exactly the old breakaway, a hit keeps 35% of the extra yards.
       const chase = allowChase !== false && !!(window.TDChase && TDChase.ready());
@@ -4410,7 +4412,9 @@ const DefenseSim = (function () {
     // use the call up: one call, one play, choose again next down. Covers both
     // the normal line AND a drive-ending one, because both read p.t.
     if (window.TDDefense) p.t = TDDefense.consume() + p.t;
-    advanceClock(p.secs != null ? p.secs : (p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY));   // 🧎 a kneel brings its own number
+    // ⏱ …a team in a hurry skips the huddle: a play that keeps the clock running costs half (an incomplete already stops it)
+    const hurriedSecs = (p.secs == null && p.r !== 'inc' && cpuHurry()) ? Math.round(TIME_RUN_PLAY * HURRY_CLOCK) : null;
+    advanceClock(p.secs != null ? p.secs : hurriedSecs != null ? hurriedSecs : (p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY));   // 🧎 a kneel brings its own number
     // 📊 THE DEFENSIVE BOX SCORE (gamestats.js): write down WHO made this play.
     // ⚠️ BEFORE the branches below, because every one of them can end the drive
     // and the takeaway on a drive-ending play has to find its man already credited.
@@ -4466,6 +4470,18 @@ const DefenseSim = (function () {
   // (An early run WITHOUT the tipped ball said 0.6: the picks that come out of tipped incompletions are not scaled, so the real
   // game needs a harder cut.) Ball Hawk gear and your defensive calls still add on top, unscaled, so they are worth what they were.
   const TAKEAWAY_SCALE = 0.5;
+  // ⏱ THE COMPUTER HURRIES UP: when THEY trail late in a half (Q2 or the last quarter, 2:00 or less, not overtime) they run a two-minute offense.
+  // The lever is the huddle, exactly as 🏃 hurry.js treats yours: a play that keeps the clock running costs HURRY_CLOCK of 32 seconds. The price
+  // is real: their throws are hurried (HURRY_INC_ADD more incompletions), everything gains HURRY_YARDS as much, and they throw HURRY_PASS_ADD
+  // more often. ⚠️ TRADES YARDS FOR TIME, it is not free time: tuned so the chance they reach field-goal range inside ninety seconds is a real
+  // but modest threat (DEVLOG v4.75).
+  const HURRY_CLOCK = 0.5, HURRY_YARDS = 0.88, HURRY_INC_ADD = 0.05, HURRY_PASS_ADD = 0.12;
+  function cpuHurry() {
+    if (G.gameOver || G.overtime || !G.cpu) return false;
+    if (G.quarter !== 2 && G.quarter !== NUM_QUARTERS) return false;
+    if (!(G.clock > 0 && G.clock <= 120)) return false;
+    return G.oppScore < G.score;                                   // they are behind
+  }
   const LONG_FIX = 0.85;                                 // 🕵 the ordinary-pass yards factor on those downs that pays for the scramble (tuned below)
   const SCRAMBLE_P = 0.20;                               // 🕵 the share of 3rd/4th-and-6+ pass plays that become a quarterback scramble (tuned in DEVLOG v4.73)
   const INT_DEPTH_MIN = 4, INT_DEPTH_MAX = 22;          // yards downfield the pass was caught (mean 13)
@@ -4648,7 +4664,7 @@ const DefenseSim = (function () {
     render(line);
   }
 
-  return { start, tap, wire, resume, _play: play };   // (_play: tests only — the headless sims call the real play() in a loop)
+  return { start, tap, wire, resume, _play: play, cpuHurry };   // (_play: tests only — the headless sims call the real play() in a loop)
 })();
 
 // ============================================================
