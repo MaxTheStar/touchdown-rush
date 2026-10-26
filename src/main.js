@@ -5589,6 +5589,7 @@ window.TDGame = {
 function startKickoff(asPunt) {
   G.state = 'kickoff';
   G.koLive = false;                          // the ball is in the air first
+  G.retT0 = null; if (window.TDRet) { TDRet.reset(); TDRet.paint(true); }   // 🧱 no wall called yet; the three call buttons come up while the ball is in the air
   G.replay = [];                             // start a fresh film reel for the return
   G.dashUntil = 0;                           // no leftover dash
   G.fumbleLoose = false;                     // 🏈 no leftover fumble scramble ('loose' is shared)
@@ -5977,7 +5978,10 @@ function updateKickoffCoverage() {
     if (G.twoPlayer && d === G.p2Defender) { controlP2Defender(d); continue; }
     // 🏃 a man the interception caught flat-footed has not reacted yet (pickreturn.js; zero for every kickoff and punt)
     if (d.holdUntil && G.scene.time.now < d.holdUntil) { d.s.setVelocity(0, 0); continue; }
-    steer(d.s, c.x, c.y, diff().koCover);   // coverage speed depends on difficulty
+    // 🧱 CALL THE RETURN (retcall.js): the three men on the called side are blocked for a while; the other four read it and hurry
+    let retMul = 1;
+    if (window.TDRet) { if (G.retT0 == null) { G.retT0 = G.scene.time.now; TDRet.paint(false); } if (TDRet.get()) retMul = TDRet.mult(defense.indexOf(d), TDRet.get(), G.scene.time.now - G.retT0); }
+    steer(d.s, c.x, c.y, diff().koCover * retMul);   // coverage speed depends on difficulty
   }
 }
 
@@ -6790,6 +6794,9 @@ function updateHUD() {
 
   // 🏹 BULLET OR LOB — the button, only while a throw is possible; an armed lob lapses with the throw (or the play)
   { const on = lobState(); if (!on) G.lobArmed = false; if (window.TDLob) TDLob.paint(on, G.lobArmed); }
+
+  // 🧱 CALL THE RETURN — its three buttons exist only while a kick is in the air
+  if (window.TDRet) TDRet.paint();
 
   // 🛝 THE QB SLIDE — the button, only once he has scrambled across the line with a tackler closing.
   const sl = slideState();
