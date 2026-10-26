@@ -208,16 +208,62 @@
 
   let armed = null;   // the call for the play about to happen
 
+  // ============================================================
+  // 🧠 THEY SCOUT YOU BACK (Round 21, pick ⑧) — the mirror of 📊 Self-Scouting
+  // ------------------------------------------------------------
+  // The Self-Scouting card tells YOU what your offense looks like and nudges their defense; nothing told the computer what YOUR defense looks like, so
+  // you could call the same blitz forever. Now it keeps your last four calls, and when THREE of them are the same call it is ready for it:
+  // the next time you call that call, `K` of its edge is taken away (K = 0.35 after three of the last four, 0.70 after four in a row), as if they
+  // had a play ready: a screen against the blitz, a rub against the man, a quick out against the zone.
+  //   • it only counts calls you CHOSE (a 'no call' down breaks the pattern; any other call breaks it too)
+  //   • it undoes the call's own edge, field by field — the same numbers the call is made of (no second set to tune)
+  //   • and it only ever hurts the habit: switch and the next call is full price.
+  // ⚠️ Nothing else changes: with a varied mix you will never see it.
+  // ============================================================
+  const HIST_LEN = 4;
+  let hist = [];
+  const MUL = { passGain: 1, runGain: 1 };
+  function scoutedK(id) {
+    if (!id || id === 'none') return 0;
+    const same = hist.filter(h => h === id).length;
+    if (hist.length === HIST_LEN && same === HIST_LEN) return 0.70;
+    if (same >= 3) return 0.35;
+    return 0;
+  }
+  // the call's mods, with K of its EDGE taken away (pure). ONLY the helpful half of a call is undone: a deviation that hurts the offense (more sacks, more
+  // incompletions, fewer yards) is cut by K, one that hurts YOU (the run defence a man call gives up, the deep ball a blitz leaves) is left at full price —
+  // otherwise "they are ready for it" would quietly fix a call's own weaknesses (the first cut did, and a scouted man call got BETTER).
+  const GOOD = { sack: 1, stuff: 1, incomplete: 1, intAdd: 1, fumbleAdd: 1, bigPass: -1, bigRun: -1, passGain: -1, runGain: -1 };
+  function countered(mods, k) {
+    if (!k) return mods;
+    const out = Object.assign({}, mods);
+    for (const key of Object.keys(GOOD)) {
+      const v = out[key] != null ? out[key] : NEUTRAL[key];
+      const mult = (key in MUL);
+      const dev = mult ? Math.log(v) : v - NEUTRAL[key];          // how far from neutral, in the call's own units
+      if (dev * GOOD[key] > 0) out[key] = mult ? Math.exp(dev * (1 - k)) : NEUTRAL[key] + dev * (1 - k);   // a helpful deviation shrinks…
+    }                                                             // …a harmful one is left alone
+    return out;
+  }
+  function scoutLine() {
+    const k = scoutedK(armed && armed.id) || 0;
+    const id = hist.length ? hist[hist.length - 1] : null;
+    const same = hist.filter(h => h === id).length;
+    return (id && id !== 'none' && same >= 3) ? '🧠 They have you scouted: ' + id.toUpperCase() + ' ×' + same + ' — mix it up' : '';
+  }
+
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
   function mods() {
     if (!armed) return NEUTRAL;
-    return Object.assign({}, NEUTRAL, armed.mods);
+    const m = Object.assign({}, NEUTRAL, armed.mods);
+    return countered(m, scoutedK(armed.id));
   }
 
   // main.js's DefenseSim.apply() asks for this once the play has resolved: the
   // label to stick on the front of the play-by-play line, AND the moment the
   // call is used up. One call, one play — you choose again every down.
   function consume() {
+    hist.push(armed ? armed.id : 'none'); if (hist.length > HIST_LEN) hist.shift();   // 🧠 they are keeping count
     if (!armed) return '';
     const t = '<b>' + armed.tag + '</b> · ';
     armed = null;
@@ -235,9 +281,11 @@
     if (doubleOn() || (armed && armed.id === 'double')) list = list.concat(DOUBLE);       // 🤝 only against a team that throws
     if (dimeOn() || (armed && armed.id === 'dime')) list = list.concat(DIME);             // 🧩 third and long
     if (heavyOn() || (armed && armed.id === 'heavy')) list = list.concat(HEAVY);          // 🧱 third and short
+    row.classList.toggle('dc-compact', list.filter(c => c !== CALLS[0] && c !== CALLS[1] && c !== CALLS[2]).length >= 2);   // two or more situational calls at once: drop their blurbs so the panel still fits a phone
     row.innerHTML = list.map(c =>
       '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE || c === DIME || c === HEAVY) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
+    { const sl = scoutLine(); if (sl) row.insertAdjacentHTML('beforeend', '<div class="dc-scout">' + sl + '</div>'); }   // 🧠 they have you scouted
     row.querySelectorAll('.dc-btn').forEach(el => {
       el.addEventListener('pointerdown', e => {
         // ⚠️ The whole panel is one big "tap to continue", so a call button has
@@ -271,6 +319,7 @@
     try { if (window.TDPowerup && TDPowerup.close) TDPowerup.close(); } catch (e) {}
   }
   function show() { armed = null; clearCovers(); paint(); refresh(); }
+  function resetScout() { hist = []; }
 
   // main.js calls this every time the panel repaints. Two jobs:
   //  • hide the three calls when the next tap is NOT a play (a drive that has
@@ -297,7 +346,8 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    goalOn, GOAL_SPOT, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn,
+    goalOn, GOAL_SPOT, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn, scoutedK, countered, scoutLine, resetScout,
+    _hist: a => { if (a) hist = a.slice(); return hist.slice(); },
     _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE, DIME, HEAVY).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };

@@ -5308,6 +5308,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   G.quarter = 1; G.clock = QUARTER_SECONDS;
   G.overtime = false; G.gameOver = false;
   G.twoMinDone = {};                    // 🕑 no warnings given yet
+  if (window.TDDefense && TDDefense.resetScout) TDDefense.resetScout();   // 🧠 a new game: they know nothing about your defense yet
   G.celebBig = false; G.celebFlagged = false;   // 🕺 no big celebration pending
   if (window.TDOT) TDOT.reset();         // 🔀 no overtime possessions yet
   G.boostUntil = 0;                              // no leftover 🔋 energy burst
