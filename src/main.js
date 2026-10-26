@@ -4307,6 +4307,8 @@ const DefenseSim = (function () {
     // is telling the truth. It was a flat 0.56 for every team in the league
     // before, and that is still exactly what you get with scout.js missing.
     // ⏱ THE COMPUTER HURRIES UP (Round 21, pick ④): trailing late in a half, they stop playing like it is the first quarter — more throws, hurried ones.
+    // 🏳 …and a team that is behind with seconds left stops the clock
+    if (cpuSpike()) return { r: 'inc', y: 0, side: 'pass', tag: 'spike', secs: CPU_SPIKE_SECS, t: pick(['They <b>spike it</b> to stop the clock.', 'Quick snap — <b>spiked</b>! The clock stops.', '<b>Spike!</b> They are saving time.']) };
     const hurry = cpuHurry();
     const passShare = Math.min(0.9, ((window.TDScout && TDScout.passLean) ? TDScout.passLean(G.oppTeam) : 0.56) + (hurry ? HURRY_PASS_ADD : 0));
     // 🛡️ THE DEFENSE YOU CALLED (defcall.js) — 🔥 blitz, 👤 man or 🛡 zone. It
@@ -4412,6 +4414,7 @@ const DefenseSim = (function () {
     // use the call up: one call, one play, choose again next down. Covers both
     // the normal line AND a drive-ending one, because both read p.t.
     if (window.TDDefense) p.t = TDDefense.consume() + p.t;
+    G.cpuClockRunning = (p.r === 'gain' && p.tag !== 'spike');    // 🏳 a completed play or a run keeps the clock moving: the only time a spike helps them
     // ⏱ …a team in a hurry skips the huddle: a play that keeps the clock running costs half (an incomplete already stops it)
     const hurriedSecs = (p.secs == null && p.r !== 'inc' && cpuHurry()) ? Math.round(TIME_RUN_PLAY * HURRY_CLOCK) : null;
     advanceClock(p.secs != null ? p.secs : hurriedSecs != null ? hurriedSecs : (p.r === 'inc' ? TIME_INCOMPLETE : TIME_RUN_PLAY));   // 🧎 a kneel brings its own number
@@ -4419,7 +4422,7 @@ const DefenseSim = (function () {
     // ⚠️ BEFORE the branches below, because every one of them can end the drive
     // and the takeaway on a drive-ending play has to find its man already credited.
     // (A kneel is nobody's tackle.)
-    if (window.TDGameStats && TDGameStats.noteDefense && p.tag !== 'kneel' && !(p.tag === 'hail' && p.r === 'gain')) TDGameStats.noteDefense(p);   // (a kneel is nobody's tackle; neither is a Hail Mary caught in the end zone)
+    if (window.TDGameStats && TDGameStats.noteDefense && p.tag !== 'kneel' && p.tag !== 'spike' && !(p.tag === 'hail' && p.r === 'gain')) TDGameStats.noteDefense(p);   // (a spike is nobody's pass breakup either)   // (a kneel is nobody's tackle; neither is a Hail Mary caught in the end zone)
     if (p.r === 'int' || p.r === 'fum') {
       if (window.TDDrives) TDDrives.play('opp', G.cpu.spot);
       splash(p.r);
@@ -4476,6 +4479,18 @@ const DefenseSim = (function () {
   // more often. ⚠️ TRADES YARDS FOR TIME, it is not free time: tuned so the chance they reach field-goal range inside ninety seconds is a real
   // but modest threat (DEVLOG v4.75).
   const HURRY_CLOCK = 0.5, HURRY_YARDS = 0.88, HURRY_INC_ADD = 0.05, HURRY_PASS_ADD = 0.12;
+  // 🏳 THE COMPUTER SPIKES IT (Round 21, pick ⑤): behind, under 30 seconds, the last play kept the clock running, a down to spare: they spike it —
+  // 6 seconds, no yards, the down is gone. It is exactly clockplay.js's SPIKE rule for YOU, applied to them, and it only happens when it is right.
+  // ⚠️ IT COSTS THEM A DOWN AND SAVES ONLY 6–10 SECONDS in this engine's clock (every play costs 12 or more), so it is neutral at best — measured
+  // in DEVLOG v4.76. It is here because a team that is behind with 20 seconds left and does NOT spike looks wrong, not because it is a weapon.
+  const CPU_SPIKE_WINDOW = 22, CPU_SPIKE_SECS = 6;   // (22, not 30: a wider window made the spike HURT them — see DEVLOG v4.76)
+  function cpuSpike() {
+    if (G.noCpuSpike || G.gameOver || G.overtime || !G.cpu || !G.cpuClockRunning || G.clockStopped) return false;
+    if (G.quarter !== 2 && G.quarter !== NUM_QUARTERS) return false;
+    if (!(G.clock > CPU_SPIKE_SECS && G.clock <= CPU_SPIKE_WINDOW)) return false;
+    if (!(G.oppScore < G.score)) return false;                    // they are behind
+    return G.cpu.down >= 1 && G.cpu.down <= 3;                    // a down to spare (never on 4th)
+  }
   function cpuHurry() {
     if (G.gameOver || G.overtime || !G.cpu) return false;
     if (G.quarter !== 2 && G.quarter !== NUM_QUARTERS) return false;
@@ -4664,7 +4679,7 @@ const DefenseSim = (function () {
     render(line);
   }
 
-  return { start, tap, wire, resume, _play: play, cpuHurry };   // (_play: tests only — the headless sims call the real play() in a loop)
+  return { start, tap, wire, resume, _play: play, cpuHurry, cpuSpike };   // (_play: tests only — the headless sims call the real play() in a loop)
 })();
 
 // ============================================================
