@@ -5105,6 +5105,7 @@ function enterMenu() {
   if (window.TDTrophy) TDTrophy.onMenu();        // 🏆 refresh the trophy-case bar
   if (window.TDAchieve) TDAchieve.onMenu();      // 🏅 check for any newly-earned achievement badges
   if (window.TDStreak) TDStreak.onMenu();        // 🔥 show/hide the win-streak flame pill
+  if (window.TDResume) TDResume.onMenu();        // 💾 offer ▶ RESUME if a game was saved
   if (window.TDRoad) TDRoad.onMenu();            // 🎟️ refresh the Reward Road bar (glows when claimable)
   if (window.TDCards) TDCards.onMenu();          // 🃏 refresh the unopened-packs badge on SHOP
   if (window.TDStadium) TDStadium.onMenu();      // 🏟️ refresh the "can afford an upgrade" badge
@@ -5195,6 +5196,29 @@ function startGameWithTeam() {
     do { opp = NFL_TEAMS[Phaser.Math.Between(0, NFL_TEAMS.length - 1)]; } while (opp === team);
   }
   beginGame(team, opp, false);
+}
+
+// 💾 RESUME (resume.js) — pick a saved game up where it left off. beginGame() has already built a fresh game for the two teams; this
+// writes the SAVED situation over it (score, quarter, clock, down, spot, timeouts, who won the toss) and sets up the very next snap.
+// Everything else (momentum, scouting reads, power-up, challenges, stat book) starts fresh — resume.js says so on the menu button.
+let resumeSnap = null;
+function applyResume(sn) {
+  G.score = sn.score | 0; G.oppScore = sn.oppScore | 0;
+  G.quarter = Math.max(1, Math.min(NUM_QUARTERS, sn.quarter | 0));
+  G.clock = Math.max(0, Math.min(QUARTER_SECONDS, +sn.clock || 0));
+  G.timeouts = Math.max(0, Math.min(3, sn.timeouts | 0));
+  G.trickAvailable = !!sn.trick;
+  // 🕑 The two-minute warning is a once-a-half event, and a fresh game has given none. Without this, resuming at 1:40 of Q2 would "give" the
+  // warning on the very next snap — and that warning clamps the clock BACK UP to 2:00 (found in testing: +20 seconds out of nowhere).
+  // Any warning already behind the saved clock has been given.
+  G.twoMinDone = {};
+  if (window.TDTwoMin) for (let q = 1; q <= G.quarter; q++) if (q < G.quarter || G.clock <= TDTwoMin.AT) G.twoMinDone[q] = true;
+  if (window.TDToss && TDToss.restore) TDToss.restore(!!sn.theyOpen);
+  updateTimeoutBtn(); updateHUD();
+  document.body.classList.remove('kicking');
+  setupPlay({ los: sn.los, down: sn.down, fd: sn.fd });
+  showBanner('💾 GAME RESUMED  ·  ' + G.score + '–' + G.oppScore, true);
+  sayComment('Welcome back. Q' + G.quarter + ', ' + G.down + ' and ' + Math.max(1, Math.round(G.firstDownYards - G.losYards)) + '.');
 }
 
 // The shared "start a brand-new game" routine, used by BOTH Quick Game and
@@ -5407,6 +5431,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
     sayComment('2:00 to go, four points down. Score or go home!');
     return;
   }
+  // 💾 RESUME (resume.js) — a saved game skips the scouting card, the toss and the kickoff: it carries on from its dead ball.
+  if (resumeSnap) { const sn = resumeSnap; resumeSnap = null; applyResume(sn); return; }
   // 📋 SCOUTING REPORT (scout.js) — your coaches' card on this opponent, read
   // BEFORE the kickoff. If it puts the card up it returns true and holds the
   // kickoff until you tap 🏈 LET'S PLAY (G.state is still 'menu' here, and
@@ -5493,6 +5519,19 @@ window.TDGame = {
   // 🎲 `resume` (simgame.js) means "you are TAKING OVER a game the computer
   // already played half of": keep the simmed score and start in that quarter.
   // Without it this is exactly the call it has always been.
+  // 💾 RESUME (resume.js): the saved teams are looked up by name/abbr, so a snapshot that no longer matches (a deleted custom team) returns false
+  // and resume.js falls back to a new game.
+  resumeGame(sn) {
+    if (G.state !== 'menu' || !G.scene) return false;
+    const all = allTeams();
+    const idx = all.findIndex(t => t.name === sn.team);
+    const opp = NFL_TEAMS.find(t => t.abbr === sn.opp);
+    if (idx < 0 || !opp || all[idx] === opp || !DIFFICULTY[sn.diff]) return false;
+    G.menuIndex = idx; G.difficulty = sn.diff; syncDiffButtons();
+    resumeSnap = sn;
+    try { beginGame(all[idx], opp, false); } catch (e) { resumeSnap = null; throw e; }
+    return true;
+  },
   startSeasonGame(youAbbr, oppAbbr, resume) {
     const team = this.teamByAbbr(youAbbr), opp = this.teamByAbbr(oppAbbr);
     if (!team || !opp || !G.scene) return;

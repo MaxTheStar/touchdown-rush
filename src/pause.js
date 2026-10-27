@@ -48,7 +48,7 @@
     resume();
     try { __td.enterMenu(); } catch (e) { console.error(e); }
   }
-  function paint() { const q = $('pause-quit'); if (q) { q.textContent = armQuit ? '🚪 TAP AGAIN TO QUIT — THIS GAME IS LOST' : '🚪 QUIT GAME'; q.classList.toggle('arm', armQuit); } }
+  function paint() { const q = $('pause-quit'); if (q) { q.textContent = armQuit ? (window.TDResume && TDResume.has() ? '🚪 TAP AGAIN TO QUIT — RESUME LATER FROM THE MENU' : '🚪 TAP AGAIN TO QUIT — THIS GAME IS LOST') : '🚪 QUIT GAME'; q.classList.toggle('arm', armQuit); } }
 
   function sync() {
     const b = $('btn-pause'); if (!b) return;

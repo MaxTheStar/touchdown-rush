@@ -90,6 +90,8 @@
   // Do they receive the OPENING kickoff? (true only if you deferred, or lost
   // the toss and they took the ball.)
   function theyReceive() { return theyGetOpening; }
+  // 💾 resume.js: a saved game remembers who received the opening kick, so the SECOND half still goes the right way round
+  function restore(they) { theyGetOpening = !!they; }
 
   // …and the second half is simply the other way round. This is the entire
   // mechanical consequence of the feature.
@@ -239,7 +241,7 @@
   function hide() { const p = $('toss-panel'); if (p) p.style.display = 'none'; }
 
   window.TDToss = {
-    pregame, newGame, theyReceive, youReceiveSecondHalf,
+    pregame, newGame, theyReceive, youReceiveSecondHalf, restore,
     // for tests
     _flip: flip, _choose: choose, _finish: finish, _realGame: realGame,
     _state: () => ({ called, landed, youWon, theyGetOpening }),
