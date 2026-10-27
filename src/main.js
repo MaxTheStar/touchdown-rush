@@ -2011,8 +2011,9 @@ function updateRouteTrails() {
 
 // Each receiver gets his own line color (RB yellow, WR #1 orange, WR #2 pink).
 function routeColor(o) {
-  if (o.role === 'RB') return 0xffe066;
-  return o.num === 1 ? 0xffa23a : 0xff6ea5;
+  const cb = document.body.classList.contains('cb');          // 🎨 color-blind colors (colorblind.js): yellow / sky blue / orange
+  if (o.role === 'RB') return cb ? 0xf0e442 : 0xffe066;
+  return o.num === 1 ? (cb ? 0x56b4e9 : 0xffa23a) : (cb ? 0xe69f00 : 0xff6ea5);
 }
 
 // Before the snap, draw each receiver's PLANNED route as a colored line (with a
