@@ -14,46 +14,47 @@
   'use strict';
   const $ = id => document.getElementById(id);
 
-  // [element id, icon, name, what it does, when it is there]  — always:true = on screen the whole game
+  // [element id, icon, name, what it does, when it is there, tier]
+  // tier 0 = a button you can always have; 1 = hidden in 🧒 ROOKIE mode; 2 = hidden in ROOKIE and in MORE (see rookie.js, which reads this)
   const GUIDE = [
     { g: 'ALWAYS THERE', items: [
-      ['btn-mute', '🔊', 'SOUND', 'Mutes or un-mutes everything.', 'Always.'],
-      ['btn-view', '3D', 'VIEW', 'Flips between the flat field and the tilted 3D look.', 'Always.'],
-      ['btn-mode', '1P', 'PLAYERS', 'One player (you vs the computer) or two players on one screen.', 'Always.'],
-      ['btn-pause', '⏸', 'PAUSE', 'Freezes the game and the music. Resume, open settings, or quit.', 'During a game. Not during a timing moment (the jump ball, toe-tap…), which runs on a real clock.'],
-      ['btn-timeout', '⏱', 'TIMEOUT', 'Stops the clock. The number is how many you have left in the half.', 'During a game.'],
-      ['btn-power', '⚡', 'POWER-UPS', 'At the line it opens your picker; during a play it fires your once-a-game hero move.', 'Once you have equipped a power-up play.'],
+      ['btn-mute', '🔊', 'SOUND', 'Mutes or un-mutes everything.', 'Always.', 0],
+      ['btn-view', '3D', 'VIEW', 'Flips between the flat field and the tilted 3D look.', 'Always.', 0],
+      ['btn-mode', '1P', 'PLAYERS', 'One player (you vs the computer) or two players on one screen.', 'Always.', 0],
+      ['btn-pause', '⏸', 'PAUSE', 'Freezes the game and the music. Resume, open settings, or quit.', 'During a game. Not during a timing moment (the jump ball, toe-tap…), which runs on a real clock.', 0],
+      ['btn-timeout', '⏱', 'TIMEOUT', 'Stops the clock. The number is how many you have left in the half.', 'During a game.', 0],
+      ['btn-power', '⚡', 'POWER-UPS', 'At the line it opens your picker; during a play it fires your once-a-game hero move.', 'Once you have equipped a power-up play.', 0],
     ]},
     { g: 'BEFORE THE SNAP (offense)', items: [
-      ['btn-formation', '🧩', 'FORMATION', 'Changes how your team lines up.', 'At the line, before the snap.'],
-      ['btn-trick', '🎩', 'TRICK', 'The flea flicker: fake the run, then spring a receiver deep. One per game.', 'Before the snap, until you have used your one.'],
-      ['btn-audible', '🗣️', 'AUDIBLE', 'Change the play after you see what the defense is showing.', 'Before the snap, once the defense is showing you something to read.'],
-      ['btn-motion', '👀', 'MOTION', 'Send a receiver across and watch who follows him: man or zone.', 'Before the snap only.'],
-      ['btn-draw', '🎭', 'DRAW', 'Look like a pass, then hand it off behind the rush.', 'Before the snap. It greys out when it would not work.'],
-      ['btn-screen', '🧱', 'SCREEN', 'Let the rush come, then throw short behind your blockers.', 'Before the snap. It greys out when it would not work.'],
-      ['btn-pa', '🎣', 'PLAY ACTION', 'Fake the hand-off so the linebackers bite. Needs a real running threat.', 'Before the snap.'],
-      ['btn-boot', '🌀', 'BOOTLEG', 'Fake one way, roll out the other.', 'Before the snap.'],
-      ['btn-hard', '🗣', 'HARD COUNT', 'Bark at the line. Sometimes a defender jumps: 5 free yards.', 'Before the snap on 1st, 2nd and 3rd down. One try a down.'],
-      ['btn-calls', '📋', 'SPECIAL', 'Cycles through the formations that change who has the ball: wildcat, jet sweep, option.', 'Before the snap.'],
-      ['btn-sneak', '🐢', 'QB SNEAK', 'Quarterback pushes for the last yard.', 'Only within about 2½ yards of the marker or goal line.'],
-      ['btn-hurry', '⏰', 'HURRY UP', 'Skip the huddle for more plays out of the same clock.', 'Only when you are behind late in a half.'],
-      ['btn-hail', '🙏', 'HAIL MARY', 'One huge heave to the end zone.', 'Only the last snap of a half (or of a game you are losing by a score or less), 25+ yards out.'],
-      ['btn-clock', '🏈', 'SPIKE / KNEEL', 'Spike to stop the clock, or kneel to run it out.', 'Only when the clock decides the game: behind and out of time, or ahead and nearly home.'],
-      ['btn-fakespike', '🎭', 'FAKE SPIKE', 'Look like a spike, then throw.', 'Only in the spike moment.'],
+      ['btn-formation', '🧩', 'FORMATION', 'Changes how your team lines up.', 'At the line, before the snap.', 1],
+      ['btn-trick', '🎩', 'TRICK', 'The flea flicker: fake the run, then spring a receiver deep. One per game.', 'Before the snap, until you have used your one.', 2],
+      ['btn-audible', '🗣️', 'AUDIBLE', 'Change the play after you see what the defense is showing.', 'Before the snap, once the defense is showing you something to read.', 1],
+      ['btn-motion', '👀', 'MOTION', 'Send a receiver across and watch who follows him: man or zone.', 'Before the snap only.', 2],
+      ['btn-draw', '🎭', 'DRAW', 'Look like a pass, then hand it off behind the rush.', 'Before the snap. It greys out when it would not work.', 2],
+      ['btn-screen', '🧱', 'SCREEN', 'Let the rush come, then throw short behind your blockers.', 'Before the snap. It greys out when it would not work.', 2],
+      ['btn-pa', '🎣', 'PLAY ACTION', 'Fake the hand-off so the linebackers bite. Needs a real running threat.', 'Before the snap.', 2],
+      ['btn-boot', '🌀', 'BOOTLEG', 'Fake one way, roll out the other.', 'Before the snap.', 2],
+      ['btn-hard', '🗣', 'HARD COUNT', 'Bark at the line. Sometimes a defender jumps: 5 free yards.', 'Before the snap on 1st, 2nd and 3rd down. One try a down.', 2],
+      ['btn-calls', '📋', 'SPECIAL', 'Cycles through the formations that change who has the ball: wildcat, jet sweep, option.', 'Before the snap.', 2],
+      ['btn-sneak', '🐢', 'QB SNEAK', 'Quarterback pushes for the last yard.', 'Only within about 2½ yards of the marker or goal line.', 1],
+      ['btn-hurry', '⏰', 'HURRY UP', 'Skip the huddle for more plays out of the same clock.', 'Only when you are behind late in a half.', 1],
+      ['btn-hail', '🙏', 'HAIL MARY', 'One huge heave to the end zone.', 'Only the last snap of a half (or of a game you are losing by a score or less), 25+ yards out.', 0],
+      ['btn-clock', '🏈', 'SPIKE / KNEEL', 'Spike to stop the clock, or kneel to run it out.', 'Only when the clock decides the game: behind and out of time, or ahead and nearly home.', 0],
+      ['btn-fakespike', '🎭', 'FAKE SPIKE', 'Look like a spike, then throw.', 'Only in the spike moment.', 2],
     ]},
     { g: 'DURING A PLAY (offense)', items: [
-      ['btn-lob', '🏹', 'LOB', 'Your next throw floats over a linebacker instead of firing flat.', 'While you could still throw.'],
-      ['btn-pump', '🧢', 'PUMP FAKE', 'Freeze a defender. One fake a play.', 'While the quarterback could still throw.'],
-      ['btn-throwaway', '🧤', 'THROW AWAY', 'Dump it out of bounds. Green outside the pocket; red ⚠ inside it means intentional grounding.', 'Only while a rusher is on you.'],
-      ['btn-slide', '🛝', 'QB SLIDE', 'Go down feet first and keep the ball. Gives up the rest of the run.', 'Only after the quarterback crosses the line with the ball.'],
-      ['btn-hotroute', '🪁', 'HOT ROUTE', 'Beat a blitz: the open receiver cuts to a quick route.', 'Only on a blitz.'],
-      ['btn-pitch', '🔄', 'PITCH', 'Flip it to a teammate level with you or behind you.', 'Only when a legal pitch exists.'],
-      ['btn-juke', '🪄', 'JUKE', 'Beat a tackler. Timing is the whole thing: not too early, not too late.', 'Only while a tackler is closing on the ball carrier.'],
-      ['btn-dive', '🤸', 'DIVE', 'Stretch for the marker. Gold on the goal line.', 'Only when you are a stretch short with a tackler closing.'],
+      ['btn-lob', '🏹', 'LOB', 'Your next throw floats over a linebacker instead of firing flat.', 'While you could still throw.', 1],
+      ['btn-pump', '🧢', 'PUMP FAKE', 'Freeze a defender. One fake a play.', 'While the quarterback could still throw.', 1],
+      ['btn-throwaway', '🧤', 'THROW AWAY', 'Dump it out of bounds. Green outside the pocket; red ⚠ inside it means intentional grounding.', 'Only while a rusher is on you.', 0],
+      ['btn-slide', '🛝', 'QB SLIDE', 'Go down feet first and keep the ball. Gives up the rest of the run.', 'Only after the quarterback crosses the line with the ball.', 0],
+      ['btn-hotroute', '🪁', 'HOT ROUTE', 'Beat a blitz: the open receiver cuts to a quick route.', 'Only on a blitz.', 1],
+      ['btn-pitch', '🔄', 'PITCH', 'Flip it to a teammate level with you or behind you.', 'Only when a legal pitch exists.', 0],
+      ['btn-juke', '🪄', 'JUKE', 'Beat a tackler. Timing is the whole thing: not too early, not too late.', 'Only while a tackler is closing on the ball carrier.', 1],
+      ['btn-dive', '🤸', 'DIVE', 'Stretch for the marker. Gold on the goal line.', 'Only when you are a stretch short with a tackler closing.', 0],
     ]},
     { g: 'KICKING GAME', items: [
-      ['btn-faircatch', '🙋', 'FAIR CATCH', 'Wave it: no return, no tackle, no muff.', 'Only while a punt is in the air.'],
-      ['btn-touchback', '🧎', 'TOUCHBACK', 'Kneel it: your ball on your own 25.', 'Only while a kickoff that reached the end zone is falling.'],
+      ['btn-faircatch', '🙋', 'FAIR CATCH', 'Wave it: no return, no tackle, no muff.', 'Only while a punt is in the air.', 0],
+      ['btn-touchback', '🧎', 'TOUCHBACK', 'Kneel it: your ball on your own 25.', 'Only while a kickoff that reached the end zone is falling.', 0],
     ]},
   ];
 
@@ -63,8 +64,8 @@
   function render() {
     const body = $('guide-body'); if (!body) return;
     body.innerHTML = GUIDE.map(s => '<div class="gd-sec">' + s.g + '</div>' + s.items.map(r => {
-      const up = live(r[0]);
-      return '<div class="gd-row' + (up ? ' up' : '') + '"><div class="gd-ic">' + r[1] + '</div><div class="st-txt"><b>' + r[2] + (up ? ' <i>UP NOW</i>' : '') + '</b><span>' + r[3] + '</span><span class="gd-when">⏳ ' + r[4] + '</span></div></div>';
+      const up = live(r[0]); const hid = !up && r[5] && document.body.classList.contains('rk-hide-' + r[5]);
+      return '<div class="gd-row' + (up ? ' up' : '') + (hid ? ' hid' : '') + '"><div class="gd-ic">' + r[1] + '</div><div class="st-txt"><b>' + r[2] + (up ? ' <i>UP NOW</i>' : '') + (hid ? ' <i class="gd-hid">🧒 HIDDEN</i>' : '') + '</b><span>' + r[3] + '</span><span class="gd-when">⏳ ' + r[4] + '</span></div></div>';
     }).join('')).join('');
   }
   function open() { const m = $('guide-modal'); if (!m) return; render(); m.style.display = 'flex'; }
