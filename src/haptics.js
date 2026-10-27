@@ -25,6 +25,7 @@
     if (!on) return false;
     last = PATTERNS[kind] || PATTERNS.hit;
     if (!can) return false;
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return false;   // Chrome refuses (and logs an error) before the first tap
     try { return navigator.vibrate(last); } catch (e) { return false; }
   }
 
