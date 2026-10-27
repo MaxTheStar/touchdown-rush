@@ -4429,12 +4429,17 @@ const DefenseSim = (function () {
     // nothing changes at all.
     const fumP = ((0.03 + dStop * 0.02) * TAKEAWAY_SCALE + hawk * 0.5 + D.fumbleAdd) * wxFumble;
     const loose = !!(window.TDFallOn && TDFallOn.ready());
-    if (r < (loose ? fumP * TDFallOn.FREQ : fumP)) {
+    const strip = loose && !!(window.TDStrip && TDStrip.ready());          // ✋ STRIP THE BALL (strip.js): the moment in FRONT of the fumble
+    if (r < (loose ? fumP * TDFallOn.FREQ * (strip ? TDStrip.FREQ : 1) : fumP)) {
       const got = () => ({ r: 'fum', y: 0, side: 'run', t: loose ? pick(['<b>FUMBLE!</b> You fell on it!', '<b>FUMBLE!</b> You recovered it!', '<b>FUMBLE!</b> Your ball!']) : '<b>FUMBLE!</b> You recovered it!' });
       if (!loose) return got();
       const run = ordinaryRun(false);          // (a lost recovery is a plain run: never a breakaway moment inside a fumble moment)
-      return { r: 'pile', y: 0, side: 'run', hawk, win: got(),
+      const inner = { r: 'pile', y: 0, side: 'run', hawk, win: got(),
                lose: { r: 'gain', y: run.y, side: 'run', tag: 'fumlost', t: pick(['<b>FUMBLE</b> — but they fall on it.', '<b>FUMBLE</b> — it bounces right back to them.', '<b>FUMBLE</b> — and they pounce on it.']) + ' ' + run.t } };
+      if (!strip) return inner;
+      // ✋ …and with strip.js you have to RIP it out first: a win is the loose ball above, a miss is the ordinary run (never a dead down)
+      return { r: 'pile', kind: 'strip', y: 0, side: 'run', hawk, win: inner,
+               lose: { r: 'gain', y: run.y, side: 'run', t: pick(['He clawed at it — but the runner hung on.', 'You got a hand on the ball… he held it tight.', 'Close! He had it covered up.']) + ' ' + run.t } };
     }
     return ordinaryRun();
   }
@@ -4640,7 +4645,8 @@ const DefenseSim = (function () {
     const played = play(tw, fm);
     if (fm && fm.bluff) {                                                  // 🎭 say so when they lied
       const pre = TDFormation.bluffLine(fm);
-      if (played.win) { played.win.t = pre + played.win.t; played.lose.t = pre + played.lose.t; }   // a tipped ball or a loose ball: two endings
+      if (played.kind === 'strip') { played.win.win.t = pre + played.win.win.t; played.win.lose.t = pre + played.win.lose.t; played.lose.t = pre + played.lose.t; }   // ✋ a strip holds a loose ball inside it
+      else if (played.win) { played.win.t = pre + played.win.t; played.lose.t = pre + played.lose.t; }   // a tipped ball or a loose ball: two endings
       else played.t = pre + played.t;
     }
     // 🙌 …and a TIPPED ball is not decided yet: you decide it (tipped.js). If there is
@@ -4654,15 +4660,24 @@ const DefenseSim = (function () {
     // 🙌 …and so is a LOOSE ball (fallon.js): the field holds still and you try to fall on it. `play()` only builds one when the
     // moment can be drawn, and if the panel somehow cannot be, it is the recovery it always was.
     if (played.r === 'pile') {
-      G.dsimPile = played;
-      render(played.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : played.kind === 'swim' ? '<b>PASS RUSH!</b> You beat your man — get to the quarterback!' : '<b>FUMBLE!</b> The ball is loose…');
-      const startMoment = played.kind === 'chase' ? (cb => TDChase.begin(cb)) : played.kind === 'swim' ? (cb => TDSwim.begin(cb)) : (cb => TDFallOn.begin(played.hawk, cb));   // 💥 the same slot, a different moment
-      const drawn = startMoment(got => {
-        if (G.dsimPile !== played || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was bouncing
-        G.dsimPile = null;
-        apply(got ? played.win : played.lose);
-      });
-      if (!drawn) { G.dsimPile = null; apply(played.kind === 'chase' ? played.lose : played.kind === 'swim' ? (Math.random() < TDSwim.ORDINARY ? played.win : played.lose) : played.win); }   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
+      // (a function because ✋ STRIP THE BALL chains into 🙌 FALL ON IT: a stripped ball is a pile of its own)
+      const runPile = (pl) => {
+        G.dsimPile = pl;
+        render(pl.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : pl.kind === 'swim' ? '<b>PASS RUSH!</b> You beat your man — get to the quarterback!' : pl.kind === 'strip' ? '<b>WRAPPED UP!</b> Reach in and rip the ball out!' : '<b>FUMBLE!</b> The ball is loose…');
+        const startMoment = pl.kind === 'chase' ? (cb => TDChase.begin(cb)) : pl.kind === 'swim' ? (cb => TDSwim.begin(cb)) : pl.kind === 'strip' ? (cb => TDStrip.begin(cb)) : (cb => TDFallOn.begin(pl.hawk, cb));   // 💥 the same slot, a different moment
+        const drawn = startMoment(got => {
+          if (G.dsimPile !== pl || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was bouncing
+          G.dsimPile = null;
+          if (pl.kind === 'strip' && got) { runPile(pl.win); return; }
+          apply(got ? pl.win : pl.lose);
+        });
+        if (!drawn) {
+          G.dsimPile = null;
+          if (pl.kind === 'strip') { if (Math.random() < TDStrip.ORDINARY) runPile(pl.win); else apply(pl.lose); }
+          else apply(pl.kind === 'chase' ? pl.lose : pl.kind === 'swim' ? (Math.random() < TDSwim.ORDINARY ? pl.win : pl.lose) : pl.win);   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
+        }
+      };
+      runPile(played);
       return;
     }
     apply(played);
