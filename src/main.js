@@ -4394,7 +4394,11 @@ const DefenseSim = (function () {
         const y = -Phaser.Math.Between(3, 8);
         const sack = { r: 'gain', y, tag: 'sack', side: 'pass', t: '<b>SACK!</b> ' + y + ' yards.' };
         if (!swim) return sack;
-        return { r: 'pile', kind: 'swim', y: 0, side: 'pass', hawk: 0, win: sack, lose: completion() };
+        // 💪 a share of rushes are BULL RUSHES (swim.js): harder to land, but the throw he makes after one is hurried even if you miss
+        const bull = Math.random() < TDSwim.BULL.share;
+        const lose = completion();
+        if (bull) { lose.y = Math.max(1, Math.round(lose.y * TDSwim.BULL.hurry)); lose.t = 'Hurried by the <b>bull rush</b> — complete for <b>' + lose.y + '</b>.'; }
+        return { r: 'pile', kind: 'swim', bull, y: 0, side: 'pass', hawk: 0, win: sack, lose };
       }
       return completion();
     }
@@ -4663,8 +4667,8 @@ const DefenseSim = (function () {
       // (a function because ✋ STRIP THE BALL chains into 🙌 FALL ON IT: a stripped ball is a pile of its own)
       const runPile = (pl) => {
         G.dsimPile = pl;
-        render(pl.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : pl.kind === 'swim' ? '<b>PASS RUSH!</b> You beat your man — get to the quarterback!' : pl.kind === 'strip' ? '<b>WRAPPED UP!</b> Reach in and rip the ball out!' : '<b>FUMBLE!</b> The ball is loose…');
-        const startMoment = pl.kind === 'chase' ? (cb => TDChase.begin(cb)) : pl.kind === 'swim' ? (cb => TDSwim.begin(cb)) : pl.kind === 'strip' ? (cb => TDStrip.begin(cb)) : (cb => TDFallOn.begin(pl.hawk, cb));   // 💥 the same slot, a different moment
+        render(pl.kind === 'chase' ? '<b>BREAKAWAY!</b> He is clear — run him down!' : pl.kind === 'swim' ? (pl.bull ? '<b>PASS RUSH!</b> You have your man on his heels — drive him back!' : '<b>PASS RUSH!</b> You beat your man — get to the quarterback!') : pl.kind === 'strip' ? '<b>WRAPPED UP!</b> Reach in and rip the ball out!' : '<b>FUMBLE!</b> The ball is loose…');
+        const startMoment = pl.kind === 'chase' ? (cb => TDChase.begin(cb)) : pl.kind === 'swim' ? (cb => TDSwim.begin(cb, pl.bull)) : pl.kind === 'strip' ? (cb => TDStrip.begin(cb)) : (cb => TDFallOn.begin(pl.hawk, cb));   // 💥 the same slot, a different moment
         const drawn = startMoment(got => {
           if (G.dsimPile !== pl || G.state !== 'dsim') return;      // the game moved on (a restart, a quit) while the ball was bouncing
           G.dsimPile = null;
@@ -4674,7 +4678,7 @@ const DefenseSim = (function () {
         if (!drawn) {
           G.dsimPile = null;
           if (pl.kind === 'strip') { if (Math.random() < TDStrip.ORDINARY) runPile(pl.win); else apply(pl.lose); }
-          else apply(pl.kind === 'chase' ? pl.lose : pl.kind === 'swim' ? (Math.random() < TDSwim.ORDINARY ? pl.win : pl.lose) : pl.win);   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
+          else apply(pl.kind === 'chase' ? pl.lose : pl.kind === 'swim' ? (Math.random() < (pl.bull ? TDSwim.BULL.ordinary : TDSwim.ORDINARY) ? pl.win : pl.lose) : pl.win);   // (no panel to draw: a fumble is the recovery it was, a breakaway is the breakaway it was)
         }
       };
       runPile(played);
