@@ -1178,6 +1178,36 @@ function juke() {
   }
 }
 
+// 🦘 THE HURDLE (hurdle.js has the table; the move lives here). Same flag as the juke: ONE move a play.
+function hurdleState() {
+  if (!window.TDHurdle || G.state !== 'live' || G.cpu || G.jukeUsed || !G.ballCarrier || (G.ballCarrier === offense[0] && canPass())) return null;
+  if (window.TDStar && TDStar.on() && G.ballCarrier !== TDStar.player()) return null;
+  const c = G.ballCarrier.s; let best = null, bd = Infinity;
+  for (const d of defense) {
+    if (!TDHurdle.inFront(d.s.x - c.x, c.y - d.s.y)) continue;   // only a man standing dead ahead
+    const dd = Phaser.Math.Distance.Between(d.s.x, d.s.y, c.x, c.y); if (dd < bd) { bd = dd; best = d; }
+  }
+  return (best && bd >= TDHurdle.MIN_PX && bd <= TDHurdle.MAX_PX) ? { def: best, d: bd } : null;
+}
+function hurdle() {
+  const st = hurdleState(); if (!st) return;
+  const now = G.scene.time.now, c = G.ballCarrier.s;
+  G.jukeUsed = true;
+  const win = Math.random() < TDHurdle.chance(st.d, G.hurdleUses || 0);
+  G.hurdleUses = (G.hurdleUses || 0) + 1;
+  if (win) {
+    G.jukeStun = { def: st.def, until: now + TDHurdle.STUN_MS };
+    c.y = Math.max(8, c.y - TDHurdle.HOP_PX);
+    G.stiffUntil = Math.max(G.stiffUntil, now + TDHurdle.FREE_MS);
+    sayComment(pick(['🦘 HE JUMPED RIGHT OVER HIM!', 'Hurdled the tackler!', 'Up and over!']));
+    showBanner('🦘 HURDLE!', false); if (window.TDSound) TDSound.sting('coin');
+  } else {
+    G.jukeTripUntil = now + TDHurdle.TRIP_MS; G.jukeBad = TDHurdle.FUMBLE_X;
+    sayComment(pick(['He left his feet for nothing!', 'The hurdle came up short…', 'Clipped in the air!']));
+    showBanner('😬 CAUGHT IN THE AIR', false);
+  }
+}
+
 function pumpState() {
   if (G.state !== 'live' || G.cpu || G.pumped || G.trickActive || !canPass()) return false;
   if (window.TDStar && TDStar.on()) return false;
@@ -2319,7 +2349,7 @@ function checkTackle() {
       const grip = window.TDShop ? TDShop.gripFactor() : 0;
       // 🧢 …and a quarterback caught holding the ball out right after a pump fake coughs it up twice as often
       const pumpRisk = (G.ballCarrier === offense[0] && G.scene.time.now < G.fakeStripUntil) ? PUMP_STRIP : 1;
-      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk * (G.jukeBad ? TDJuke.FUMBLE_X : 1)) fumble();   // 🪄 a read juke leaves the ball loose
+      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk * (G.jukeBad ? (G.jukeBad > 1 ? G.jukeBad : TDJuke.FUMBLE_X) : 1)) fumble();   // 🪄 a read juke leaves the ball loose (🦘 a missed hurdle stores its own, bigger number)
       else {
         // 🧱 HEAVY — the whistle hasn't gone yet. Eight big bodies are all
         // leaning the same way, so the pile falls forward another yard and a
@@ -3340,7 +3370,7 @@ function startCpuDrive() {
   G.turnoverSpotCpu = null;
   G.cpu = { spot, down: 1, togo: 10, play: null, goFor: false };
   if (window.TDDrives) TDDrives.beginOpp(spot, driveWhen());   // 📋 their drive starts here
-  G.pumpUses = 0; G.wildUses = 0; G.jukeUses = 0; G.fakeUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
+  G.pumpUses = 0; G.wildUses = 0; G.jukeUses = 0; G.fakeUses = 0; G.hurdleUses = 0;                              // 🧢 a new possession: the defense forgets your pump fakes (🐺 …and your wildcats)
   // 🛡 1-player: the new tap-to-progress mini-map. 2-player keeps LIVE defense so
   // Player 2 gets to run the red offense on their possession.
   if (!G.twoPlayer) { DefenseSim.start(); return; }
@@ -6443,6 +6473,7 @@ function setupTouchButtons() {
   bindTapEl('btn-fake', () => chooseFourthDown('fake'));   // 🎭 special teams trick
   bindTapEl('btn-celeb', () => { if (G.state === 'patdecision') { G.celebBig = !G.celebBig; updateCelebBtn(); } });   // 🕺 GO BIG toggle
   bindTapEl('btn-fakespike', () => fakeSpike());           // 🎭 THE FAKE SPIKE (clockplay.js)
+  bindTapEl('btn-hurdle', () => hurdle());                 // 🦘 THE HURDLE (hurdle.js)
   bindTapEl('btn-juke', () => juke());                     // 🪄 THE JUKE (juke.js)
   bindTapEl('btn-lob', () => toggleLob());                 // 🏹 BULLET OR LOB (lob.js)
   bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
@@ -6829,6 +6860,9 @@ function updateHUD() {
 
   // 🪄 THE JUKE — the button, only while a tackler is in range
   { const jb = document.getElementById('btn-juke'); if (jb) jb.style.display = jukeState() ? 'flex' : 'none'; }
+
+  // 🦘 THE HURDLE — the button, only while a tackler stands dead ahead
+  { const hb = document.getElementById('btn-hurdle'); if (hb) hb.style.display = hurdleState() ? 'flex' : 'none'; }
 
   // 🪁 HOT ROUTE — the button, only against a blitz while the rush is not home
   if (window.TDHotRoute) TDHotRoute.paint();

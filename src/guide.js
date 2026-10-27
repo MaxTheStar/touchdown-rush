@@ -49,6 +49,7 @@
       ['btn-slide', '🛝', 'QB SLIDE', 'Go down feet first and keep the ball. Gives up the rest of the run.', 'Only after the quarterback crosses the line with the ball.', 0],
       ['btn-hotroute', '🪁', 'HOT ROUTE', 'Beat a blitz: the open receiver cuts to a quick route.', 'Only on a blitz.', 1],
       ['btn-pitch', '🔄', 'PITCH', 'Flip it to a teammate level with you or behind you.', 'Only when a legal pitch exists.', 0],
+      ['btn-hurdle', '🦘', 'HURDLE', 'Jump the tackler standing right in front of you. Timing is the whole thing, and a miss is costly.', 'Only while a tackler is dead ahead of the ball carrier.', 1],
       ['btn-juke', '🪄', 'JUKE', 'Beat a tackler. Timing is the whole thing: not too early, not too late.', 'Only while a tackler is closing on the ball carrier.', 1],
       ['btn-dive', '🤸', 'DIVE', 'Stretch for the marker. Gold on the goal line.', 'Only when you are a stretch short with a tackler closing.', 0],
     ]},
