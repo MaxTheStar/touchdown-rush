@@ -231,5 +231,7 @@
     if (musicBus) musicBus.gain.value = mix.music;
     if (fxBus) fxBus.gain.value = mix.fx;
   }
-  window.TDSound = { start, setMode, sting, hit, toggle, setMix, _mix: () => ({ music: mix.music, fx: mix.fx, music_g: musicBus ? musicBus.gain.value : null, fx_g: fxBus ? fxBus.gain.value : null, master_g: master ? master.gain.value : null }) };
+  // ⏸ THE PAUSE MENU (Round 22): the audio clock stops with the game (the music is scheduled on it) and starts again on resume
+  function suspend(on) { try { if (ctx) { if (on) ctx.suspend(); else ctx.resume(); } } catch (e) {} }
+  window.TDSound = { start, setMode, sting, hit, toggle, setMix, suspend, _mix: () => ({ music: mix.music, fx: mix.fx, music_g: musicBus ? musicBus.gain.value : null, fx_g: fxBus ? fxBus.gain.value : null, master_g: master ? master.gain.value : null }) };
 })();
