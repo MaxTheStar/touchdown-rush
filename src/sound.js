@@ -24,6 +24,8 @@
 
   let ctx = null;        // the AudioContext — the browser's sound engine
   let master = null;     // the master volume knob (mute turns it to 0)
+  let musicBus = null, fxBus = null;      // 🔊 the SOUND MIXER (Round 22): the tune+hi-hat and the stings+hits each get their own knob, both feeding `master`
+  const mix = { music: 1, fx: 1 };         // …both at 1 = the game exactly as it always sounded; Mute still silences all of it (it is on `master`)
   let noiseBuf = null;   // one reusable burst of static (for the hi-hat)
   let started = false;
   let mode = 'menu';     // which tune is playing: 'menu' or 'game'
@@ -55,14 +57,14 @@
   // ---- One short synth note --------------------------------------------
   // An oscillator hums at the note's frequency while a gain (volume) knob
   // fades it out fast — that quick fade is what makes it sound plucky.
-  function blip(midi, when, dur, type, vol) {
+  function blip(midi, when, dur, type, vol, bus) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.type = type;                       // 'square' = classic game console
     osc.frequency.value = freqOf(midi);    // 'triangle' = soft and round
     g.gain.setValueAtTime(vol, when);
     g.gain.exponentialRampToValueAtTime(0.001, when + dur);
-    osc.connect(g); g.connect(master);
+    osc.connect(g); g.connect(bus || musicBus || master);
     osc.start(when); osc.stop(when + dur + 0.02);
   }
 
@@ -71,7 +73,7 @@
     const src = ctx.createBufferSource(); src.buffer = noiseBuf;
     const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6500;
     const g = ctx.createGain(); g.gain.value = 0.05;
-    src.connect(f); f.connect(g); g.connect(master);
+    src.connect(f); f.connect(g); g.connect(musicBus || master);
     src.start(when);
   }
 
@@ -107,7 +109,7 @@
     osc.frequency.exponentialRampToValueAtTime(hz * 0.45, t0 + 0.13 + 0.07 * f);
     og.gain.setValueAtTime(0.030 + 0.055 * f, t0);
     og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15 + 0.10 * f);
-    osc.connect(og); og.connect(master);
+    osc.connect(og); og.connect(fxBus || master);
     osc.start(t0); osc.stop(t0 + 0.30);
 
     // 2. the crunch — static with the hiss filtered off = pads colliding
@@ -120,7 +122,7 @@
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.020 + 0.050 * f, t0);
       g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09 + 0.06 * f);
-      src.connect(lp); lp.connect(g); g.connect(master);
+      src.connect(lp); lp.connect(g); g.connect(fxBus || master);
       src.start(t0);
     }
   }
@@ -170,7 +172,7 @@
     if (!started || !STINGS[name]) return;
     const s = STINGS[name];
     const t0 = ctx.currentTime + 0.02;
-    s.notes.forEach((n, i) => blip(n, t0 + i * s.gap, s.dur, s.type, s.vol));
+    s.notes.forEach((n, i) => blip(n, t0 + i * s.gap, s.dur, s.type, s.vol, fxBus));
   }
 
   // ---- Start, switch tunes, mute ---------------------------------------
@@ -182,6 +184,8 @@
     master = ctx.createGain();
     master.gain.value = muted ? 0 : 0.5;
     master.connect(ctx.destination);
+    musicBus = ctx.createGain(); musicBus.gain.value = mix.music; musicBus.connect(master);   // 🔊 the mixer's two buses
+    fxBus = ctx.createGain(); fxBus.gain.value = mix.fx; fxBus.connect(master);
 
     // Bake the hi-hat's static once and reuse it every "tss".
     noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
@@ -220,5 +224,12 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUp);
   else wireUp();
 
-  window.TDSound = { start, setMode, sting, hit, toggle };
+  // 🔊 THE SOUND MIXER (Round 22, pick ③): 0…1 each. Applied at once if the audio is already running, and remembered for when it starts.
+  function setMix(music, fx) {
+    if (music != null) mix.music = Math.max(0, Math.min(1, music));
+    if (fx != null) mix.fx = Math.max(0, Math.min(1, fx));
+    if (musicBus) musicBus.gain.value = mix.music;
+    if (fxBus) fxBus.gain.value = mix.fx;
+  }
+  window.TDSound = { start, setMode, sting, hit, toggle, setMix, _mix: () => ({ music: mix.music, fx: mix.fx, music_g: musicBus ? musicBus.gain.value : null, fx_g: fxBus ? fxBus.gain.value : null, master_g: master ? master.gain.value : null }) };
 })();
