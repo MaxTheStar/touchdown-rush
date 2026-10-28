@@ -6298,6 +6298,10 @@ const FORMATIONS = [
   { name: 'TRIPS R', wr1: 360, wr2: 470, rbx: 150, rby: 44  },  // both WRs stacked to the right
   { name: 'TRIPS L', wr1: 63,  wr2: 173, rbx: 416, rby: 44  },  // both WRs stacked to the left
   { name: 'I-FORM',  wr1: 150, wr2: 383, rbx: 266, rby: 104 },  // tight, RB deep behind the QB
+  // 🔫 SHOTGUN (Round 23, pick ④): the QB lines up 12px deeper (qby 72 vs 60) = a longer pocket:
+  // MEASURED, a QB who stands still is sacked at 0.93s from SPREAD and ~1.12s from here (+0.19s; the rush walks through the line at ~57px/s, so every px is ~17ms).
+  // 92px was +0.5s — far too much. The back stands beside him and 16px deeper than SPREAD's, so a hand-off starts the run later and the HAND window is narrower (49px apart vs 24; HANDOFF_DIST 60).
+  { name: 'SHOTGUN', wr1: 55,  wr2: 478, rbx: 306, rby: 100, qby: 72 },
 ];
 
 // Put WR#1, WR#2 and the RB where the current formation says, at line 'L' (the
@@ -6305,6 +6309,7 @@ const FORMATIONS = [
 // startY) so the route system knows which side he lined up on.
 function layoutSkill(L) {
   const f = FORMATIONS[G.formation] || FORMATIONS[0];
+  place(offense[0], 266, L + (f.qby || 60));   // 🔫 QB (a SHOTGUN snap stands him deeper)
   place(offense[1], f.rbx, L + f.rby);   // RB
   place(offense[2], f.wr1, L + 14);      // WR #1
   place(offense[3], f.wr2, L + 14);      // WR #2

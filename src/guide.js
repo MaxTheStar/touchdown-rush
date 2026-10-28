@@ -26,7 +26,7 @@
       ['btn-power', '⚡', 'POWER-UPS', 'At the line it opens your picker; during a play it fires your once-a-game hero move.', 'Once you have equipped a power-up play.', 0],
     ]},
     { g: 'BEFORE THE SNAP (offense)', items: [
-      ['btn-formation', '🧩', 'FORMATION', 'Changes how your team lines up.', 'At the line, before the snap.', 1],
+      ['btn-formation', '🧩', 'FORMATION', 'Changes how your team lines up. SHOTGUN stands the QB deeper: about 0.2s more time to throw, but handoffs start later.', 'At the line, before the snap.', 1],
       ['btn-trick', '🎩', 'TRICK', 'The flea flicker: fake the run, then spring a receiver deep. One per game.', 'Before the snap, until you have used your one.', 2],
       ['btn-audible', '🗣️', 'AUDIBLE', 'Change the play after you see what the defense is showing.', 'Before the snap, once the defense is showing you something to read.', 1],
       ['btn-motion', '👀', 'MOTION', 'Send a receiver across and watch who follows him: man or zone.', 'Before the snap only.', 2],
