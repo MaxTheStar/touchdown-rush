@@ -1013,6 +1013,9 @@ function controlBallCarrier() {
   if (consume('pump') || Phaser.Input.Keyboard.JustDown(keys.pump)) pumpFake();
   // 🛝 …and a quarterback who has scrambled across the line can go down feet first (slide.js).
   if (consume('slide') || Phaser.Input.Keyboard.JustDown(keys.slide)) slideDown();
+  // ⌨️ SPACE (or the big HIKE button) is the runner's "move" once the ball is snapped: a man dead ahead
+  // gets hurdled, otherwise a man closing from the side gets juked. No tiny button to chase.
+  if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) { if (hurdleState()) hurdle(); else if (jukeState()) juke(); }
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
