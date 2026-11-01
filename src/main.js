@@ -1000,7 +1000,7 @@ function controlBallCarrier() {
     if (consume('one')   || Phaser.Input.Keyboard.JustDown(keys.one))   throwTo(1);
     else if (consume('two')   || Phaser.Input.Keyboard.JustDown(keys.two))   throwTo(2);
     else if (consume('three') || Phaser.Input.Keyboard.JustDown(keys.three)) throwTo(3);
-    else if (consume('hand')  || Phaser.Input.Keyboard.JustDown(keys.hand))  handOff();
+    else if (consume('hand')  || Phaser.Input.Keyboard.JustDown(keys.hand))  { if (window.TDReverse && TDReverse.ready()) TDReverse.exchange(); else handOff(); }   // 🔁 …the second tap of a reverse gives it back
   }
   // 🔄 A pitch is a lateral, so it works in the open field too — not only behind
   // the line like a pass. (Read after the pass block so a tap is never both.)
@@ -1061,6 +1061,7 @@ function handOff() {
   G.scene.cameras.main.startFollow(rb.s, true, 0.12, 0.12);
   if (G.jetOn && window.TDJet) { G.jetBurstUntil = G.scene.time.now + TDJet.BURST_MS; sayComment('✈️ JET SWEEP! He takes it at full speed!'); }   // ✈️ he takes it at speed
   else sayComment(pick(['Handoff!', 'He gives it off!', 'Hands it off!']));
+  if (window.TDReverse) TDReverse.handoff();   // 🔁 the first exchange of a reverse (the read is timed from here)
   if (window.TDDraw) TDDraw.handoff();   // 🎭 a LATE hand-off on a called draw catches the rush going the wrong way
 }
 
@@ -1966,6 +1967,7 @@ function routeVelocity(o, depth, side) {
     case 'hot': {    const dx = G.hotSpot.x - o.s.x, dy = G.hotSpot.y - o.s.y, dd = Math.hypot(dx, dy);   // 🪁 HOT ROUTE: cut to the hole and stop
                      return dd < 8 ? { vx: 0, vy: 0 } : { vx: dx / dd * S * 1.05, vy: dy / dd * S * 1.05 }; }
     case 'jet':      return Math.abs(o.s.x - o.startX) < 230 ? { vx: -G.jetSide * S, vy: 0 } : { vx: 0, vy: -S };   // ✈️ the JET sweep: across behind the quarterback, then upfield
+    case 'rev':      return Math.abs(o.s.x - o.startX) < TDReverse.SPAN ? { vx: -G.revSide * S * TDReverse.SPEED, vy: 0 } : { vx: 0, vy: -S };   // 🔁 the REVERSE: across behind the back, then upfield as a decoy
     case 'screen':   return Math.abs(o.s.x - o.startX) < 84 ? { vx: OUT * S * 0.85, vy: 0 } : { vx: 0, vy: 0 };   // 🧱 the SCREEN: out to the flat, then wait
     case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
     default:         return { vx: 0, vy: -S };                                        // 'streak'
@@ -2089,6 +2091,7 @@ function routePath(o) {
     case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
     case 'hot':      return [{ x: sx, y: sy }, { x: G.hotSpot.x, y: G.hotSpot.y }];   // 🪁 HOT ROUTE: to the hole
     case 'jet':      return [{ x: sx, y: sy }, { x: clampX(sx - G.jetSide * 230), y: sy }];   // ✈️ the JET sweep: across the formation
+    case 'rev':      return [{ x: sx, y: sy }, { x: clampX(sx - G.revSide * TDReverse.SPAN), y: sy }];   // 🔁 the REVERSE: across behind the back
     case 'screen':   return [{ x: sx, y: sy }, { x: clampX(sx + OUT * 84), y: sy }];  // 🧱 the SCREEN: out to the flat and wait
     case 'swing': {  const ox = clampX(sx + 90);
                      return [{ x: sx, y: sy }, { x: ox, y: up(20) }, { x: clampX(ox + 35), y: up(210) }]; }
@@ -6870,7 +6873,7 @@ function updateHUD() {
 
   // Gray out the HAND button when you're too far from the RB to hand off.
   const handBtn = document.getElementById('btn-hand');
-  if (handBtn) handBtn.classList.toggle('off', !canHandOff());
+  if (handBtn) handBtn.classList.toggle('off', !canHandOff() && !(window.TDReverse && TDReverse.ready()));
 
   // 📏 THE CHAINS — repaint the two lines on the field (a no-op unless something moved).
   if (window.TDChains) TDChains.sync(chainState());
