@@ -1016,7 +1016,7 @@ function controlBallCarrier() {
   if (consume('slide') || Phaser.Input.Keyboard.JustDown(keys.slide)) slideDown();
   // ⌨️ SPACE (or the big HIKE button) is the runner's "move" once the ball is snapped: a man dead ahead
   // gets hurdled, otherwise a man closing from the side gets juked. No tiny button to chase.
-  if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) { if (hurdleState()) hurdle(); else if (jukeState()) juke(); }
+  if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) { if (window.TDHookLat && TDHookLat.ready()) pitch(); else if (hurdleState()) hurdle(); else if (jukeState()) juke(); }
 }
 
 // Player 2 drives their defender with WASD keys or the top D-pad.
@@ -1325,6 +1325,7 @@ function pitch() {
   });
 }
 function resolvePitch(rec, dist, from) {
+  const pitcher = G.ballCarrier;   // 🪃 who threw it (read before the carrier changes)
   G.passTarget = null;
   if (G.state !== 'pass') return;
   let nd = Infinity;
@@ -1342,6 +1343,7 @@ function resolvePitch(rec, dist, from) {
   G.boostUntil = G.scene.time.now + PITCH_BURST_MS;
   G.scene.cameras.main.startFollow(rec.s, true, 0.12, 0.12);
   sayComment(pick(['Got it!', 'Clean pitch!', 'He takes it!']));
+  if (window.TDHookLat) TDHookLat.pitched(pitcher, rec);   // 🪃 a clean lateral off a hook catch overruns the chasers
 }
 // The pitch hits the turf: it keeps going the way it was thrown, PAST him (never
 // at his feet — v4.9's lesson: a ball that lands inside RECOVER_DIST is
@@ -1969,6 +1971,8 @@ function routeVelocity(o, depth, side) {
     case 'hot': {    const dx = G.hotSpot.x - o.s.x, dy = G.hotSpot.y - o.s.y, dd = Math.hypot(dx, dy);   // 🪁 HOT ROUTE: cut to the hole and stop
                      return dd < 8 ? { vx: 0, vy: 0 } : { vx: dx / dd * S * 1.05, vy: dy / dd * S * 1.05 }; }
     case 'jet':      return Math.abs(o.s.x - o.startX) < 230 ? { vx: -G.jetSide * S, vy: 0 } : { vx: 0, vy: -S };   // ✈️ the JET sweep: across behind the quarterback, then upfield
+    case 'trail': {  const w = offense[2].s, tx = w.x, ty = w.y + TDHookLat.TRAIL_BEHIND, dx = tx - o.s.x, dy = ty - o.s.y, dd = Math.hypot(dx, dy);   // 🪃 the back runs up a few steps behind the hook man
+                     return dd < 6 ? { vx: 0, vy: -S * 0.5 } : { vx: dx / dd * S * 0.97, vy: dy / dd * S * 0.97 }; }
     case 'rev':      return Math.abs(o.s.x - o.startX) < TDReverse.SPAN ? { vx: -G.revSide * S * TDReverse.SPEED, vy: 0 } : { vx: 0, vy: -S };   // 🔁 the REVERSE: across behind the back, then upfield as a decoy
     case 'screen':   return Math.abs(o.s.x - o.startX) < 84 ? { vx: OUT * S * 0.85, vy: 0 } : { vx: 0, vy: 0 };   // 🧱 the SCREEN: out to the flat, then wait
     case 'swing':    return depth < 20  ? { vx: S * 0.85, vy: -S * 0.20 } : { vx: S * 0.25, vy: -S * 0.90 };
@@ -2094,6 +2098,7 @@ function routePath(o) {
     case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
     case 'hot':      return [{ x: sx, y: sy }, { x: G.hotSpot.x, y: G.hotSpot.y }];   // 🪁 HOT ROUTE: to the hole
     case 'jet':      return [{ x: sx, y: sy }, { x: clampX(sx - G.jetSide * 230), y: sy }];   // ✈️ the JET sweep: across the formation
+    case 'trail':    return [{ x: sx, y: sy }, { x: clampX(offense[2].s.x), y: up(110) }];   // 🪃 up the field behind the hook man
     case 'rev':      return [{ x: sx, y: sy }, { x: clampX(sx - G.revSide * TDReverse.SPAN), y: sy }];   // 🔁 the REVERSE: across behind the back
     case 'screen':   return [{ x: sx, y: sy }, { x: clampX(sx + OUT * 84), y: sy }];  // 🧱 the SCREEN: out to the flat and wait
     case 'swing': {  const ox = clampX(sx + 90);
@@ -2193,6 +2198,7 @@ function updateDefense(elapsed) {
       // the ballhawk, closes a touch faster than the rest.)
       tx = carrier.x; ty = carrier.y; speed = PURSUE_SPEED * boost * (isStar ? 1.12 : 1);
       if (G.jukeStun && d === G.jukeStun.def && G.scene.time.now < G.jukeStun.until) speed *= 0.08;   // 🪄 juked out of his shoes
+      if (G.hlUntil && d.role !== 'DL') speed *= TDHookLat.slow(G.scene.time.now, G.hlUntil);        // 🪃 chasing the hook man, and the ball just went the other way
       if (G.wildcat && G.scene.time.now < G.wildHoldUntil) speed *= 0.08;   // 🐺 the defense is guessing which man has it
       // 🧱 …unless the tight end has him sealed off on a HEAVY run, in which case
       // he keeps exactly what a blocked pass rusher keeps — one rule for both
