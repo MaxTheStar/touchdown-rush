@@ -206,6 +206,26 @@
   function dimeOn()  { try { const g = __td.G; return !!(g.cpu && g.state === 'dsim' && !g.dsimEnding && g.cpu.down >= 3 && g.cpu.togo >= 7); } catch (e) { return false; } }
   function heavyOn() { try { const g = __td.G; return !!(g.cpu && g.state === 'dsim' && !g.dsimEnding && g.cpu.down >= 3 && g.cpu.togo <= 2); } catch (e) { return false; } }
 
+  // ============================================================
+  // 📦 STACK THE BOX (Round 23, pick ⑤) — the sixth conditional call, the run-side mirror of 🤝 DOUBLE
+  // ------------------------------------------------------------
+  // Against a team that runs about as much as it throws or more (the Scouting Report's lean, `TDScout.passLean`, at or under STACK_LEAN) a real defense puts eight or nine
+  // men at the line and dares them to throw. Runs are choked — but it is a SAFER, quieter answer than 🔥 BLITZ (no sacks, no fumbles): the price is a
+  // thin back end, so a pass over the top is a gift. Against a team that throws it is nine men standing around, so it is only offered when they run.
+  // ⚠️ MEASURED against blitz / HEAVY / man in DEVLOG v4.93: it has to be the best answer to a team that runs 70%+ on yards and NOT beat a blitz at the league's mix.
+  // ============================================================
+  const STACK_LEAN = 0.50;          // 8 of the 32 teams (CHI .40 … up to .50): the ones the Scouting Report shows leaning run (only 2 teams are at or under its 'RUN-FIRST' .42, so that was too rare)
+  const STACK = { id: 'stack', ic: '📦', name: 'STACK THE BOX', tag: '📦 STACK THE BOX',
+    blurb: 'Against a team that runs: nine at the line. Runs go nowhere — but nobody is deep, so a throw finds grass.',
+    mods: { stuff: 0.15, runGain: 0.75, bigRun: -0.07, incomplete: -0.04, bigPass: 0.05, passGain: 1.15 } };
+  function stackOn() {
+    try {
+      const g = window.__td && __td.G;
+      if (!g || !g.cpu || g.state !== 'dsim' || g.dsimEnding) return false;
+      return !!(window.TDScout && TDScout.passLean && TDScout.passLean(g.oppTeam) <= STACK_LEAN);
+    } catch (e) { return false; }
+  }
+
   let armed = null;   // the call for the play about to happen
 
   // ============================================================
@@ -281,9 +301,10 @@
     if (doubleOn() || (armed && armed.id === 'double')) list = list.concat(DOUBLE);       // 🤝 only against a team that throws
     if (dimeOn() || (armed && armed.id === 'dime')) list = list.concat(DIME);             // 🧩 third and long
     if (heavyOn() || (armed && armed.id === 'heavy')) list = list.concat(HEAVY);          // 🧱 third and short
+    if (stackOn() || (armed && armed.id === 'stack')) list = list.concat(STACK);          // 📦 only against a team that runs
     row.classList.toggle('dc-compact', list.filter(c => c !== CALLS[0] && c !== CALLS[1] && c !== CALLS[2]).length >= 2);   // two or more situational calls at once: drop their blurbs so the panel still fits a phone
     row.innerHTML = list.map(c =>
-      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE || c === DIME || c === HEAVY) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE || c === DIME || c === HEAVY || c === STACK) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     { const sl = scoutLine(); if (sl) row.insertAdjacentHTML('beforeend', '<div class="dc-scout">' + sl + '</div>'); }   // 🧠 they have you scouted
     row.querySelectorAll('.dc-btn').forEach(el => {
@@ -300,7 +321,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : id === 'dime' ? DIME : id === 'heavy' ? HEAVY : null); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : id === 'dime' ? DIME : id === 'heavy' ? HEAVY : id === 'stack' ? STACK : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -346,9 +367,9 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    goalOn, GOAL_SPOT, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn, scoutedK, countered, scoutLine, resetScout,
+    goalOn, GOAL_SPOT, stackOn, STACK_LEAN, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn, scoutedK, countered, scoutLine, resetScout,
     _hist: a => { if (a) hist = a.slice(); return hist.slice(); },
-    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE, DIME, HEAVY).map(c => ({ id: c.id, mods: c.mods })),
+    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE, DIME, HEAVY, STACK).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 
