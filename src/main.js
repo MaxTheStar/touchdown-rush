@@ -862,6 +862,7 @@ function snap(time) {
   G.lobArmed = false; G.lobThrow = false;                    // 🏹 a fresh play: no lob called, none in the air
   G.hotMan = null; G.hotSpot = null;                         // 🪁 …and nobody has gone hot yet
   G.jetBurstUntil = 0;                                       // ✈️ …and no leftover jet burst
+  if (window.TDStunt) TDStunt.snapped();                     // 🌀 start the clock the stunt's lanes run on
   if (window.TDDraw) TDDraw.snapped();                       // 🎭 start the clock the draw is read against
   if (window.TDScreen) TDScreen.snapped();                   // 🧱 …and send the screen's escorts out if it was called
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
@@ -1936,6 +1937,7 @@ function callPlay() {
   const packBlitz = (blitzOdds > 0 && window.TDPersonnel) ? TDPersonnel.blitzShift() : 0;
   G.coverage = Math.random() < zoneOdds ? 'zone' : 'man';
   G.blitz    = Math.random() < Phaser.Math.Clamp(blitzOdds + selfBlitz + packBlitz, 0, 0.6);
+  if (window.TDStunt) TDStunt.newPlay(G.blitz || G.difficulty === 'easy');   // 🌀 one pass play in five the two inside rushers twist (never on a blitz, never on easy)
   G.passTarget = null;
 }
 
@@ -2068,6 +2070,7 @@ function drawRoutePreview() {
     routeGfx.fillStyle(routeColor(o), 0.75);
     routeGfx.fillCircle(pts[pts.length - 1].x, pts[pts.length - 1].y, 5);   // the target spot
   }
+  if (window.TDStunt) TDStunt.drawTell(routeGfx, defense);   // 🌀 the stunt's crossing lines (75% of stunts, 8% of plain plays)
 }
 
 // A simple sketch of where each route goes, from the receiver's pre-snap spot,
@@ -2212,7 +2215,14 @@ function updateDefense(elapsed) {
       tx = offense[0].s.x; ty = offense[0].s.y;
       // ...unless an offensive lineman is blocking them. How slowed depends on
       // difficulty (easy = a strong pocket, hard = rushers push through faster).
-      if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush();
+      // 🌀 THE STUNT (stunt.js): two men cross — one crashes and takes the blockers, the other loops round into a free lane
+      const st = (window.TDStunt && qbHasBall) ? TDStunt.laneNow(d) : null;
+      if (st) {
+        if (st.tx != null) { tx = st.tx; ty = st.ty; }
+        speed = DEF_SPEED * boost * st.mult * (st.free ? 1 : 1);
+        if (!st.free && nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush() * st.mult;
+        else if (st.free) speed = DEF_SPEED * boost * st.mult * ppRush();
+      } else if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush();
     } else if (d.role === 'LB') {
       if (G.blitz && d === defense[2]) {
         // 🔥 BLITZ — this linebacker shoots the gap and chases the QB (and gets
