@@ -2074,6 +2074,7 @@ function drawRoutePreview() {
     routeGfx.fillStyle(routeColor(o), 0.75);
     routeGfx.fillCircle(pts[pts.length - 1].x, pts[pts.length - 1].y, 5);   // the target spot
   }
+  if (window.TDMismatch) TDMismatch.draw(routeGfx, offense, defense);   // 👀 the yellow arrow over the most open man
   if (window.TDStunt) TDStunt.drawTell(routeGfx, defense);   // 🌀 the stunt's crossing lines (75% of stunts, 8% of plain plays)
 }
 
