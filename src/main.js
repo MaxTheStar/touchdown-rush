@@ -854,7 +854,7 @@ function snap(time) {
   G.pitchLoose = false;       // 🔄 no leftover dropped-pitch scramble
   G.fumbleLoose = false;      // 🏈 …or fumble scramble
   G.groundingPenalty = false; // 🧤 …or a grounding call
-  G.pumped = false; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 one pump fake a play, fresh every snap
+  G.bShoulder = false; G.pumped = false; G.fakeBiteUntil = 0; G.fakeLockUntil = 0; G.fakeStripUntil = 0;   // 🧢 one pump fake a play, fresh every snap
   G.onsideLoose = false;      // ⚡ …or onside scramble
   G.replay = [];              // start a fresh film reel for this play
   G.dashUntil = 0;            // no leftover dash from the last play
@@ -1460,6 +1460,7 @@ function wxIncompleteMsg() {
 function contestedRoll(wy, starThere) {
   let intChance = starThere ? Math.min(0.75, INT_CHANCE + 0.25) : INT_CHANCE;
   if (window.TDShop && TDShop.armAccuracy) intChance *= (1 - TDShop.armAccuracy());   // 🎯 Cannon Arm: fewer picks
+  if (G.bShoulder && window.TDBackShoulder) intChance *= TDBackShoulder.INT_KEEP;   // 🎚 back-shoulder: fewer picks
   if (Math.random() < intChance) {
     G.turnoverSpotCpu = Phaser.Math.Clamp(Math.round(100 - yardsFromOwnGoal(wy)), 1, 99);
     endPlay('interception');
@@ -1488,7 +1489,7 @@ function jumpBall(wr, wx, wy, starThere) {
     if (won) {
       if (window.TDSound) TDSound.sting('coin');
       showBanner('WENT UP AND GOT IT!', true);
-      catchAndRun(wr, wx, wy, pick(['HE WENT UP AND GOT IT!', 'WHAT A CATCH!', 'Came down with it!']));
+      catchAndRun(wr, wx, wy + (G.bShoulder && window.TDBackShoulder ? TDBackShoulder.BACK_PX : 0), pick(['HE WENT UP AND GOT IT!', 'WHAT A CATCH!', 'Came down with it!']));
     } else contestedRoll(wy, starThere);
   });
   if (!started) return false;                           // nowhere to draw it: the caller rolls the old way
@@ -1701,6 +1702,7 @@ function resolvePass(wr, x, y) {
   // interception or a knock-away, never a catch); now you play the moment and winning it is a catch.
   // If the moment cannot run (no module, Superstar mode) the old roll below happens exactly as it always did.
   if (nearestDef < (starThere ? CATCH_CONTEST + 6 : CATCH_CONTEST)) {
+    G.bShoulder = !!(window.TDBackShoulder && TDBackShoulder.applies(wy, nearestD));   // 🎚 the defender is on his hip: back-shoulder
     if (jumpBall(wr, wx, wy, starThere)) return;
     contestedRoll(wy, starThere);
     return;
