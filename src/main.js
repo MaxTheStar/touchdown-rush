@@ -771,6 +771,7 @@ function update(time, delta) {
     if (!G.koLive) { freezeEveryone(); updateHUD(); return; }  // ball still in the air
     controlReturner();          // you drive the returner with arrows / the D-pad
     updateKickoffCoverage();    // the coverage team chases you
+    if (window.TDWedge) TDWedge.update(defense, G.ballCarrier.s, G.scene.time.now);   // 🏁 your blockers hold the V and take men
     updateBall();
     recordReplayFrame();        // remember this moment, in case it's a return TD
     if (checkTouchdown()) return;   // took it all the way = return TD!
@@ -5734,6 +5735,7 @@ function startKickoff(asPunt) {
   G.ballCarrier = offense[0];
   place(offense[0], 266, catchY + 6);
   offense[0].s.setVisible(true);
+  if (window.TDWedge) TDWedge.setup(offense, 266, catchY + 6);   // 🏁 five teammates in a V ahead of him
 
   // The coverage team: a spread wall downfield that converges on the returner.
   const cov = [
@@ -5841,6 +5843,7 @@ function startPuntReturn() {
   const spot = TDPunt.catchSpot();
   const y = yardsToY(spot);
   place(offense[0], 266, y);
+  if (window.TDWedge) TDWedge.setup(offense, 266, y);   // 🏁 …and the wedge goes with him
   G.puntSpot = spot;
 
   // 2. THE GUNNERS ARE ALREADY THERE. Two of them sprinted down while the ball
@@ -6096,6 +6099,7 @@ function updateKickoffCoverage() {
     // 🧱 CALL THE RETURN (retcall.js): the three men on the called side are blocked for a while; the other four read it and hurry
     let retMul = 1;
     if (window.TDRet) { if (G.retT0 == null) { G.retT0 = G.scene.time.now; TDRet.paint(false); } if (TDRet.get()) retMul = TDRet.mult(defense.indexOf(d), TDRet.get(), G.scene.time.now - G.retT0); }
+    if (window.TDWedge) retMul *= TDWedge.slow(d, G.scene.time.now);   // 🏁 a blocked man is slowed
     steer(d.s, c.x, c.y, diff().koCover * retMul);   // coverage speed depends on difficulty
   }
 }
@@ -6114,6 +6118,7 @@ function checkKickoffTackle() {
 // Tackled! Start a normal 1st-&-10 drive from wherever you were brought down.
 function endKickoffReturn() {
   freezeEveryone();
+  if (window.TDWedge) TDWedge.clear(defense);   // 🏁 the blockers' holds end with the return
   // 🙋 a punt return ends through here too — clear its flags so the next
   // kickoff is a kickoff again.
   G.puntPlay = false; G.puntFair = false; G.puntMuffed = false;
