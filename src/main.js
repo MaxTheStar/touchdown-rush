@@ -1973,6 +1973,7 @@ function routeVelocity(o, depth, side) {
     case 'hold':     return { vx: 0, vy: 0 };                                        // 🎭 the DRAW: the back stays home
     case 'hot': {    const dx = G.hotSpot.x - o.s.x, dy = G.hotSpot.y - o.s.y, dd = Math.hypot(dx, dy);   // 🪁 HOT ROUTE: cut to the hole and stop
                      return dd < 8 ? { vx: 0, vy: 0 } : { vx: dx / dd * S * 1.05, vy: dy / dd * S * 1.05 }; }
+    case 'dbl':      return TDDouble.vel(o, depth, side, S);                         // 🔀 DOUBLE MOVE: stem, jab out, then go
     case 'jet':      return Math.abs(o.s.x - o.startX) < 230 ? { vx: -G.jetSide * S, vy: 0 } : { vx: 0, vy: -S };   // ✈️ the JET sweep: across behind the quarterback, then upfield
     case 'trail': {  const w = offense[2].s, tx = w.x, ty = w.y + TDHookLat.TRAIL_BEHIND, dx = tx - o.s.x, dy = ty - o.s.y, dd = Math.hypot(dx, dy);   // 🪃 the back runs up a few steps behind the hook man
                      return dd < 6 ? { vx: 0, vy: -S * 0.5 } : { vx: dx / dd * S * 0.97, vy: dy / dd * S * 0.97 }; }
@@ -2102,6 +2103,7 @@ function routePath(o) {
     case 'hold':     return [{ x: sx, y: sy }, { x: sx, y: sy }];                    // 🎭 the DRAW: he is not going anywhere
     case 'hot':      return [{ x: sx, y: sy }, { x: G.hotSpot.x, y: G.hotSpot.y }];   // 🪁 HOT ROUTE: to the hole
     case 'jet':      return [{ x: sx, y: sy }, { x: clampX(sx - G.jetSide * 230), y: sy }];   // ✈️ the JET sweep: across the formation
+    case 'dbl':      return TDDouble.path(o, side, up, clampX);                       // 🔀 stem, jab, go
     case 'trail':    return [{ x: sx, y: sy }, { x: clampX(offense[2].s.x), y: up(110) }];   // 🪃 up the field behind the hook man
     case 'rev':      return [{ x: sx, y: sy }, { x: clampX(sx - G.revSide * TDReverse.SPAN), y: sy }];   // 🔁 the REVERSE: across behind the back
     case 'screen':   return [{ x: sx, y: sy }, { x: clampX(sx + OUT * 84), y: sy }];  // 🧱 the SCREEN: out to the flat and wait
@@ -2308,6 +2310,9 @@ function updateDefense(elapsed) {
 
     // 🧱 THE SCREEN (screen.js): a defender one of the two escorts has a hand on keeps only a blocked rusher's speed
     if (window.TDScreen && TDScreen.sealed(d)) speed *= diff().rushSlow;
+
+    // 🔀 THE DOUBLE MOVE (doublemove.js): the corner and anybody near the jabbing receiver bite on the first break
+    if (G.dblUntil && d.role !== 'DL') speed *= TDDouble.slow(G.scene.time.now, G.dblUntil, Phaser.Math.Distance.Between(d.s.x, d.s.y, offense[2].s.x, offense[2].s.y));
 
     steer(d.s, tx, ty, speed);
   }
