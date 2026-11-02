@@ -2375,7 +2375,7 @@ function checkTackle() {
       const grip = window.TDShop ? TDShop.gripFactor() : 0;
       // 🧢 …and a quarterback caught holding the ball out right after a pump fake coughs it up twice as often
       const pumpRisk = (G.ballCarrier === offense[0] && G.scene.time.now < G.fakeStripUntil) ? PUMP_STRIP : 1;
-      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk * (G.jukeBad ? (G.jukeBad > 1 ? G.jukeBad : TDJuke.FUMBLE_X) : 1)) fumble();   // 🪄 a read juke leaves the ball loose (🦘 a missed hurdle stores its own, bigger number)
+      if (Math.random() < FUMBLE_CHANCE * (1 - grip) * wxFumble() * pumpRisk * (G.jukeBad ? (G.jukeBad > 1 ? G.jukeBad : TDJuke.FUMBLE_X) : 1) * (window.TDStrip ? TDStrip.mult(G.scene.time.now - G.snapTime, G.ballCarrier === offense[0]) : 1)) fumble();   // 🪄 a read juke leaves the ball loose (🦘 a missed hurdle stores its own, bigger number)
       else {
         // 🧱 HEAVY — the whistle hasn't gone yet. Eight big bodies are all
         // leaning the same way, so the pile falls forward another yard and a
