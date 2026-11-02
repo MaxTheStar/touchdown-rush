@@ -2080,6 +2080,7 @@ function drawRoutePreview() {
     routeGfx.fillStyle(routeColor(o), 0.75);
     routeGfx.fillCircle(pts[pts.length - 1].x, pts[pts.length - 1].y, 5);   // the target spot
   }
+  if (window.TDLook) TDLook.draw(routeGfx, offense);   // 👁 the eye over the receiver you are staring at
   if (window.TDMismatch) TDMismatch.draw(routeGfx, offense, defense);   // 👀 the yellow arrow over the most open man
   if (window.TDStunt) TDStunt.drawTell(routeGfx, defense);   // 🌀 the stunt's crossing lines (75% of stunts, 8% of plain plays)
 }
@@ -2313,6 +2314,9 @@ function updateDefense(elapsed) {
 
     // 🧱 THE SCREEN (screen.js): a defender one of the two escorts has a hand on keeps only a blocked rusher's speed
     if (window.TDScreen && TDScreen.sealed(d)) speed *= diff().rushSlow;
+
+    // 👁 THE LOOK-OFF (lookoff.js): for a beat every back and linebacker drifts toward the receiver the quarterback is staring at
+    if (window.TDLook && G.lookUntil && d.role !== 'DL' && qbHasBall) { const lt = TDLook.target(tx, ty, offense[2].s, G.scene.time.now, G.lookUntil); tx = lt.x; ty = lt.y; }
 
     // 🧲 THE PICK PLAY (pickplay.js): the man the crossing receivers ran into is screened for a beat
     if (window.TDPick) speed *= TDPick.slow(d, G.scene.time.now);
