@@ -9,7 +9,7 @@
 // ⚠️ A NORMAL SACK IS UNTOUCHED: a QB who stands still is sacked at about 0.93s (0.78s on a
 // 🌀 stunt), well inside FREE_S, so the fumbles per game for a quarterback who throws on time do
 // not move at all. Only a scrambler who holds it past 1.5s pays, and only a QB (not a runner).
-// Nothing is saved. main.js multiplies the fumble chance by `TDStrip.mult(heldMs, isQB)` in checkTackle.
+// Nothing is saved. main.js multiplies the fumble chance by `TDStripSack.mult(heldMs, isQB)` in checkTackle.
 // ============================================================
 (function () {
   'use strict';
@@ -20,5 +20,5 @@
     if (s <= FREE_S) return 1;
     return 1 + (MAX_X - 1) * Math.min(1, (s - FREE_S) / (FULL_S - FREE_S));
   }
-  window.TDStrip = { FREE_S, FULL_S, MAX_X, mult };
+  window.TDStripSack = { FREE_S, FULL_S, MAX_X, mult };
 })();
