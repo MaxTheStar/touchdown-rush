@@ -226,6 +226,26 @@
     } catch (e) { return false; }
   }
 
+  // ============================================================
+  // ☂️ COVER 2 (Round 24, pick ⑤) — the seventh conditional call, for a team that MIXES
+  // ------------------------------------------------------------
+  // Two safeties split the deep field in half and the corners sit on the flats: the deep sidelines are gone and the short ball is
+  // there to be taken, but with both safeties deep the box is light, so the run finds room. It is offered only against a team whose lean sits BETWEEN the two
+  // calls built for the extremes (📦 stack at or under STACK_LEAN, 🤝 double at or over DOUBLE_LEAN): the balanced teams, where neither of those is the answer.
+  // ⚠️ MEASURED against the other calls in DEVLOG v4.102.
+  // ============================================================
+  const COVER2 = { id: 'cover2', ic: '☂️', name: 'COVER 2', tag: '☂️ COVER 2',
+    blurb: 'Two safeties split the deep field. No deep ball — but the box is light, so they can run it.',
+    mods: { bigPass: -0.07, incomplete: -0.03, passGain: 0.96, sack: -0.01, runGain: 1.12, bigRun: 0.02 } };
+  function cover2On() {
+    try {
+      const g = window.__td && __td.G;
+      if (!g || !g.cpu || g.state !== 'dsim' || g.dsimEnding) return false;
+      const l = window.TDScout && TDScout.passLean ? TDScout.passLean(g.oppTeam) : null;
+      return l != null && l > STACK_LEAN && l < DOUBLE_LEAN;
+    } catch (e) { return false; }
+  }
+
   let armed = null;   // the call for the play about to happen
 
   // ============================================================
@@ -302,9 +322,10 @@
     if (dimeOn() || (armed && armed.id === 'dime')) list = list.concat(DIME);             // 🧩 third and long
     if (heavyOn() || (armed && armed.id === 'heavy')) list = list.concat(HEAVY);          // 🧱 third and short
     if (stackOn() || (armed && armed.id === 'stack')) list = list.concat(STACK);          // 📦 only against a team that runs
+    if (cover2On() || (armed && armed.id === 'cover2')) list = list.concat(COVER2);       // ☂️ only against a team that mixes
     row.classList.toggle('dc-compact', list.filter(c => c !== CALLS[0] && c !== CALLS[1] && c !== CALLS[2]).length >= 2);   // two or more situational calls at once: drop their blurbs so the panel still fits a phone
     row.innerHTML = list.map(c =>
-      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE || c === DIME || c === HEAVY || c === STACK) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
+      '<div class="dc-btn' + ((c === PREVENT || c === GOALLINE || c === SPY || c === DOUBLE || c === DIME || c === HEAVY || c === STACK || c === COVER2) ? ' dc-wide' : '') + (armed && armed.id === c.id ? ' on' : '') + '" data-id="' + c.id + '">' +
         '<b>' + c.ic + ' ' + c.name + '</b><span>' + c.blurb + '</span></div>').join('');
     { const sl = scoutLine(); if (sl) row.insertAdjacentHTML('beforeend', '<div class="dc-scout">' + sl + '</div>'); }   // 🧠 they have you scouted
     row.querySelectorAll('.dc-btn').forEach(el => {
@@ -321,7 +342,7 @@
 
   // Choosing a call IS the tap that snaps the ball — one action, not two.
   function choose(id) {
-    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : id === 'dime' ? DIME : id === 'heavy' ? HEAVY : id === 'stack' ? STACK : null); if (!c) return;
+    const c = CALLS.find(x => x.id === id) || (id === 'prevent' ? PREVENT : id === 'goalline' ? GOALLINE : id === 'spy' ? SPY : id === 'double' ? DOUBLE : id === 'dime' ? DIME : id === 'heavy' ? HEAVY : id === 'stack' ? STACK : id === 'cover2' ? COVER2 : null); if (!c) return;
     armed = c;
     paint();
     try { __td.DefenseSim.tap(); } catch (e) {}
@@ -367,9 +388,9 @@
     armed: () => armed && armed.id,
     preventOn,
     _choose: choose,
-    goalOn, GOAL_SPOT, stackOn, STACK_LEAN, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn, scoutedK, countered, scoutLine, resetScout,
+    goalOn, GOAL_SPOT, stackOn, STACK_LEAN, cover2On, spyOn, doubleOn, DOUBLE_LEAN, dimeOn, heavyOn, scoutedK, countered, scoutLine, resetScout,
     _hist: a => { if (a) hist = a.slice(); return hist.slice(); },
-    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE, DIME, HEAVY, STACK).map(c => ({ id: c.id, mods: c.mods })),
+    _calls: () => CALLS.concat(PREVENT, GOALLINE, SPY, DOUBLE, DIME, HEAVY, STACK, COVER2).map(c => ({ id: c.id, mods: c.mods })),
     _neutral: () => NEUTRAL,
   };
 
