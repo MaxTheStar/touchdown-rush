@@ -1662,6 +1662,8 @@ function hailCancel() {
 
 function resolvePass(wr, x, y) {
   G.passTarget = null;   // the ball has arrived — stop the break-on-the-ball chase
+  // 🧲 a throw off a fresh rub can draw the flag (pickplay.js): the ten-yard loss and the lost down, like intentional grounding
+  if (window.TDPick && TDPick.flag(G.scene.time.now)) { G.groundingPenalty = true; endPlay('incomplete', '🟨 OFFENSIVE PICK — 10 YARDS'); return; }
   // Where the receiver ACTUALLY is when the ball arrives (he kept running).
   const wx = wr.s.x, wy = wr.s.y;
 
@@ -2177,6 +2179,7 @@ function updateDefense(elapsed) {
               // never decide it. 1 = nothing said (see src/press.js).
               * (window.TDPress && TDPress.bulletin() ? 1.04 : 1);
 
+  if (window.TDPick) TDPick.tick(offense, defense, G.scene.time.now);   // 🧲 did the two crossing receivers just meet?
   for (const d of defense) {
     // In 2-player mode, one defender is driven by Player 2's fingers (or WASD),
     // so we skip the computer's brain for him.
@@ -2310,6 +2313,9 @@ function updateDefense(elapsed) {
 
     // 🧱 THE SCREEN (screen.js): a defender one of the two escorts has a hand on keeps only a blocked rusher's speed
     if (window.TDScreen && TDScreen.sealed(d)) speed *= diff().rushSlow;
+
+    // 🧲 THE PICK PLAY (pickplay.js): the man the crossing receivers ran into is screened for a beat
+    if (window.TDPick) speed *= TDPick.slow(d, G.scene.time.now);
 
     // 🔀 THE DOUBLE MOVE (doublemove.js): the corner and anybody near the jabbing receiver bite on the first break
     if (G.dblUntil && d.role !== 'DL') speed *= TDDouble.slow(G.scene.time.now, G.dblUntil, Phaser.Math.Distance.Between(d.s.x, d.s.y, offense[2].s.x, offense[2].s.y));
