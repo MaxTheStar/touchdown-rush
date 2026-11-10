@@ -216,6 +216,7 @@
       for (const [a, b] of S.schedule[S.week - 1]) {
         if (a === S.you || b === S.you) continue;
         const r = simGame(a, b); record(a, b, r.a, r.b);
+        (S.around = S.around || []).push({ week: S.week, a, b, as: r.a, bs: r.b });   // 📺 the league ticker shows what the standings were built from
       }
       S.week++;
       if (S.week > REG_WEEKS) startPlayoffs();
@@ -297,6 +298,19 @@
     return `<div class="se-cap">YOUR SCHEDULE <small>(division rivals, home &amp; away)</small></div><div class="se-sched">${chips}</div>`;
   }
 
+  // 📺 THE LEAGUE TICKER: the week's other games, from the very results `record()` already counted (never a second roll), newest week first.
+  function tickerHTML() {
+    const all = S.around || [];
+    if (!all.length) return '';
+    const last = all[all.length - 1].week;
+    const games = all.filter(g => g.week === last);
+    const line = games.map(g => {
+      const aw = g.as > g.bs;
+      return `<span class="se-tk"><b${aw ? ' style="color:#ffd60a"' : ''}>${g.a} ${g.as}</b> · <b${!aw ? ' style="color:#ffd60a"' : ''}>${g.b} ${g.bs}</b></span>`;
+    }).join('');
+    return `<div class="se-cap">📺 AROUND THE LEAGUE <small>(week ${last})</small></div><div class="se-ticker" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px;font-size:13px">${line}</div>`;
+  }
+
   function playoffHTML() {
     if (S.phase === 'regular') return '';
     if (S.phase === 'champion')
@@ -325,7 +339,7 @@
       return;
     }
 
-    body.innerHTML = headerHTML() + standingsHTML() + scheduleHTML() + playoffHTML();
+    body.innerHTML = headerHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + playoffHTML();
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
