@@ -74,6 +74,8 @@
       ).join('');
     }
 
+    if (window.TDLegacy) TDLegacy.paint();   // 🏅 the LEGACY card, built from the same numbers
+
     // 🎽 The uniform cabinet — owned ones in colour, locked ones dimmed.
     const uc = $('trophy-uni-count');
     if (uc) uc.textContent = g.ownedCount + '/' + g.uniforms.length;
