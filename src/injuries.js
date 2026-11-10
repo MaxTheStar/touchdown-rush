@@ -413,6 +413,7 @@
     open, close, render, gameEnded, injured, coverFor,
     available,          // 🧑‍🤝‍🧑 personnel.js: a backup who can run on for a few snaps
     bench: () => (ensure(), s.bench.slice()),
+    rest: () => { ensure(); const was = !!s.out; if (was) heal(); return was; },   // 🛏 a BYE WEEK (season.js): a week off and anybody hurt is fit again
     _heal: heal, _hurt: hurtSomebody,
     _state: () => s,
   };

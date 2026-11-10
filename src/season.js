@@ -16,6 +16,7 @@
 // ============================================================
 (function () {
   const KEY = 'tdr-season';   // where the whole season is saved
+  const BYE_BEFORE = 4;      // 🛏 the bye week sits between week 3 and week 4
   const REG_WEEKS = 6;        // how many regular-season games YOU play
   const LEAGUE = 8;           // teams in the league (you + 7 others)
   const $ = id => document.getElementById(id);
@@ -240,9 +241,32 @@
   }
 
   // What game does the big PLAY button start next? (null = the season is over)
+  // 🛏 THE BYE WEEK (Round 25, pick ③): one week with no game for anybody, once a season, between weeks 3 and 4. It is not in the schedule and
+  // not in the standings: no game is played, so no row, no result and no playoff maths can change. What it does: anybody hurt is fit again
+  // (injuries.js `rest()`) and 🏕️ camp holds one extra session (training.js `session(true)`).
+  function byeDue() { return !!(S && S.phase === 'regular' && S.week === BYE_BEFORE && !S.byeDone); }
+  function takeBye() {
+    if (!byeDue()) return null;
+    S.byeDone = true;
+    let healed = false, grew = 0;
+    try { if (window.TDInjury && TDInjury.rest) healed = TDInjury.rest(); } catch (e) {}
+    try {
+      if (window.TDTrain && TDTrain.session) {
+        const before = (TDTrain._state && TDTrain._state().sessions) || 0;
+        TDTrain.session(true);
+        const last = TDTrain._state && TDTrain._state().last;
+        grew = last ? last.results.length : 0;
+        void before;
+      }
+    } catch (e) {}
+    S.byeNote = '🛏 Bye week: ' + (healed ? 'everybody is fit again' : 'nobody was hurt') + ' · 🏕️ an extra camp session' + (grew ? ' (' + grew + ' players trained)' : '');
+    save();
+    return S.byeNote;
+  }
   function nextGame() {
     if (!S) return null;
     if (S.phase === 'regular') {
+      if (byeDue()) return { bye: true, opp: null, label: '🛏 TAKE THE BYE WEEK' };
       const opp = pairFor(S.week, S.you);
       return opp ? { opp, label: `PLAY WEEK ${S.week} ▶` } : null;
     }
@@ -262,7 +286,7 @@
   function headerHTML() {
     const r = S.rec[S.you];
     const phaseTxt = {
-      regular: `Week ${Math.min(S.week, REG_WEEKS)} of ${REG_WEEKS}`,
+      regular: byeDue() ? `Bye week (after week ${BYE_BEFORE - 1} of ${REG_WEEKS})` : `Week ${Math.min(S.week, REG_WEEKS)} of ${REG_WEEKS}`,
       semifinal: 'Playoffs · Semifinal', maxbowl: 'Playoffs · Max Bowl',
       champion: 'CHAMPIONS 🏆', eliminated: 'Season over'
     }[S.phase];
@@ -339,7 +363,7 @@
       return;
     }
 
-    body.innerHTML = headerHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + playoffHTML();
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + playoffHTML();
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
@@ -361,6 +385,7 @@
     }
     const ng = nextGame();
     if (!ng) { render(); return; }
+    if (ng.bye) { takeBye(); render(); return; }   // 🛏 no game: rest, then the Season screen shows week 4 as NEXT
     save();
     closeOverlay();
     if (window.TDSound) TDSound.sting('td');
@@ -402,7 +427,7 @@
     // ⚠️ REGULAR SEASON ONLY — the semifinal and the Max Bowl are the two games
     // the whole year is for, so they are never offered up to the computer.
     simNext: () => {
-      if (!S || S.phase !== 'regular') return null;
+      if (!S || S.phase !== 'regular' || byeDue()) return null;   // 🛏 a bye week has no game to sim
       const opp = pairFor(S.week, S.you);
       if (!opp) return null;
       const r = simGame(S.you, opp);
