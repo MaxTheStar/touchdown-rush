@@ -89,7 +89,7 @@
   // The kit to paint on your players this game.
   function kitFor(team) {
     if (!team) return team;
-    if (!away()) return team;
+    if (!away()) return (window.TDThrowback && TDThrowback.on()) ? TDThrowback.kit(team) : team;   // 🏷 one home game a season is a throwback
     return { jersey: AWAY_JERSEY, helmet: team.helmet };
   }
 

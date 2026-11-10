@@ -5476,6 +5476,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   makeChibiTexture(G.scene, 'red',  G.oppTeam.jersey, G.oppTeam.helmet);
   for (const o of offense) o.s.setTexture('blue');
   for (const d of defense) d.s.setTexture('red');
+  if (window.TDThrowback && TDThrowback.on()) sayComment('🏷 THROWBACK DAY! The old kits are out.');
 
   // Tell the kicking screen your colors, so its kicker matches your team —
   // and the OTHER team's colors, so the rusher who tries to block you matches them.
