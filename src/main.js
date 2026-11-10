@@ -4491,6 +4491,7 @@ const DefenseSim = (function () {
 
   // Apply a play to the drive: move the ball, update downs, end it if it's over.
   function apply(p) {
+    if (window.TDHalfAdj && (p.side === 'run' || p.side === 'pass')) TDHalfAdj.noted(p.side, p.r === 'gain' ? p.y : 0);   // 🗣 what they did this half, for the halftime panel
     // 🛡️ Put the defense you called on the front of the play-by-play line, and
     // use the call up: one call, one play, choose again next down. Covers both
     // the normal line AND a drive-ending one, because both read p.t.
@@ -4791,6 +4792,7 @@ function startBreak(kind, resume) {
   if (window.TDGas) TDGas.timeout();
   G.breakResume = resume;
   G.breakReadyAt = G.scene.time.now + BREAK_MIN_MS;
+  G.breakKind = kind;
   if (window.TDDrives) {                          // 📋 the half closes whatever drive is open; either break can read the chart
     if (kind === 'half') TDDrives.closeAll('END OF HALF');
     TDDrives.showBreakButton();
@@ -4811,6 +4813,7 @@ function startBreak(kind, resume) {
 function endBreak() {
   if (G.state !== 'qbreak') return;
   if (G.scene.time.now < G.breakReadyAt) return;   // too soon — let the break land
+  if (G.breakKind === 'half' && window.TDHalfAdj && TDHalfAdj.gate(() => endBreak())) return;   // 🗣 the halftime adjustment panel holds the second half until you choose
   if (window.TDDrives) TDDrives.hideBreakButton();
   destroyBreakOverlay();
   const resume = G.breakResume;
@@ -5466,6 +5469,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDRecords) TDRecords.startGame();   // 📖 fresh per-game record watching
   if (window.TDPowerup) TDPowerup.newGame();     // ⚡ your one Power-Up Play is ready again
   if (window.TDGameStats) TDGameStats.newGame(); // ⭐ a fresh stat book for this game
+  if (window.TDHalfAdj) TDHalfAdj.reset();       // 🗣 …and a fresh halftime read
   if (window.TDDrives) TDDrives.newGame(G.team ? G.team.abbr : 'YOU', G.oppTeam ? G.oppTeam.abbr : 'OPP');   // 📋 …and a blank drive chart
 
   // Paint both teams onto their players.

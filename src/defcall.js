@@ -294,9 +294,11 @@
 
   // What main.js's DefenseSim.play() asks for. Neutral unless a call is armed.
   function mods() {
-    if (!armed) return NEUTRAL;
+    const h = window.TDHalfAdj && TDHalfAdj.active();     // 🗣 the halftime adjustment rides under every call
+    if (!armed) return h ? TDHalfAdj.merge(NEUTRAL) : NEUTRAL;
     const m = Object.assign({}, NEUTRAL, armed.mods);
-    return countered(m, scoutedK(armed.id));
+    const c = countered(m, scoutedK(armed.id));
+    return h ? TDHalfAdj.merge(c) : c;
   }
 
   // main.js's DefenseSim.apply() asks for this once the play has resolved: the
