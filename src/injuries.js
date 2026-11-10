@@ -219,6 +219,34 @@
     paintBadge();
   }
 
+  // ============================================================
+  // 🚑 THE IN-GAME INJURY (Round 25, pick ⑥) — the same injury, but it happens DURING the game
+  // ------------------------------------------------------------
+  // Everything above happens between games. Now, in about one game in ten, a starter is hurt mid-game and his stand-in runs on for the rest of it.
+  // It reuses `hurtSomebody()` whole, so every rule above still holds: never two hurt at once, never in the game right after an injury, never before MIN_GAMES,
+  // and the stand-in is REALLY swapped into the roster (TDDraft.swapIn). ⚠️ THE GAME DECIDES THE MOMENT AT KICKOFF (a play number between 8 and 28) and the
+  // moment itself is the SNAP: it never lands on a play that scored, and never in the special game modes (drill, house rules, all-star, sim takeover, superstar,
+  // two-player). The injury keeps its 1–3 games, and THIS game's final whistle counts as the first of them, so a 1-game knock heals at the end of the same game.
+  // ⚠️ WHAT THE STAND-IN CHANGES MID-GAME is whatever reads the roster live (the sim's `teamOverall`); the live players' speeds were set at kickoff and do not change.
+  // ============================================================
+  const GAME_CHANCE = 0.10, PLAY_MIN = 8, PLAY_MAX = 28;
+  let plan = null, plays = 0;
+  function gameStart() { plan = (Math.random() < GAME_CHANCE) ? rint(PLAY_MIN, PLAY_MAX) : null; plays = 0; }
+  function midGame() {
+    if (plan == null) return false;
+    plays++;
+    if (plays < plan) return false;
+    plan = null;
+    const g = window.__td && __td.G;
+    if (!g || g.twoPlayer || g.drillGame || g.houseGame || g.allStarGame || g.simTakeover || g.starGame) return false;
+    ensure();
+    if (s.out || !s.cleared || load('games', 0) < MIN_GAMES) return false;
+    hurtSomebody();
+    if (!s.out) return false;
+    try { __td.sayComment('🚑 ' + s.out.name + ' is down with ' + s.out.what + ' — ' + s.out.standIn + ' runs on!'); } catch (e) {}
+    return true;
+  }
+
   function heal() {
     if (!s.out || !window.TDDraft || !TDDraft.swapIn) { s.out = null; save(); return; }
     const played = TDDraft.playerAt ? TDDraft.playerAt(s.out.slot) : null;
@@ -414,6 +442,7 @@
     available,          // 🧑‍🤝‍🧑 personnel.js: a backup who can run on for a few snaps
     bench: () => (ensure(), s.bench.slice()),
     rest: () => { ensure(); const was = !!s.out; if (was) heal(); return was; },   // 🛏 a BYE WEEK (season.js): a week off and anybody hurt is fit again
+    gameStart, midGame,   // 🚑 the in-game injury (main.js: beginGame, setupPlay)
     _heal: heal, _hurt: hurtSomebody,
     _state: () => s,
   };

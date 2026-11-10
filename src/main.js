@@ -5472,6 +5472,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDPowerup) TDPowerup.newGame();     // ⚡ your one Power-Up Play is ready again
   if (window.TDGameStats) TDGameStats.newGame(); // ⭐ a fresh stat book for this game
   if (window.TDHalfAdj) TDHalfAdj.reset();       // 🗣 …and a fresh halftime read
+  if (window.TDInjury) TDInjury.gameStart();     // 🚑 …and the game decides whether somebody gets hurt in it
   if (window.TDDrives) TDDrives.newGame(G.team ? G.team.abbr : 'YOU', G.oppTeam ? G.oppTeam.abbr : 'OPP');   // 📋 …and a blank drive chart
 
   // Paint both teams onto their players.
@@ -6399,6 +6400,7 @@ function setupPlay(next) {
   G.down = next.down;
   G.losYards = next.los;
   G.firstDownYards = next.fd;
+  if (window.TDInjury && TDInjury.midGame && !next.fresh && !G.cpu) TDInjury.midGame();   // 🚑 a snap of YOURS may be the one a starter goes down on
   // 📋 THE DRIVE CHART: a possession of yours starts at the first snap (idempotent — the
   // later downs of the same drive do nothing). Not the two-point try, which is not a drive.
   if (window.TDDrives && !G.twoPtTry) TDDrives.beginYou(next.los, driveWhen());
