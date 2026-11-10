@@ -51,6 +51,37 @@
     blizzard: { btn: '🥶 BLIZZARD', say: '🥶 BLIZZARD! Brutal cold — everything is hard!', fumble: 2.0, catch: 0.72, fg: 0.78 },
   };
 
+  // 🌦 WEATHER TURNS (Round 25, pick ⑤): on AUTO, the sky can change at halftime. `forecast()` (the break screen) rolls it and warns you; `turn()` (the
+  // second half's first snap) makes it so. A front only moves ONE step: it turns into something a neighbour of today's weather (clear → rain, wind or night;
+  // a blizzard only eases to snow or clear), never to the same kind and never straight to the other extreme. Both teams feel it: every number reads `current`.
+  // Not when you PICKED a weather (the menu button is a promise), and not for a themed 🎃 event sky (forGame(force) locks it).
+  const TURN_P = 0.30;
+  const FRONT = { clear: ['rain', 'wind', 'night'], night: ['rain', 'clear'], rain: ['clear', 'snow', 'wind'], wind: ['clear', 'rain'],
+                  snow: ['clear', 'blizzard', 'rain'], hot: ['clear', 'rain'], blizzard: ['snow', 'clear'] };
+  let pending = null, locked = false;
+  function forecast(rand) {
+    pending = null;
+    if (pref !== 'auto' || locked) return '';
+    const r = rand != null ? rand : Math.random();
+    if (r >= TURN_P) return '';
+    const opts = FRONT[current] || [];
+    if (!opts.length) return '';
+    pending = opts[Math.min(opts.length - 1, Math.floor((r / TURN_P) * opts.length))];   // (r is already uniform below TURN_P, so this is a fair pick)
+    return '⚠️ FORECAST: ' + (INFO[pending].btn) + ' moving in for the second half';
+  }
+  function turn() {
+    if (!pending) return '';
+    const k = pending; pending = null; apply(k);
+    return '🌦 THE WEATHER TURNED! ' + (INFO[current].say || '');
+  }
+  function toast(text) {
+    if (!text) return;
+    const old = document.getElementById('wx-toast'); if (old) old.remove();
+    const el = document.createElement('div'); el.id = 'wx-toast'; el.textContent = text;
+    el.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:99998;max-width:92vw;padding:10px 14px;border-radius:10px;background:#16345f;border:2px solid #ffd60a;color:#fff;font:bold 14px Arial,sans-serif;text-align:center;pointer-events:none';
+    document.body.appendChild(el); setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
+  }
+
   let pref    = load('weather', 'auto');   // what YOU picked (may be 'auto')
   let current = 'clear';                    // the actual weather in play right now
 
@@ -69,7 +100,8 @@
   // game is always at night) — normal games pass nothing and behave as before.
   function forGame(force) {
     let kind = pref;
-    if (force && KINDS.includes(force)) { apply(force); return INFO[current].say || ''; }
+    pending = null; locked = false;
+    if (force && KINDS.includes(force)) { locked = true; apply(force); return INFO[current].say || ''; }
     if (pref === 'auto') {
       // Weighted toward nice days; the two EXTREMES are rare treats.
       const r = Math.random();   // clear 34 · night 18 · rain 14 · wind 12 · snow 10 · hot 7 · blizzard 5
@@ -111,6 +143,7 @@
     catchMult,      // main.js: catch / pass-completion multiplier (night, wind, snow, hot, blizzard)
     fgMult,         // kick.js: field-goal make multiplier (rain, wind, blizzard)
     current: () => current,
+    forecast, turn, toast, FRONT, TURN_P,   // 🌦 a front at halftime (main.js: startBreak / endBreak)
     pref: () => pref,
   };
 })();

@@ -4807,6 +4807,7 @@ function startBreak(kind, resume) {
   // top of the break screen. When it's done it tucks away and you tap to start
   // the 2nd half as usual — the break/ad flow underneath is untouched.
   if (kind === 'half' && window.TDHalftime) TDHalftime.start();
+  if (kind === 'half' && window.TDWeather && TDWeather.forecast) TDWeather.toast(TDWeather.forecast());   // 🌦 a front may be moving in: warn first
 }
 
 // Tap / SPACE ends the break and the game picks up where it left off.
@@ -4818,6 +4819,7 @@ function endBreak() {
   destroyBreakOverlay();
   const resume = G.breakResume;
   G.breakResume = null;
+  if (G.breakKind === 'half' && window.TDWeather && TDWeather.turn) { const wt = TDWeather.turn(); if (wt) sayComment(wt); }   // 🌦 …and then it arrives
   if (resume) resume(); else startKickoff();
 }
 
