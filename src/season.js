@@ -335,6 +335,42 @@
     return `<div class="se-cap">📺 AROUND THE LEAGUE <small>(week ${last})</small></div><div class="se-ticker" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px;font-size:13px">${line}</div>`;
   }
 
+  // 📰 POWER RANKINGS (Round 26, pick ①): a weekly "who looks best" list. DISPLAY ONLY. It is built from the very games `record()` already
+  // counted (S.results for you, S.around for the others), never a second roll, and nothing reads it back: the playoff seeds still come from
+  // sortedStandings(). Rating = average margin of victory (so a 6-0 team that squeaked by sits below a 5-1 team that won big), then wins.
+  function rankThrough(week) {
+    const games = [];
+    (S.results || []).forEach(r => { if (r.week <= week) games.push({ a: S.you, b: r.opp, as: r.ys, bs: r.os }); });
+    (S.around || []).forEach(g => { if (g.week <= week) games.push(g); });
+    const t = {};
+    S.league.forEach(a => t[a] = { a, g: 0, m: 0, w: 0 });
+    games.forEach(g => {
+      if (!t[g.a] || !t[g.b]) return;
+      t[g.a].g++; t[g.b].g++; t[g.a].m += g.as - g.bs; t[g.b].m += g.bs - g.as;
+      if (g.as > g.bs) t[g.a].w++; else if (g.bs > g.as) t[g.b].w++;
+    });
+    return S.league.map(a => ({ a, avg: t[a].g ? t[a].m / t[a].g : 0, w: t[a].w }))
+      .sort((x, y) => (y.avg - x.avg) || (y.w - x.w) || (x.a < y.a ? -1 : 1));
+  }
+  function powerHTML() {
+    const done = Math.max(0, ...(S.results || []).map(r => r.week));
+    if (done < 1) return '';
+    const now = rankThrough(done);
+    const before = done > 1 ? rankThrough(done - 1) : null;
+    const rows = now.map((x, i) => {
+      let arrow = '<span style="opacity:.4">–</span>';
+      if (before) {
+        const d = before.findIndex(y => y.a === x.a) - i;
+        if (d > 0) arrow = `<span style="color:#7dff9b">▲${d}</span>`;
+        else if (d < 0) arrow = `<span style="color:#ff8a8a">▼${-d}</span>`;
+      }
+      const me = x.a === S.you ? ' se-me' : '';
+      return `<tr class="se-row${me}"><td>${i + 1}</td><td class="se-ab">${x.a}</td><td>${arrow}</td><td>${x.avg > 0 ? '+' : ''}${x.avg.toFixed(1)}</td></tr>`;
+    }).join('');
+    return `<div class="se-cap">📰 POWER RANKINGS <small>(after week ${done} · average margin, not the standings)</small></div>` +
+           `<table class="se-tab"><tr class="se-h"><td></td><td>TEAM</td><td>MOVE</td><td>MARGIN</td></tr>${rows}</table>`;
+  }
+
   function playoffHTML() {
     if (S.phase === 'regular') return '';
     if (S.phase === 'champion')
@@ -363,7 +399,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + playoffHTML();
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML();
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
