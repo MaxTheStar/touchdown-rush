@@ -109,8 +109,34 @@
   // ---- 🏈 main.js: a game just finished — pay the gate receipts -----------
   // Called BEFORE the FINAL screen is built, so the coins land in this game's
   // payday total. Returns how many it paid (0 if the stadium's still tiny).
+  // 🏟 ATTENDANCE (Round 26, pick ②): the house is not always full. At KICKOFF `kickoff()` works out who turned up: 70% of your seats
+  // on a quiet day, up to 100% with a win streak going, and a SELLOUT for a playoff, a rival or the boss. `gameBonus()` then scales
+  // the gate by it: 60% of the gate on an empty-ish house up to the full gate on a sellout, and never below 1 coin. ⚠️ A starter
+  // stadium's gate is 1 coin and stays 1 coin, so a new save is byte-identical. Read the streak AT KICKOFF, not at the final whistle:
+  // main.js records the result before it pays the gate, so by then a loss has already wiped the streak that filled the seats.
+  let crowd = null;
+  function fillFor(g) {
+    let form = 0;
+    try { if (window.TDStreak && TDStreak.current) form = Math.max(0, Math.min(1, TDStreak.current() / 5)); } catch (e) {}
+    let big = !!(g && (g.playoffGame || g.bossGame || g.rivalGame));
+    try {
+      if (g && g.seasonGame && window.TDSeason && TDSeason.table) {
+        const t = TDSeason.table(); if (t && (t.phase === 'semifinal' || t.phase === 'maxbowl')) big = true;
+      }
+    } catch (e) {}
+    return big ? { fill: 1, sellout: true } : { fill: 0.7 + 0.3 * form, sellout: false };
+  }
+  function kickoff() {
+    let g = null; try { g = window.__td && __td.G; } catch (e) {}
+    const f = fillFor(g);
+    crowd = { fill: f.fill, sellout: f.sellout, n: Math.round(capacity() * f.fill / 10) * 10, cap: capacity() };
+    return crowd;
+  }
   function gameBonus() {
-    const g = gateReceipts();
+    let g = gateReceipts();
+    if (g > 0 && crowd) g = Math.max(1, Math.round(g * (0.6 + 0.4 * crowd.fill)));
+    if (crowd) { s.last = { n: crowd.n, cap: crowd.cap, sellout: crowd.sellout }; save(); }
+    crowd = null;
     if (g > 0 && window.TDShop) TDShop.earn(g);
     return g;
   }
@@ -194,9 +220,10 @@
       `<span class="stad-cap">🎟️ ${fmt(capacity())} FANS</span>`;
 
     const gate = $('stad-gate');
-    if (gate) gate.innerHTML = allMaxed()
+    const lastLine = s.last && s.last.n ? `<br>🎟️ Last crowd: <b>${fmt(s.last.n)}</b> of ${fmt(s.last.cap)}${s.last.sellout ? ' — SOLD OUT' : ''}` : '';   // 🏟 attendance
+    if (gate) gate.innerHTML = (allMaxed()
       ? '🏆 MAX STADIUM — the biggest, loudest house in the league!'
-      : `🪙 Gate receipts: <b>+${gateReceipts()}</b> coins every game`;
+      : `🪙 Gate receipts: <b>+${gateReceipts()}</b> coins on a sellout`) + lastLine;
 
     const list = $('stad-list');
     if (!list) return;
@@ -248,7 +275,7 @@
 
   // ---- what the rest of the game may use ----------------------------------
   window.TDStadium = {
-    gameBonus, onMenu, open, close,
+    gameBonus, kickoff, onMenu, open, close,
     capacity, level, gateReceipts,
     _state: () => Object.assign({}, s, { level: level(), cap: capacity(), gate: gateReceipts() }),
   };
