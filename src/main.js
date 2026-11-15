@@ -5331,6 +5331,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   // wearing and the crowd you are hearing can never disagree. ⚠️ It has to come
   // after the two flags above, because those are what it asks about.
   G.awayGame = !!(window.TDHome && TDHome.decide());
+  G.neutralGame = !!(window.TDHome && TDHome.decideNeutral && TDHome.decideNeutral());   // 🏆 the Max Bowl is at a neutral site
   // 🎃 SEASON EVENTS happen all by themselves: if today falls inside an event's
   // week, EVERY game you start is that event — themed field, sky and bonus.
   G.eventGame = !!(window.TDEvents && TDEvents.begin());
@@ -5486,6 +5487,7 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   for (const o of offense) o.s.setTexture('blue');
   for (const d of defense) d.s.setTexture('red');
   if (window.TDThrowback && TDThrowback.on()) sayComment('🏷 THROWBACK DAY! The old kits are out.');
+  if (G.neutralGame) sayComment('🏆 THE MAX BOWL — a neutral site. No home crowd for either side.');
   if (window.TDStadium && TDStadium.kickoff) { const c = TDStadium.kickoff(); if (c && c.sellout && c.cap > 8000) sayComment('🎟️ SOLD OUT! ' + c.n.toLocaleString('en-US') + ' fans.'); }   // 🏟 attendance (one line, sellouts only)
 
   // Tell the kicking screen your colors, so its kicker matches your team —

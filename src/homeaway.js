@@ -80,6 +80,17 @@
     return false;
   }
 
+  // 🏆 NEUTRAL SITE (Round 26, pick ⑧): the MAX BOWL, the season's title game, is played at a neutral site. Not home, not away: nobody's
+  // crowd. ⚠️ It reads the season's own phase, so a quick game, a boss, the 🏆 Playoff Tournament and every regular-season and semifinal game
+  // keep their old home/away answer exactly. Asked once by beginGame and stashed on G.neutralGame like awayGame.
+  function decideNeutral() {
+    const g = G();
+    if (!g || !g.seasonGame || g.playoffGame) return false;
+    try { if (window.TDSeason && TDSeason.table) { const t = TDSeason.table(); return !!(t && t.phase === 'maxbowl'); } } catch (e) {}
+    return false;
+  }
+  function neutral() { const g = G(); return !!(g && g.neutralGame); }
+
   // Is the CURRENT game an away game? (Reads the flag beginGame set.)
   function away() {
     const g = G();
@@ -89,6 +100,7 @@
   // The kit to paint on your players this game.
   function kitFor(team) {
     if (!team) return team;
+    if (neutral()) return team;               // 🏆 the title game: plain kits for both sides, no throwback
     if (!away()) return (window.TDThrowback && TDThrowback.on()) ? TDThrowback.kit(team) : team;   // 🏷 one home game a season is a throwback
     return { jersey: AWAY_JERSEY, helmet: team.helmet };
   }
@@ -96,5 +108,5 @@
   // A word for the scoreboard / schedule.
   function label() { return away() ? '@' : 'vs'; }
 
-  window.TDHome = { decide, away, kitFor, label, AWAY_JERSEY };
+  window.TDHome = { decide, decideNeutral, neutral, away, kitFor, label, AWAY_JERSEY };
 })();

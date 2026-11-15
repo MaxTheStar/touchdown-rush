@@ -76,6 +76,7 @@
     if (!g) return false;
     if (g.drillGame || g.allStarGame) return false;      // practice field · neutral site
     if (g.awayGame) return false;                       // 👕 these are not your seats
+    if (g.neutralGame) return false;                    // 🏆 the Max Bowl is at a neutral site: nobody's seats
     try { if (window.TDHouse && TDHouse.live && TDHouse.live()) return false; } catch (e) {}
     return true;
   }
