@@ -277,6 +277,24 @@
     save();
   }
 
+  // ⏰ THE TRADE DEADLINE (Round 26, pick ⑦): trades are open all offseason and for the first 4 games, then SHUT from the 5th game of the
+  // regular season through the playoffs, and re-open the moment the season is over (or none is running). Pure read of the season save:
+  // draft.js asks `TDSeason.tradeOpen()` at every trade entry (roster offers, rival requests, draft-pick trades) and `tradeNote()` for the banner.
+  const DEADLINE_AFTER = 4;     // you may still trade while your NEXT game is week 4 or earlier
+  function tradeOpen() {
+    const st = load();
+    if (!st || st.phase === 'champion' || st.phase === 'eliminated') return true;
+    if (st.phase === 'regular') return st.week <= DEADLINE_AFTER;
+    return false;                // semifinal / Max Bowl
+  }
+  function tradeNote() {
+    const st = load();
+    if (!st || st.phase === 'champion' || st.phase === 'eliminated') return '';
+    if (!tradeOpen()) return '⏰ TRADE WINDOW CLOSED — the deadline has passed. Trades re-open when the season ends.';
+    if (st.phase === 'regular' && st.week === DEADLINE_AFTER) return `⏰ TRADE DEADLINE: this is your LAST chance before game ${DEADLINE_AFTER}. After that, no trades until the season ends.`;
+    return '';
+  }
+
   // What game does the big PLAY button start next? (null = the season is over)
   // 🛏 THE BYE WEEK (Round 25, pick ③): one week with no game for anybody, once a season, between weeks 3 and 4. It is not in the schedule and
   // not in the standings: no game is played, so no row, no result and no playoff maths can change. What it does: anybody hurt is fit again
@@ -473,7 +491,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + (window.TDContract ? TDContract.html() : '');
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + (window.TDContract ? TDContract.html() : '');
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
@@ -526,6 +544,7 @@
     homeAway,                   // 👕 'home' | 'away' for a week (defaults to yours, this week)
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
+    tradeOpen, tradeNote,       // ⏰ the trade deadline (draft.js asks before every trade)
     predict: makePrediction, _settle: settlePrediction,   // 🔮 (_settle for tests)
     hasSeason: () => !!load(),  // is a season in progress?
     // 📊 LEAGUE LEADERS (leaders.js) reads the whole table: who is in the

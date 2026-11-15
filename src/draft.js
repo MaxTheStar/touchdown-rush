@@ -681,7 +681,18 @@
   }
 
   // 🔼 TRADE UP — spend coins + your last upcoming pick to draft an EXTRA guy NOW.
+  // ⏰ THE TRADE DEADLINE (season.js `tradeOpen()`): shut from the 5th season game until the season ends. Every trade entry asks first, so a
+  // closed window refuses the trade with a message instead of quietly doing it. No season running = always open (old behaviour exactly).
+  function windowShut() {
+    try { return !!(window.TDSeason && TDSeason.tradeOpen && !TDSeason.tradeOpen()); } catch (e) { return false; }
+  }
+  const SHUT_MSG = '⏰ The trade deadline has passed. Trades re-open after the season.';
+  function shutBanner() {
+    return windowShut() ? `<div class="dr-hint" style="color:#ffd60a;font-weight:bold">${SHUT_MSG}</div>` : '';
+  }
+
   function tradeUp() {
+    if (windowShut()) { flash(SHUT_MSG); return; }
     if (!draft || draft.done) return;
     if (futureMinePicks() < 1) { flash('No future pick left to trade up with!'); return; }
     if (!spend(TRADE_UP_COST)) { flash(`Need ${TRADE_UP_COST}🪙 to trade up.`); return; }
@@ -698,6 +709,7 @@
 
   // 🔽 TRADE DOWN — let a team pick now; you get coins + a pick at the very end.
   function tradeDown(partnerFromCall, coinFromCall) {
+    if (windowShut()) { flash(SHUT_MSG); return; }
     if (!draft || draft.done) return;
     const partner = partnerFromCall || randomCpuTeam();
     const pay = coinFromCall || TRADE_DOWN_PAY;
@@ -853,6 +865,7 @@
   }
 
   function acceptOffer(id) {
+    if (windowShut()) { flash(SHUT_MSG); return; }
     const o = offers.find(x => x.id === id);
     if (!o) return;
     if (o.coin > 0 && !spend(o.coin)) { flash('Not enough coins for this trade!'); return; }
@@ -868,6 +881,7 @@
 
   function tradeHTML() {
     if (!offers) makeOffers();
+    const shut = shutBanner();
     let cards;
     if (!offers.length) {
       cards = `<div class="dr-hint">No offers on the table. Tap "NEW OFFERS" to shop your roster around!</div>`;
@@ -903,6 +917,7 @@
     }
     return `<div class="dr-intro">Teams around the league want your players! Accept a trade to swap a
         starter — some deals cost coins, some pay you.</div>
+      ${shut}
       ${coinLine()}
       <div class="dr-offers">${cards}</div>
       <div class="dr-actions"><div class="ov-btn" data-act="newOffers">🔄 NEW OFFERS</div></div>`;
@@ -935,6 +950,7 @@
   }
 
   function acceptRequest(id) {
+    if (windowShut()) { flash(SHUT_MSG); return; }
     const r = requests.find(x => x.id === id);
     if (!r) return;
     earn(r.coin); paintCoins();
@@ -948,6 +964,7 @@
   function rejectRequest(id) { requests = requests.filter(x => x.id !== id); saveRequests(); render(); }
 
   function requestsHTML() {
+    const shut = shutBanner();
     let cards;
     if (!requests.length) {
       cards = `<div class="dr-hint">📭 No trade requests right now. Build up star players and rival teams
@@ -981,6 +998,7 @@
     }
     return `<div class="dr-intro">Rival teams come to <b>YOU</b>! When you've got stars, other teams send
         trade requests for them — cash in on a great one, or turn down a lowball.</div>
+      ${shut}
       ${coinLine()}
       <div class="dr-offers">${cards}</div>`;
   }
