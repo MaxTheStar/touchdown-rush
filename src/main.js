@@ -5548,9 +5548,13 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
     if (window.TDToss && TDToss.theyReceive()) { startCpuDrive(); return; }
     startKickoff();   // the game opens with a kickoff for you to return
   };
-  const afterScout = () => {
+  const afterSpeech = () => {
     if (window.TDToss && TDToss.pregame(openingPlay)) return;   // holds until you call it
     openingPlay();
+  };
+  const afterScout = () => {
+    if (window.TDSpeech && TDSpeech.pregame(afterSpeech)) return;   // 📣 the pre-game speech (speech.js), between the card and the toss
+    afterSpeech();
   };
   if (window.TDScout && TDScout.pregame(G.team, G.oppTeam, afterScout)) return;
   afterScout();
