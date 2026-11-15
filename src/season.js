@@ -270,6 +270,10 @@
       else { S.phase = 'eliminated'; S.champion = S.yourBowlOpp; }
     }
     settlePrediction();
+    if ((S.phase === 'champion' || S.phase === 'eliminated') && !S.contractsTicked) {   // ✍️ a season just ended: deals tick down
+      S.contractsTicked = true;
+      try { if (window.TDContract) TDContract.seasonOver(); } catch (e) {}
+    }
     save();
   }
 
@@ -469,7 +473,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML();
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + (window.TDContract ? TDContract.html() : '');
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
@@ -485,6 +489,7 @@
   function onPlay() {
     // No season, or last one finished → begin a new one with the menu's team.
     if (!S || S.phase === 'champion' || S.phase === 'eliminated') {
+      try { if (window.TDContract) TDContract.newSeason(); } catch (e) {}   // ✍️ an unanswered contract walks now
       newSeason(window.TDGame ? TDGame.currentMenuTeamAbbr() : null);
       render();
       return;
@@ -509,6 +514,8 @@
     if (body) body.addEventListener('pointerdown', e => {   // 🔮 the call boxes are rebuilt by render(), so one delegated listener
       const t = e.target && e.target.closest ? e.target.closest('[data-pred]') : null;
       if (t) { e.preventDefault(); if (makePrediction(t.dataset.pred)) render(); }
+      const ct = e.target && e.target.closest ? e.target.closest('[data-ct]') : null;      // ✍️ extend / walk
+      if (ct) { e.preventDefault(); if (window.TDContract && TDContract.act(ct.dataset.ct)) render(); }
     });
   }
   if (document.readyState !== 'loading') wire();
