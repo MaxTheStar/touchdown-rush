@@ -237,6 +237,7 @@
       if (win) { S.phase = 'champion'; S.champion = S.you; awardChampion(); }
       else { S.phase = 'eliminated'; S.champion = S.yourBowlOpp; }
     }
+    settlePrediction();
     save();
   }
 
@@ -371,6 +372,42 @@
            `<table class="se-tab"><tr class="se-h"><td></td><td>TEAM</td><td>MOVE</td><td>MARGIN</td></tr>${rows}</table>`;
   }
 
+  // 🔮 PRESEASON PREDICTIONS (Round 26, pick ④): before week 1 you CALL how the year ends. Harder calls pay more; a miss costs nothing.
+  //   🏅 WINNING RECORD (4+ wins of 6) +20 · 🎟 MAKE THE PLAYOFFS (top 4) +40 · 🏆 WIN THE MAX BOWL +100
+  // ⚠️ It never touches a play, a roll or the standings: it only READS the finished season (rec / seeds / champion) and pays coins once.
+  // ⚠️ LOCKED once made (no changing it after week 1), and it can only be made before your first game. It lives in S.predict inside the
+  // existing season save: {pick, done, hit}. An old save has none and shows no call box until a NEW season starts.
+  const PRED = {
+    wins:  { ic: '🏅', name: 'WINNING RECORD',   sub: '4+ wins of 6',     pay: 20 },
+    po:    { ic: '🎟', name: 'MAKE THE PLAYOFFS', sub: 'finish top 4',     pay: 40 },
+    champ: { ic: '🏆', name: 'WIN THE MAX BOWL', sub: 'be the champion',  pay: 100 }
+  };
+  function canPredict() { return !!(S && S.phase === 'regular' && S.week === 1 && !(S.results && S.results.length) && !S.predict); }
+  function makePrediction(k) {
+    if (!PRED[k] || !canPredict()) return false;
+    S.predict = { pick: k, done: false, hit: false }; save(); return true;
+  }
+  function settlePrediction() {
+    const p = S && S.predict; if (!p || p.done || !PRED[p.pick]) return;
+    const over = S.phase !== 'regular';                       // the 6 games are done
+    let res = null;
+    if (p.pick === 'wins' && over) res = S.rec[S.you].w >= 4;
+    else if (p.pick === 'po' && over) res = (S.seeds || sortedStandings()).slice(0, 4).includes(S.you);
+    else if (p.pick === 'champ' && (S.phase === 'champion' || S.phase === 'eliminated')) res = S.champion === S.you;
+    if (res === null) return;
+    p.done = true; p.hit = !!res;
+    if (p.hit && window.TDShop && TDShop.earn) TDShop.earn(PRED[p.pick].pay);
+  }
+  function predictHTML() {
+    if (canPredict()) {
+      const b = k => `<div data-pred="${k}" style="margin:6px 0;padding:10px;border-radius:10px;background:#17325e;border:2px solid #2d5a9e;cursor:pointer;min-height:44px;text-align:left"><b>${PRED[k].ic} ${PRED[k].name}</b> <span style="opacity:.8">· ${PRED[k].sub}</span><span style="float:right;color:#ffd60a">+${PRED[k].pay} 🪙</span></div>`;
+      return `<div class="se-cap">🔮 CALL YOUR SEASON <small>(locked once you pick · a miss costs nothing)</small></div>` + b('wins') + b('po') + b('champ');
+    }
+    const p = S.predict; if (!p || !PRED[p.pick]) return '';
+    const st = p.done ? (p.hit ? `<b style="color:#7dff9b">✅ CALLED IT! +${PRED[p.pick].pay} 🪙</b>` : '<span style="color:#ff8a8a">❌ missed this time</span>') : '<span style="opacity:.8">locked in, pending</span>';
+    return `<div class="se-cap">🔮 YOUR CALL</div><div class="se-ticker" style="padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px">${PRED[p.pick].ic} ${PRED[p.pick].name} · ${st}</div>`;
+  }
+
   function playoffHTML() {
     if (S.phase === 'regular') return '';
     if (S.phase === 'champion')
@@ -399,7 +436,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML();
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML();
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
@@ -433,7 +470,14 @@
     const el = $(id);
     if (el) el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); });
   }
-  function wire() { tap('open-season', open); tap('season-play', onPlay); tap('season-close', closeOverlay); }
+  function wire() {
+    tap('open-season', open); tap('season-play', onPlay); tap('season-close', closeOverlay);
+    const body = $('season-body');
+    if (body) body.addEventListener('pointerdown', e => {   // 🔮 the call boxes are rebuilt by render(), so one delegated listener
+      const t = e.target && e.target.closest ? e.target.closest('[data-pred]') : null;
+      if (t) { e.preventDefault(); if (makePrediction(t.dataset.pred)) render(); }
+    });
+  }
   if (document.readyState !== 'loading') wire();
   else document.addEventListener('DOMContentLoaded', wire);
 
@@ -442,6 +486,7 @@
     homeAway,                   // 👕 'home' | 'away' for a week (defaults to yours, this week)
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
+    predict: makePrediction, _settle: settlePrediction,   // 🔮 (_settle for tests)
     hasSeason: () => !!load(),  // is a season in progress?
     // 📊 LEAGUE LEADERS (leaders.js) reads the whole table: who is in the
     // league, everyone's W/L and points for/against, and how strong each team
