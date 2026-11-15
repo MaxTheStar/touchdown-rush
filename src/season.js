@@ -129,15 +129,47 @@
     if (as > bs) { ra.w++; rb.l++; } else if (bs > as) { rb.w++; ra.l++; }
   }
 
-  // Sort the whole league best-to-worst: most wins, then best point-difference.
+  // Sort the whole league best-to-worst: most wins, then HEAD-TO-HEAD, then best point-difference.
+  // 🧮 TIEBREAKERS (Round 26, pick ⑤): point difference alone ordered teams that had split their games. Now, among teams on the SAME win
+  // count, whoever won more of the games played BETWEEN those teams goes first (two teams: the head-to-head; three or more: the mini-table).
+  // ⚠️ It only ever compares teams already tied on wins, so it can never reorder a team ahead of one with more wins; it is a pure function of
+  // the games already recorded (S.results for you + S.around for the rest), and when those games are missing (an old mid-season save has no
+  // S.around for early weeks) every count is 0 and the order falls straight through to the old point-difference rule.
+  function regularGames() {
+    const out = [];
+    (S.results || []).forEach(r => out.push({ a: S.you, b: r.opp, as: r.ys, bs: r.os }));
+    (S.around || []).forEach(g => out.push(g));
+    return out;
+  }
+  function miniWins() {
+    const mini = {}; S.league.forEach(a => mini[a] = 0);
+    regularGames().forEach(g => {
+      const ra = S.rec[g.a], rb = S.rec[g.b];
+      if (!ra || !rb || ra.w !== rb.w) return;          // only games between teams tied on wins count
+      if (g.as > g.bs) mini[g.a]++; else if (g.bs > g.as) mini[g.b]++;
+    });
+    return mini;
+  }
   function sortedStandings() {
+    const mini = miniWins();
     return S.league.slice().sort((a, b) => {
       const ra = S.rec[a], rb = S.rec[b];
       if (rb.w !== ra.w) return rb.w - ra.w;
+      if (mini[b] !== mini[a]) return mini[b] - mini[a];
       const da = ra.pf - ra.pa, db = rb.pf - rb.pa;
       if (db !== da) return db - da;
       return rb.pf - ra.pf;
     });
+  }
+  // which rows were put in order by head-to-head (for the little "H2H" tag in the table): a row is tagged when it has the same wins as
+  // the row below it but a better mini-table count, i.e. the point difference alone would not have been the reason.
+  function h2hTags(order) {
+    const mini = miniWins(), tag = {};
+    for (let i = 0; i + 1 < order.length; i++) {
+      const a = order[i], b = order[i + 1];
+      if (S.rec[a].w === S.rec[b].w && mini[a] > mini[b]) tag[a] = true;
+    }
+    return tag;
   }
 
   // ---- Starting a fresh season -------------------------------------------
@@ -296,6 +328,7 @@
 
   function standingsHTML() {
     const order = S.seeds || sortedStandings();
+    const h2h = S.seeds ? {} : h2hTags(order);   // 🧮 (after the playoffs are seeded the order is frozen, so no tags)
     const rows = order.map((a, i) => {
       const r = S.rec[a], diff = r.pf - r.pa;
       const me = a === S.you ? ' se-me' : '';
@@ -303,9 +336,9 @@
       const dv = divisionOf(a);                 // 📅 which division a team is in
       const dvCell = dv ? `<td><b style="color:${dv === 'A' ? '#ffd60a' : '#8fd0ff'}">${dv}</b></td>` : '<td></td>';
       return `<tr class="se-row${me}${line}"><td>${i + 1}</td><td class="se-ab">${a}</td>${dvCell}` +
-             `<td>${r.w}-${r.l}</td><td>${diff > 0 ? '+' : ''}${diff}</td></tr>`;
+             `<td>${r.w}-${r.l}${h2h[a] ? ' <small style="color:#ffd60a" title="won the head-to-head">H2H</small>' : ''}</td><td>${diff > 0 ? '+' : ''}${diff}</td></tr>`;
     }).join('');
-    return `<div class="se-cap">STANDINGS <small>(top 4 make the playoffs · 2 divisions)</small></div>` +
+    return `<div class="se-cap">STANDINGS <small>(top 4 make the playoffs · tied? head-to-head, then point diff)</small></div>` +
            `<table class="se-tab"><tr class="se-h"><td></td><td>TEAM</td><td>DIV</td><td>W-L</td><td>DIFF</td></tr>${rows}</table>`;
   }
 
