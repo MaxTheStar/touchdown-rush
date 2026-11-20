@@ -2753,6 +2753,10 @@ function showFourthDownChoice() {
   // 🐢 THE QB SNEAK (sneak.js): on the panel only when the last yard is all that is left
   const sn4 = document.getElementById('btn-sneak4');
   if (sn4) sn4.style.display = (window.TDSneak && TDSneak.available(G.losYards, G.firstDownYards)) ? '' : 'none';
+  // 🛑 INTENTIONAL SAFETY (safety.js): only on the rare 4th down where giving up 2 is the smart call
+  const sfBtn = document.getElementById('btn-safety');
+  if (sfBtn) sfBtn.style.display = (window.TDSafety && TDSafety.offered({
+    spot: Math.round(G.losYards), quarter: G.quarter, numQuarters: NUM_QUARTERS, clock: G.clock, my: G.score, opp: G.oppScore })) ? '' : 'none';
   // 🎭 SPECIAL TEAMS TRICKS: the fake shows up while you've still got one left.
   const fakeBtn = document.getElementById('btn-fake');
   if (fakeBtn) {
@@ -2809,7 +2813,25 @@ function chooseFourthDown(which) {
     sayComment(pick(['🎭 Lining up to kick…', '🎭 Kick team out there…', '🎭 Sending out the kick team…']));
     return;
   }
+  if (which === 'safety') { takeIntentionalSafety(); return; }   // 🛑
   startKick(inFieldGoalRange() ? 'fg' : 'punt');
+}
+
+// 🛑 INTENTIONAL SAFETY (safety.js): the SAME ending as being tackled in your own end zone (see endPlay's safety branch): +2 to them, a free
+// kick from your own 20 that gives them the ball. Re-checks the offer, so a stray tap can never give away points when it was not a smart call.
+function takeIntentionalSafety() {
+  if (!(window.TDSafety && TDSafety.offered({ spot: Math.round(G.losYards), quarter: G.quarter, numQuarters: NUM_QUARTERS, clock: G.clock, my: G.score, opp: G.oppScore }))) { G.state = 'presnap'; return; }
+  G.oppScore += 2;
+  if (window.TDSound) TDSound.sting('lose');
+  sayComment('🛑 You take the safety on purpose. Two points to burn the clock.');
+  advanceClock(TIME_SCORE_PLAY);
+  G.next = { los: 20, down: 1, fd: 30, fresh: true };   // free kick → they receive
+  G.kickFrom = 20;
+  if (window.TDDrives) TDDrives.yourPlay({ result: 'tackle', spot: 0, losYards: G.losYards, next: { fresh: true }, msg: 'SAFETY (on purpose)', when: driveWhen() });
+  G.state = 'dead';
+  G.deadUntil = G.scene.time.now + 1800;
+  updateHUD();
+  showBanner('SAFETY!  ' + (G.oppTeam ? G.oppTeam.abbr : 'DEF') + ' +2', true);
 }
 
 // Hand off to the KickGame screen (drawn on top of the field).
@@ -6564,6 +6586,7 @@ function setupTouchButtons() {
   bindTapEl('btn-juke', () => juke());                     // 🪄 THE JUKE (juke.js)
   bindTapEl('btn-lob', () => toggleLob());                 // 🏹 BULLET OR LOB (lob.js)
   bindTapEl('btn-sneak', () => sneak());                   // 🐢 THE QB SNEAK (sneak.js)
+  bindTapEl('btn-safety', () => { if (G.state === 'decision') chooseFourthDown('safety'); });   // 🛑
   bindTapEl('btn-sneak4', () => { if (G.state === 'decision') { G.state = 'presnap'; sneak(); } });   // …and the same from the 4th-down panel
   bindTapEl('btn-xp', () => choosePAT('kick'));    // 🏈 after a TD: kick the extra point
   bindTapEl('btn-two', () => choosePAT('two'));    // 🏈 …or go for two
