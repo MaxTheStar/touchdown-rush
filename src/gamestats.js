@@ -52,6 +52,7 @@
 
   let stats = {};        // slotKey -> the numbers below
   let pendingCatch = -1; // set the moment a pass is caught, used when the play ends
+  const AST_P = 0.35;    // 👥 the share of tackles that were shared (a second man gets an assist)
   let defTurn = 0;       // rotates which defender gets credit for a takeaway
   let awarded = null;    // this game's winner (so the Box Score can show it too)
   let game = null;       // 📊 the scoreboard side of things, filled in at the final whistle
@@ -62,7 +63,7 @@
              takeaway: 0, comp: 0, passYds: 0, passTd: 0,
              // 📊 DEFENSE (v4.23): the 1-player defense sim credits each of THEIR plays to
              // one of your three defenders — see noteDefense() below.
-             tkl: 0, sack: 0, tfl: 0, pd: 0, int: 0, ff: 0, blk: 0 };
+             tkl: 0, sack: 0, tfl: 0, pd: 0, int: 0, ff: 0, blk: 0, ast: 0 };   // 👥 ast = tackle ASSISTS (Round 27, pick ⑥)
   }
 
   // Start (or restart) the book — called from beginGame.
@@ -211,16 +212,25 @@
       const d = stats[idx]; if (!d) return;
       for (const f of fields) d[f]++;
     };
+    let ordinary = false;     // 👥 true only when the play ended in an ordinary tackle (a run or a completion)
     if (p.r === 'int')                    give('int',   ['int']);
     else if (p.r === 'fum' || p.tag === 'fumlost') give('ff', ['ff']);   // 🙌 a forced fumble is a forced fumble even when THEY fall on it (fallon.js)
     else if (p.tag === 'sack')            give('sack',  ['sack', 'tkl', 'tfl']);   // a sack is also a tackle for loss
     else if (p.r === 'inc') { if (p.tag === 'tip' || p.tag === 'hail' || Math.random() < PD_SHARE) give('pd', ['pd']); }   // a tipped ball (or a Hail Mary you batted down) is, by definition, a pass defended
     else if (p.side === 'run') {
+      ordinary = true;
       if (p.y < 0)                        give('loss',  ['tkl', 'tfl']);
       else if (p.y === 0)                 give('loss',  ['tkl']);
       else                                give('run',   ['tkl']);
     }
-    else                                  give('catch', ['tkl']);                  // a completion was tackled by somebody
+    else                                { ordinary = true; give('catch', ['tkl']); }                  // a completion was tackled by somebody
+    // 👥 TACKLE ASSISTS (Round 27, pick ⑥): about a third of ordinary tackles (a run or a catch, never a sack or a takeaway) were a team effort, so a
+    // SECOND defender is credited with an assist. ⚠️ A STAT ONLY: it adds one number to a different man's row, never a yard, never a tackle for
+    // the first man, and `tkl` is untouched so the existing totals do not move. It is drawn AFTER `lastCredit` is fixed on the first man,
+    // so the takeaway-credit rule is unchanged.
+    if (ordinary && Math.random() < AST_P) {
+      for (let k = 0; k < 6; k++) { const j = whoMade(p.side === 'run' ? 'run' : 'catch'); if (j !== idx && stats[j]) { stats[j].ast++; break; } }
+    }
     lastCredit = idx;
     return idx;
   }

@@ -45,6 +45,7 @@
     // be a single "takeaway" number or "quiet day at the office"
     if (s.sack)     bits.push(`<span>${s.sack}</span> ${s.sack === 1 ? 'sack' : 'sacks'}`);
     if (s.tkl)      bits.push(`<span>${s.tkl}</span> ${s.tkl === 1 ? 'tackle' : 'tackles'}`);
+    if (s.ast)      bits.push(`<span>${s.ast}</span> ${s.ast === 1 ? 'assist' : 'assists'}`);   // 👥 Round 27 ⑥
     if (s.tfl)      bits.push(`<span>${s.tfl}</span> for loss`);
     if (s.pd)       bits.push(`<span>${s.pd}</span> ${s.pd === 1 ? 'pass defended' : 'passes defended'}`);
     if (s.int)      bits.push(`<span>${s.int}</span> ${s.int === 1 ? 'interception' : 'interceptions'}`);
