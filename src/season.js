@@ -252,7 +252,11 @@
         (S.around = S.around || []).push({ week: S.week, a, b, as: r.a, bs: r.b });   // 📺 the league ticker shows what the standings were built from
       }
       S.week++;
-      if (S.week > REG_WEEKS) startPlayoffs();
+      if (S.week > REG_WEEKS) {
+        startPlayoffs();
+        // 💯 a perfect regular season (every game won, none lost) earns the Perfect Season badge
+        try { const r = S.rec[S.you]; if (r && r.l === 0 && r.w >= REG_WEEKS && window.TDAchieve && TDAchieve.perfectSeason) TDAchieve.perfectSeason(); } catch (e) {}
+      }
 
     } else if (S.phase === 'semifinal') {
       if (win) {

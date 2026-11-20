@@ -65,6 +65,7 @@
     { id: 'shutout',  icon: '🛡️', name: 'Shutout',     need: 'Win without letting them score', coins: 40, evt: true },
     { id: 'blowout',  icon: '💥', name: 'Blowout',     need: 'Win by 21+ points',       coins: 35, evt: true },
     { id: 'comeback', icon: '😤', name: 'Comeback',    need: 'Win after trailing by 10+', coins: 45, evt: true },
+    { id: 'perfect',  icon: '💯', name: 'Perfect Season', need: 'Win all 6 regular-season games', coins: 60, evt: true },   // Round 27 ③: season.js calls perfectSeason()
   ];
   const byId = id => ACH.find(a => a.id === id) || null;
 
@@ -184,7 +185,10 @@
   function onMenu()    { stat(); }                        // check for anything newly earned
 
   // ---- What the rest of the game may use ----------------------------------
+  // 💯 PERFECT SEASON (Round 27, pick ③): season.js calls this the moment the regular season ends with every game won. Unlocks once, pays its coins.
+  function perfectSeason() { return unlock('perfect'); }
   window.TDAchieve = {
+    perfectSeason,
     startGame, onMenu,                                  // lifecycle
     td, fg, twoPoint, brokeTackle, oppScored, gameOver, // live shouts from main.js
     listForCase,                                        // the Trophy Case draws this
