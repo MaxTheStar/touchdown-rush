@@ -467,6 +467,19 @@
     return `<div class="se-cap">🔮 YOUR CALL</div><div class="se-ticker" style="padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px">${PRED[p.pick].ic} ${PRED[p.pick].name} · ${st}</div>`;
   }
 
+  // 🚑 INJURY REPORT (Round 27, pick ④ replaced Cutback): one line on the Season screen, read straight from injuries.js, so you see who is hurt
+  // BEFORE you play the week. DISPLAY ONLY: it asks `TDInjury.injured()` and changes nothing. Shown during the regular season and playoffs.
+  function injuryHTML() {
+    if (!S || S.phase === 'champion' || S.phase === 'eliminated') return '';
+    let inj = null;
+    try { inj = window.TDInjury && TDInjury.injured ? TDInjury.injured() : null; } catch (e) {}
+    if (!window.TDInjury) return '';
+    const body = inj
+      ? `🚑 <b>${inj.name}</b> (${inj.pos}) · ${inj.what || 'hurt'} · out <b>${inj.games}</b> more ${inj.games === 1 ? 'game' : 'games'}`
+      : '✅ Everyone is healthy.';
+    return `<div class="se-cap">🚑 INJURY REPORT</div><div class="se-ticker" style="display:block;padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px">${body}</div>`;
+  }
+
   function playoffHTML() {
     if (S.phase === 'regular') return '';
     if (S.phase === 'champion')
@@ -495,7 +508,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + (window.TDContract ? TDContract.html() : '');
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + injuryHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + (window.TDContract ? TDContract.html() : '');
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
