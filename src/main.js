@@ -869,6 +869,7 @@ function snap(time) {
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
   if (window.TDBoot) TDBoot.snapped();                       // 🌀 …and the bootleg's roll-out if that was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
+  G.gangSaid = false;         // 🛡 …and the gang-tackle line is said once a play at most
   G.spikeFakeUntil = 0;                                      // 🎭 nobody has been fooled this snap
   G.jukeUsed = false; G.jukeBad = false; G.jukeStun = null; G.jukeTripUntil = 0;   // 🪄 one juke a play, fresh every snap
   G.stiffUntil = 0;           // (and get a brief free run right after you break it)
@@ -2382,7 +2383,16 @@ function checkTackle() {
       // shove this tackler back and keep on running.
       // ⭐ a 🛡 BRUISER carrying it takes the BETTER of his trait and the gear.
       const trStiff = window.TDTraits ? TDTraits.stiffFor(offense.indexOf(G.ballCarrier)) : 0;
-      if (!G.stiffUsed && window.TDShop &&
+      // 🛡 GANG TACKLE (Round 27, pick ⑦): you can shrug off ONE man, not a pile. With a SECOND defender within 2.4 tackle-lengths at the
+      // contact, the stiff arm gets no roll at all (so it uses neither its chance nor its one-per-play use). With no gear or trait the
+      // stiff arm never rolled anyway, so for those players nothing here changes.
+      const gangNear = window.TDGang ? TDGang.count(defense, c, TACKLE_DIST) : 1;
+      const gang = window.TDGang ? TDGang.isGang(gangNear) : false;
+      if (gang && !G.stiffUsed && window.TDShop && Math.max(TDShop.stiffChance(), trStiff) > 0 && !G.gangSaid) {
+        G.gangSaid = true;
+        sayComment('🛡 GANG TACKLE! Nobody shakes that pile.');
+      }
+      if (!gang && !G.stiffUsed && window.TDShop &&
           Math.random() < Math.max(TDShop.stiffChance(), trStiff)) {
         G.stiffUsed = true;
         G.stiffUntil = G.scene.time.now + 500;      // ~half a second of free running
