@@ -869,6 +869,7 @@ function snap(time) {
   if (window.TDPA) TDPA.snapped();                           // 🎣 …and start the play-action fake if it was called
   if (window.TDBoot) TDBoot.snapped();                       // 🌀 …and the bootleg's roll-out if that was called
   G.stiffUsed = false;        // 💪 you can break ONE tackle per play with STIFF ARM
+  if (window.TDPancake) TDPancake.newPlay();               // 🧱 one pancake a play
   G.gangSaid = false;         // 🛡 …and the gang-tackle line is said once a play at most
   G.spikeFakeUntil = 0;                                      // 🎭 nobody has been fooled this snap
   G.jukeUsed = false; G.jukeBad = false; G.jukeStun = null; G.jukeTripUntil = 0;   // 🪄 one juke a play, fresh every snap
@@ -2245,15 +2246,15 @@ function updateDefense(elapsed) {
       if (st) {
         if (st.tx != null) { tx = st.tx; ty = st.ty; }
         speed = DEF_SPEED * boost * st.mult * (st.free ? 1 : 1);
-        if (!st.free && nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush() * st.mult;
+        if (!st.free && nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush() * pkMult(d) * st.mult;
         else if (st.free) speed = DEF_SPEED * boost * st.mult * ppRush();
-      } else if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush();
+      } else if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush() * pkMult(d);
     } else if (d.role === 'LB') {
       if (G.blitz && d === defense[2]) {
         // 🔥 BLITZ — this linebacker shoots the gap and chases the QB (and gets
         // slowed if a lineman picks him up, same as the down linemen).
         tx = offense[0].s.x; ty = offense[0].s.y;
-        if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush();
+        if (nearBlocker(d)) speed = DEF_SPEED * boost * diff().rushSlow * ppRush() * pkMult(d);
       } else if (G.coverage === 'zone') {
         // Zone: sit in the short middle and jump the nearest crosser.
         const th = nearestThreatInBand(175, 358);
@@ -2358,7 +2359,14 @@ function dbZone(d) {
   return               { lo: 150, hi: 383,         homeX: FIELD_WIDTH / 2 };
 }
 
+// 🧱 PANCAKE (pancake.js): a rusher a lineman has flattened moves at 35% of his blocked speed for 0.7s (×1 otherwise, and ×1 with the module absent)
+function pkMult(d) { return window.TDPancake ? TDPancake.mult(d, G.scene.time.now) : 1; }
 function nearBlocker(d) {
+  const hit = nearBlockerRaw(d);
+  if (window.TDPancake) TDPancake.tick(d, hit, G.scene.time.now);   // 🧱 a block held long enough flattens him
+  return hit;
+}
+function nearBlockerRaw(d) {
   for (const o of offense) {
     // 🛡 …and a back who stayed in to block counts as a blocker, or he would
     // slide in front of a rusher and slow nobody down.
