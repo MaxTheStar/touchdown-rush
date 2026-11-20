@@ -971,6 +971,12 @@ function controlStar() {
 
 function controlBallCarrier() {
   const p = G.ballCarrier.s;
+  // 💪 SECOND EFFORT (churn.js): wrapped up, the runner stands and drives; SPACE/HIKE is the whole input
+  if (window.TDChurn && TDChurn.pending()) {
+    p.setVelocity(0, 0);
+    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) TDChurn.tap();
+    return;
+  }
   // 🌀 THE BOOTLEG (bootleg.js): for the first half-second the quarterback rolls out on his own, away from the back
   if (G.bootleg && G.ballCarrier === offense[0] && G.scene.time.now < G.bootUntil) {
     p.setVelocity(G.bootDir * TDBoot.ROLL_V, -TDBoot.ROLL_V * 0.12);
@@ -2365,6 +2371,7 @@ function nearBlocker(d) {
 // TACKLES, TOUCHDOWNS, END OF PLAY
 // ============================================================
 function checkTackle() {
+  if (window.TDChurn && TDChurn.pending()) return;     // 💪 the second-effort moment is open: the play has not ended yet
   const c = G.ballCarrier.s;
   // 💪 STIFF ARM: right after you shrug a guy off, you get a brief free run so
   // the same defender can't instantly re-tackle you.
@@ -2400,6 +2407,15 @@ function checkTackle() {
         // ⚠️ AFTER the fumble roll and BEFORE the spot is marked: the extra
         // step is part of the tackle, so from the 2 it can still be six points.
         if (window.TDPersonnel && TDPersonnel.pushPile() && checkTouchdown()) return;
+        // 💪 SECOND EFFORT (churn.js): once a quarter, wrapped up on a short run, 0.4s to drive your legs. It runs AFTER the fumble roll above.
+        if (window.TDChurn && TDChurn.start({ gain: yardsFromOwnGoal(G.ballCarrier.s.y) - G.losYards, isQB: G.ballCarrier === offense[0], twoPlayer: !!G.twoPlayer, quarter: G.quarter }, function (yds) {
+          if (yds > 0) {
+            G.ballCarrier.s.y -= yds * PX_PER_YARD;
+            sayComment('💪 SECOND EFFORT! +' + yds + (yds === 1 ? ' yard' : ' yards') + ' more!');
+            if (checkTouchdown()) return;
+          }
+          endPlay('tackle');
+        })) return;
         endPlay('tackle');
       }
       return;
@@ -5486,7 +5502,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDSilent) TDSilent.newGame();       // 🔇 back on the call
   if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
   if (window.TDWin) TDWin.newGame();             // 📈 a fresh 50/50 and an empty swing chart
-  if (window.TDGas) TDGas.newGame();             // 😮‍💨 …and a full tank
+  if (window.TDGas) TDGas.newGame();
+  if (window.TDChurn) TDChurn.newGame();                 // 💪 one second effort a quarter, fresh each game             // 😮‍💨 …and a full tank
   if (window.TDHot) TDHot.newGame();             // 🔥 nobody is hot yet
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
