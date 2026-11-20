@@ -51,6 +51,7 @@
   if (typeof A.games !== 'number') A.games = 0;
   if (!Array.isArray(A.shelf)) A.shelf = [];
   if (typeof A.pending !== 'boolean') A.pending = false;
+  if (!Array.isArray(A.seen)) A.seen = [];     // 🆕 every name that has been in a PAST season's tally: anyone new is a rookie
   function save() { store('awards', A); }
 
   const KEYS = ['rec', 'recYds', 'rush', 'rushYds', 'td', 'fg', 'longFg',
@@ -123,7 +124,9 @@
   }
 
   // Build the ceremony from the tally + how the season went.
+  let rookieName = null;      // set by ceremony() when a rookie wins, so closeSeason() can pay him
   function ceremony(snap) {
+    rookieName = null;
     const list = Object.keys(A.tally).map(k => A.tally[k]);
     const out = [];
     const push = (ic, title, t, lead) => {
@@ -133,6 +136,13 @@
     push('🏆', 'Most Valuable Player', best(list, mvpScore));
     push('🛡️', 'Defensive Player',     best(list.filter(t => t.side === 'def'), t => t.takeaway || 0), ['takeaway']);
     push('🧤', 'Best Hands',            best(list, t => t.rec || 0), ['rec']);
+    // 🆕 ROOKIE OF THE YEAR (Round 27, pick ②): the best season among players who were NOT in any earlier season's tally. ⚠️ `A.seen` is empty
+    // until a first ceremony has been held, and then nobody is a rookie (in year one EVERYONE is new, so there is no award until year two).
+    // Reads only the saved tally, so it can never crown someone who did not play, and uses the same MVP score as the big trophy.
+    if (A.seen.length) {
+      const rk = best(list.filter(t => A.seen.indexOf(t.name) === -1), mvpScore);
+      if (rk) { push('🆕', 'Rookie of the Year', rk); rookieName = rk.name; }
+    }
     push('🦵', 'Special Teams',         best(list, t => (t.fg || 0) * 100 + (t.longFg || 0)), ['fg', 'longFg']);
     // 🧑‍🏫 the only trophy that isn't a player
     const w = snap ? (snap.w || 0) : 0, l = snap ? (snap.l || 0) : 0;
@@ -160,6 +170,12 @@
       awards: awards
     });
     if (A.shelf.length > MAX_SHELF) A.shelf.length = MAX_SHELF;
+    // 🆕 pay the rookie a little XP (15 = a couple of 🏕️ camp sessions), then remember everyone who played so next year's newcomers are the rookies
+    if (rookieName && window.TDDraft && TDDraft.squad && TDDraft.grantXp) {
+      try { const m = TDDraft.squad().find(x => x.name === rookieName); if (m) TDDraft.grantXp(m.idx, 15); } catch (e) {}
+    }
+    Object.keys(A.tally).forEach(n => { if (A.seen.indexOf(n) === -1) A.seen.push(n); });
+    if (A.seen.length > 200) A.seen = A.seen.slice(-200);
     A.tally = {}; A.games = 0;
     A.pending = true;                 // a 🔴 dot until you go and look
     save();
