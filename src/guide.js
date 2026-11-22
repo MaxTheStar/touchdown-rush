@@ -62,12 +62,52 @@
   const all = () => GUIDE.reduce((a, s) => a.concat(s.items), []);
   const live = id => { const el = $(id); if (!el) return false; const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && el.getClientRects().length > 0; };
 
+  // ⌨️ CONTROLS CARD (Round 29, pick ⑦): the guide listed every BUTTON but nowhere said which KEY or CONTROLLER button does the same thing. One static section
+  // at the bottom, in the order a player meets them. ⚠️ It is documentation only: the real bindings live in main.js (`keys = addKeys({...})`) and gamepad.js,
+  // so `KEYS_HELP` below is checked against the real key map by `keysHelpMatchesGame()` (a test hook), which is how it is kept from drifting.
+  const KEYS_HELP = [
+    ['⌨️ KEYBOARD', [
+      ['Arrow keys', 'Move the runner (and flip teams on the front screen)'],
+      ['SPACE', 'HIKE. After the snap: hurdle or juke. On the front screen: start. Hook-and-lateral pitch when it is ready'],
+      ['E', 'Break the tackle: the same hurdle / juke as SPACE, on its own key (also drives your legs on a second effort)'],
+      ['F', 'Dive for the marker'],
+      ['C', 'QB slide'],
+      ['X', 'Pump fake'],
+      ['H', 'Hand it off'],
+      ['P', 'Pitch (lateral)'],
+      ['T', 'Throw it away'],
+      ['1  2  3', 'Throw to receiver 1, 2 or 3']
+    ]],
+    ['🎮 CONTROLLER', [
+      ['Stick / D-pad', 'Move (and flip teams on the front screen)'],
+      ['A', 'HIKE · start · back to the menu · 4th down: play it'],
+      ['B', 'Break the tackle (same as E) · 4th down: kick or punt'],
+      ['X', 'Dive · 4th down: fake'],
+      ['Y', 'Hand it off · 4th down: QB sneak'],
+      ['LB  RB  RT', 'Throw to receiver 1, 2, 3'],
+      ['LT', 'Pitch'], ['Back / Select', 'Throw it away · 4th down: take a safety'],
+      ['L3  R3', 'QB slide · pump fake'], ['Start', 'Pause / resume']
+    ]]
+  ];
+  function keysHTML() {
+    return KEYS_HELP.map(sec => '<div class="gd-sec">' + sec[0] + '</div>' + sec[1].map(r =>
+      '<div class="gd-row"><div class="gd-ic" style="font:800 11px Arial;min-width:64px;text-align:center">' + r[0] + '</div><div class="st-txt"><span style="color:#cbd5e1">' + r[1] + '</span></div></div>').join('')).join('');
+  }
+  // test hook: do the documented keys match the keys the game really listens to? (reads the live key map)
+  function keysHelpMatchesGame() {
+    try {
+      const K = window.__td.keys, want = { E: K.move, F: K.dive, C: K.slide, X: K.pump, H: K.hand, P: K.pitch, T: K.throwaway };
+      const code = { E: 69, F: 70, C: 67, X: 88, H: 72, P: 80, T: 84 };
+      return Object.keys(want).every(k => want[k] && want[k].keyCode === code[k]);
+    } catch (e) { return false; }
+  }
+
   function render() {
     const body = $('guide-body'); if (!body) return;
     body.innerHTML = GUIDE.map(s => '<div class="gd-sec">' + s.g + '</div>' + s.items.map(r => {
       const up = live(r[0]); const hid = !up && r[5] && document.body.classList.contains('rk-hide-' + r[5]);
       return '<div class="gd-row' + (up ? ' up' : '') + (hid ? ' hid' : '') + '"><div class="gd-ic">' + r[1] + '</div><div class="st-txt"><b>' + r[2] + (up ? ' <i>UP NOW</i>' : '') + (hid ? ' <i class="gd-hid">🧒 HIDDEN</i>' : '') + '</b><span>' + r[3] + '</span><span class="gd-when">⏳ ' + r[4] + '</span></div></div>';
-    }).join('')).join('');
+    }).join('')).join('') + keysHTML();
   }
   function open() { const m = $('guide-modal'); if (!m) return; render(); m.style.display = 'flex'; }
   function close() { const m = $('guide-modal'); if (m) m.style.display = 'none'; }
@@ -82,5 +122,5 @@
     tap('open-guide', open); tap('pause-guide', open); tap('guide-close', close);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
-  window.TDGuide = { open, close, missing, _list: all, _live: live };
+  window.TDGuide = { open, close, missing, _list: all, _live: live, keysHelpMatchesGame };
 })();
