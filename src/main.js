@@ -7212,6 +7212,7 @@ function sayComment(text) {
   G.commentAt = now;
   if (G.commentTween) G.commentTween.stop();
   G.comment.setText(text).setVisible(true).setAlpha(0);
+  if (window.TDVoice) TDVoice.say(text);   // 🗣 read aloud (voice.js): only a line that is really being shown
   // The longest announcer lines — event names ("TRAINING CAMP HEAT — special
   // game!") and player nicknames — used to stretch clean off both sidelines
   // and land on top of the yard numbers. Shrink those to fit; short calls like
