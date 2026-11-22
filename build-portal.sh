@@ -46,6 +46,9 @@ grep -q "Phaser" "$OUT/phaser.min.js" || { echo "❌ Phaser download looks wrong
 
 echo "🔌 cutting the outside connections…"
 # 1) Phaser from the CDN -> the copy sitting right next to index.html
+# 🪙 Max's private coin link (src/devcoins.js) is for HIS device only: it never ships to a portal.
+rm -f "$OUT/src/devcoins.js"
+perl -ni -e 'print unless /src\/devcoins\.js/' "$OUT/index.html"
 perl -pi -e 's{<script src="https://cdn\.jsdelivr\.net/npm/phaser\@3\.87\.0/dist/phaser\.min\.js"></script>}{<script src="phaser.min.js"></script>}' "$OUT/index.html"
 # 2) the 🌍 world-tracker panel (it uses the counter services + links to the dev dashboard)
 perl -0pi -e 's{  <!-- \xF0\x9F\x8C\x8D The world tracker.*?</aside>\n}{  <!-- World tracker removed for the portal build (it needs outside services). -->\n}s' "$OUT/index.html"
