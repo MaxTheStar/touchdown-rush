@@ -108,11 +108,18 @@
     return true;
   }
 
+  // ---- 🎮 BUTTON PROMPTS (Round 30, pick ⑧): `body.padmode` while the controller was the LAST thing used; a finger, the mouse or a key takes it straight off ----
+  let padmode = false;
+  const setPadMode = on => { if (on !== padmode) { padmode = on; if (document.body) document.body.classList.toggle('padmode', on); } };
+  ['pointerdown', 'touchstart', 'mousedown', 'keydown'].forEach(ev => window.addEventListener(ev, e => { if (e.isTrusted !== false) setPadMode(false); }, true));
+  const usedNow = p => p.buttons.some(b => b && (b.pressed || b.value > 0.5)) || Math.abs(p.axes[0] || 0) > DZ || Math.abs(p.axes[1] || 0) > DZ;
+
   // one frame of input (also callable by hand for tests)
   function poll() {
     const t = td(), ps = pads(), p = ps[0] || null;
     if (t && t.G) pollP2(t, ps[1] || null);          // 👥 player 2's pad (two-player mode only), handled first so no early return below can skip it
     if (!t || !t.G || !p) return false;
+    if (enabled && ps.some(usedNow)) setPadMode(true);      // 🎮 the controller was just used: show its letters
     if (!enabled) { release(t); prev = p.buttons.map(b => !!b.pressed); return false; }
     const G = t.G, touch = t.touch;
     const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
@@ -199,5 +206,5 @@
       hint: 'The controller buzzes on big hits, touchdowns, turnovers and flags.', onChange: v => { rumbleOn = !!v; } });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-  window.TDPad = { poll, pad, pads, start, stop, isRunning: () => running, rumble, _rumbleCalls: () => rumbleCalls };
+  window.TDPad = { poll, pad, pads, padMode: () => padmode, start, stop, isRunning: () => running, rumble, _rumbleCalls: () => rumbleCalls };
 })();
