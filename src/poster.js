@@ -256,6 +256,32 @@
     if (note) note.innerHTML = 'Saved! Check your downloads &mdash; on an iPad, press and hold the poster instead.';
   }
 
+  // 📤 SHARE (Round 29, pick ③): the phone's own share sheet, with the poster picture when the browser can share a file, else just the words and the game's
+  // link, else the words are COPIED. Nothing is uploaded by the game; the share sheet belongs to the phone. A person closing the sheet (AbortError) is
+  // not a failure and says nothing. The text carries no name beyond the team name already on the poster.
+  async function sharePoster() {
+    if (!lastUrl) return;
+    const d = gather();
+    const note = $('poster-note');
+    const say = t => { if (note) note.innerHTML = t; };
+    const link = 'https://maxthestar.github.io/touchdown-rush/';
+    const text = 'My Touchdown Fun team: ' + (d.name || 'my team') + '! Can you beat us? ' + link;
+    try {
+      if (navigator.canShare && navigator.share) {
+        try {
+          const blob = await (await fetch(lastUrl)).blob();
+          const file = new File([blob], (d.name || 'my-team').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-poster.png', { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: text }); return; }
+        } catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      if (navigator.share) { await navigator.share({ title: 'Touchdown Fun', text: text }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try {      // no share sheet here (most computers): copy the words
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); say('Copied! Paste it into a message to share.'); return; }
+    } catch (e) {}
+    say('Sharing is not available here. Press and hold the poster to save it, then send it yourself.');
+  }
+
   function gameKeyboard(on) { try { window.game.input.keyboard.enabled = on; } catch (e) {} }
   function open() {
     render();
@@ -272,12 +298,13 @@
     tap('open-poster', open);
     tap('poster-close', close);
     tap('poster-save', savePoster);
+    tap('poster-share', sharePoster);
     tap('poster-refresh', render);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
   else wire();
 
-  window.TDPoster = {
+  window.TDPoster = { _share: sharePoster,
     open, close, render, save: savePoster,
     _gather: gather,
     _draw: () => draw(gather()),
