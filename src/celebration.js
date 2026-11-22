@@ -57,7 +57,7 @@
   }
   let state = load();
 
-  const reduce = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = () => (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.TDSaver && TDSaver.on());   // 🔋 battery saver counts too
   const coins = () => (window.TDShop && TDShop.coins) ? TDShop.coins() : 0;
 
   // ---- Build the splashy burst (used both in-game and in the preview) -----

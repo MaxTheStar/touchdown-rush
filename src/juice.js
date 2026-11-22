@@ -43,13 +43,13 @@
   // A short, sharp camera kick. `amount` is a fraction of the screen, so
   // 0.01 is a 1% nudge — enough to feel, small enough to stay readable.
   function shake(scene, ms, amount) {
-    if (REDUCED) return;
+    if (REDUCED || (window.TDSaver && TDSaver.on())) return;   // 🔋 battery saver trims it the same way
     const cam = camOf(scene);
     if (cam && cam.shake) cam.shake(ms, amount);
   }
 
   function flash(scene, ms, r, g, b) {
-    if (REDUCED) return;
+    if (REDUCED || (window.TDSaver && TDSaver.on())) return;   // 🔋 battery saver trims it the same way
     const cam = camOf(scene);
     if (cam && cam.flash) cam.flash(ms, r, g, b);
   }

@@ -203,7 +203,7 @@
 
     // If this device asked for "reduce motion", we stop here — you still
     // get the label + the counter, just not the flying-coins party.
-    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const calm = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.TDSaver && TDSaver.on());   // 🔋 battery saver counts too
     if (calm) return;
 
     // A dozen coins spraying up and out in random directions, each one

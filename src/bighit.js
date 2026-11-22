@@ -100,7 +100,7 @@
     //    ⚠️ Capped at 0.011 — the same ceiling the touchdown kick uses. Past
     //    that the field stops being readable, and a hit that hides the play is
     //    worse than no hit at all.
-    if (!REDUCED) {
+    if (!REDUCED && !(window.TDSaver && TDSaver.on())) {   // 🔋 battery saver trims it the same way
       const cam = scene.cameras && scene.cameras.main;
       if (cam && cam.shake) cam.shake(90 + 90 * f, Math.min(0.011, 0.0035 + 0.0075 * f));
     }
