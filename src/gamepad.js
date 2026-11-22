@@ -26,9 +26,23 @@
   const td = () => window.__td || null;
   let enabled = true, running = false, prev = [], navAt = 0, hadDir = false;
 
-  function pad() {
-    try { const ps = navigator.getGamepads ? navigator.getGamepads() : []; for (const p of ps) if (p && p.connected) return p; } catch (e) {}
-    return null;
+  // 👥 SECOND CONTROLLER (Round 30, pick ⑤): the connected controllers in the order the browser numbers them. The FIRST is always player 1 (everything above this
+  // line of the file, unchanged); the SECOND drives player 2 in TWO-PLAYER mode only. In one-player mode a second controller is simply ignored: it can never
+  // drive player 1, so two pads can never fight over the same runner.
+  function pads() {
+    const out = [];
+    try { const ps = navigator.getGamepads ? navigator.getGamepads() : []; for (const p of ps) if (p && p.connected) out.push(p); } catch (e) {}
+    return out;
+  }
+  function pad() { return pads()[0] || null; }
+  let p2Held = false;
+  function pollP2(t, p2) {
+    const G = t.G, touch2 = t.touch2; if (!touch2) return;
+    const on = !!(p2 && enabled && G && G.twoPlayer);
+    if (!on) { if (p2Held) { touch2.left = touch2.right = touch2.up = touch2.down = false; p2Held = false; } return; }
+    const ax = p2.axes[0] || 0, ay = p2.axes[1] || 0;
+    const L = ax < -DZ || down(p2, 14), R = ax > DZ || down(p2, 15), U = ay < -DZ || down(p2, 12), D = ay > DZ || down(p2, 13);
+    touch2.left = L; touch2.right = R && !L; touch2.up = U; touch2.down = D && !U; p2Held = L || R || U || D;
   }
   const down = (p, i) => !!(p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5));
   function edge(p, i) { const d = down(p, i); const e = d && !prev[i]; return e; }
@@ -96,7 +110,8 @@
 
   // one frame of input (also callable by hand for tests)
   function poll() {
-    const t = td(), p = pad();
+    const t = td(), ps = pads(), p = ps[0] || null;
+    if (t && t.G) pollP2(t, ps[1] || null);          // 👥 player 2's pad (two-player mode only), handled first so no early return below can skip it
     if (!t || !t.G || !p) return false;
     if (!enabled) { release(t); prev = p.buttons.map(b => !!b.pressed); return false; }
     const G = t.G, touch = t.touch;
@@ -184,5 +199,5 @@
       hint: 'The controller buzzes on big hits, touchdowns, turnovers and flags.', onChange: v => { rumbleOn = !!v; } });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-  window.TDPad = { poll, pad, start, stop, isRunning: () => running, rumble, _rumbleCalls: () => rumbleCalls };
+  window.TDPad = { poll, pad, pads, start, stop, isRunning: () => running, rumble, _rumbleCalls: () => rumbleCalls };
 })();
