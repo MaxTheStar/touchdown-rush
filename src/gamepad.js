@@ -11,6 +11,9 @@
 //     Y  (top)             hand it off  ·  4th down: ④ QB sneak
 //     LB / RB / RT         throw to receiver 1 / 2 / 3          LT  pitch          Back/Select  throw it away  ·  4th down: take a safety
 //     L3 (stick click)     QB slide                              R3  pump fake      Start  pause / resume
+// 🎮 POP-UPS (Round 29): while any pop-up is open (Season, Settings, the pause card, the scouting card, the speech and mercy cards...) the stick/D-pad moves a
+//    gold highlight between its buttons (it starts on the primary one, such as LET'S PLAY), A presses the highlighted button, B closes the pop-up, Start still
+//    resumes a paused game; the field gets no input meanwhile.
 // ⚠️ WHAT I COULD NOT TEST: there is no controller on this computer, so this was checked against the browser's real Gamepad API with a STAND-IN pad object
 //    (a fake `navigator.getGamepads()`), not a physical one. Button numbers follow the W3C "standard" mapping; an odd controller that does not report it may
 //    have its buttons on different numbers. Say so plainly.
@@ -33,6 +36,63 @@
   const press = id => { const el = document.getElementById(id); if (el) el.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true })); };
   const overlayOpen = () => [...document.querySelectorAll('.ov')].some(o => o.style.display === 'flex' || getComputedStyle(o).display === 'flex');
 
+  // ---- 🎮 POP-UPS (Round 29, pick ⑧): a controller could play a drive but never open the Season screen, answer a card or close anything. While any
+  // pop-up is open the stick/D-pad moves a gold highlight between its buttons, A presses the highlighted one, B closes the pop-up. The game itself gets
+  // no input meanwhile (a pop-up is a pause for the fingers too). The highlight starts on the pop-up's PRIMARY button (`.yes`, e.g. LET'S PLAY) when it has one.
+  const OVERLAYS = '.ov, #sp-panel, #mr-panel, #ha-panel, #sc-modal';
+  const FOCUSABLE = '.ov-btn, .st-sw, .st-op, [data-act], [data-a], [data-pred], [data-ct], .dr-mini, .dr-tab, button, .choice';
+  const shown = el => { if (!el) return false; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  function topOverlay() {
+    let best = null, bz = -1;
+    document.querySelectorAll(OVERLAYS).forEach((el, i) => { if (!shown(el) || el.closest('#hud')) return; const z = (parseInt(getComputedStyle(el).zIndex, 10) || 0) * 1000 + i; if (z >= bz) { bz = z; best = el; } });
+    return best;
+  }
+  const focusables = ov => [...ov.querySelectorAll(FOCUSABLE)].filter(e => shown(e) && !e.closest('[disabled]'));
+  let focusEl = null, focusIdx = -1, navDirAt = 0, styled = false;
+  function styleOnce() {
+    if (styled) return; styled = true;
+    const st = document.createElement('style'); st.textContent = '.pad-focus{outline:3px solid #ffd60a !important;outline-offset:2px;box-shadow:0 0 14px rgba(255,214,10,.8) !important}';
+    document.head.appendChild(st);
+  }
+  function setFocus(el) { if (focusEl && focusEl !== el) focusEl.classList.remove('pad-focus'); focusEl = el; if (el) { styleOnce(); el.classList.add('pad-focus'); try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {} } }
+  function clearFocus() { if (focusEl) focusEl.classList.remove('pad-focus'); focusEl = null; focusIdx = -1; }
+  function overlayStep(ov, dir) {
+    const f = focusables(ov); if (!f.length) return;
+    let i = f.indexOf(focusEl);
+    if (i < 0) { const prim = f.findIndex(e => e.classList.contains('yes')); i = prim >= 0 ? prim : 0; if (!dir) { setFocus(f[i]); return; } }
+    else i = (i + dir + f.length) % f.length;
+    focusIdx = i; setFocus(f[i]);
+  }
+  function overlayPress(ov) {
+    const f = focusables(ov); const el = (focusEl && f.indexOf(focusEl) >= 0) ? focusEl : (f.find(e => e.classList.contains('yes')) || f[0]);
+    if (!el) return;
+    focusIdx = f.indexOf(el);
+    el.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    if (typeof el.onclick === 'function') el.click();
+    // many pop-ups REBUILD their buttons when one is pressed (the settings rows, the season screen): the highlighted element is then a detached copy.
+    // Put the highlight back on the same POSITION in the new list so a second A press hits the same switch, not the first one.
+    if (focusEl && !focusEl.isConnected && focusIdx >= 0) { const f2 = focusables(ov); if (f2.length) setFocus(f2[Math.min(focusIdx, f2.length - 1)]); }
+  }
+  function overlayClose(ov) {
+    const c = ov.querySelector('[id$="-close"]') || focusables(ov).find(e => /^\W*(close|done|back|ok|cancel|keep playing|skip|no|resume)\b/i.test(e.textContent.trim()));
+    if (c) { c.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true })); if (typeof c.onclick === 'function') c.click(); }
+  }
+  // returns true if a pop-up took this frame's input
+  function overlayFrame(p, A, B, L, R, U, D) {
+    const ov = topOverlay();
+    if (!ov) { clearFocus(); return false; }
+    // Start still resumes a paused game (the pause card is itself a pop-up, so it would otherwise swallow the button that opened it)
+    if (edge(p, 9) && window.TDPause && TDPause.isPaused && TDPause.isPaused()) { try { TDPause.resume(); } catch (e) {} return true; }
+    if (focusEl && !focusEl.isConnected && focusIdx >= 0) { const f3 = focusables(ov); if (f3.length) setFocus(f3[Math.min(focusIdx, f3.length - 1)]); }   // a rebuild between frames
+    if (focusEl && !ov.contains(focusEl)) clearFocus();
+    if (!focusEl) overlayStep(ov, 0);
+    const now = performance.now(), dir = (L || U) ? -1 : (R || D) ? 1 : 0;
+    if (dir && now - navDirAt > 230) { navDirAt = now; overlayStep(ov, dir); }
+    if (!dir) navDirAt = 0;
+    if (A) overlayPress(ov); else if (B) overlayClose(ov);
+    return true;
+  }
+
   // one frame of input (also callable by hand for tests)
   function poll() {
     const t = td(), p = pad();
@@ -42,6 +102,8 @@
     const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     const L = ax < -DZ || down(p, 14), R = ax > DZ || down(p, 15), U = ay < -DZ || down(p, 12), D = ay > DZ || down(p, 13);
     const A = edge(p, 0), B = edge(p, 1), X = edge(p, 2), Y = edge(p, 3);
+    // ---- a pop-up is open: the pad drives IT, and nothing else gets input ----
+    if (overlayFrame(p, A, B, L, R, U, D)) { release(t); keep(p); return true; }
     // ---- menus first: a pad must be able to start and leave a game ----
     if (G.state === 'menu') {
       release(t);

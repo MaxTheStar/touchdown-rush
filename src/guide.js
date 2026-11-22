@@ -86,7 +86,8 @@
       ['Y', 'Hand it off · 4th down: QB sneak'],
       ['LB  RB  RT', 'Throw to receiver 1, 2, 3'],
       ['LT', 'Pitch'], ['Back / Select', 'Throw it away · 4th down: take a safety'],
-      ['L3  R3', 'QB slide · pump fake'], ['Start', 'Pause / resume']
+      ['L3  R3', 'QB slide · pump fake'], ['Start', 'Pause / resume'],
+      ['In a pop-up', 'Stick / D-pad moves the gold highlight, A presses it, B closes the pop-up']
     ]]
   ];
   function keysHTML() {
