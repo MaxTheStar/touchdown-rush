@@ -480,6 +480,31 @@
     return `<div class="se-cap">🚑 INJURY REPORT</div><div class="se-ticker" style="display:block;padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px">${body}</div>`;
   }
 
+  // 📅 SEASON RECAP (Round 29, pick ④ replaced Favorite Plays): when the year is over, one card looks back at your 6 REGULAR-SEASON games: the record and
+  // points, your biggest win, your toughest loss and your longest winning run. DISPLAY ONLY, from S.results (the playoff games are not in that list, so
+  // the card says "regular season"). Nothing is saved or read back.
+  function recapData(results) {
+    const r = (results || []).filter(x => x && typeof x.ys === 'number' && typeof x.os === 'number');
+    if (!r.length) return null;
+    let w = 0, l = 0, pf = 0, pa = 0, run = 0, best = 0, bigW = null, bigL = null;
+    r.forEach(g => {
+      const m = g.ys - g.os; pf += g.ys; pa += g.os;
+      if (m > 0) { w++; run++; best = Math.max(best, run); if (!bigW || m > bigW.m) bigW = { m, opp: g.opp, ys: g.ys, os: g.os }; }
+      else { l++; run = 0; if (!bigL || m < bigL.m) bigL = { m, opp: g.opp, ys: g.ys, os: g.os }; }
+    });
+    return { g: r.length, w, l, pf, pa, streak: best, bigW, bigL };
+  }
+  function recapHTML() {
+    if (!S || (S.phase !== 'champion' && S.phase !== 'eliminated')) return '';
+    const d = recapData(S.results); if (!d) return '';
+    const line = (ic, txt) => `<div style="padding:3px 0">${ic} ${txt}</div>`;
+    return `<div class="se-cap">📅 REGULAR SEASON RECAP</div><div class="se-ticker" style="display:block;padding:8px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px;text-align:left">` +
+      line('📊', `<b>${d.w}-${d.l}</b> · scored ${d.pf}, allowed ${d.pa} (${d.pf - d.pa >= 0 ? '+' : ''}${d.pf - d.pa})`) +
+      (d.bigW ? line('💥', `Biggest win: <b>${d.bigW.ys}-${d.bigW.os}</b> over ${d.bigW.opp} (+${d.bigW.m})`) : '') +
+      (d.bigL ? line('😤', `Toughest loss: <b>${d.bigL.ys}-${d.bigL.os}</b> to ${d.bigL.opp} (${d.bigL.m})`) : '') +
+      (d.streak >= 2 ? line('🔥', `Longest winning run: <b>${d.streak}</b> in a row`) : '') + `</div>`;
+  }
+
   function playoffHTML() {
     if (S.phase === 'regular') return '';
     if (S.phase === 'champion')
@@ -508,7 +533,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + injuryHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + (window.TDContract ? TDContract.html() : '');
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + injuryHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + recapHTML() + (window.TDContract ? TDContract.html() : '');
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
@@ -562,6 +587,7 @@
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
     tradeOpen, tradeNote,       // ⏰ the trade deadline (draft.js asks before every trade)
+    _recap: recapData,
     predict: makePrediction, _settle: settlePrediction,   // 🔮 (_settle for tests)
     hasSeason: () => !!load(),  // is a season in progress?
     // 📊 LEAGUE LEADERS (leaders.js) reads the whole table: who is in the
