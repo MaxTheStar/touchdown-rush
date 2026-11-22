@@ -978,7 +978,7 @@ function controlBallCarrier() {
   // 💪 SECOND EFFORT (churn.js): wrapped up, the runner stands and drives; SPACE/HIKE is the whole input
   if (window.TDChurn && TDChurn.pending()) {
     p.setVelocity(0, 0);
-    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap) || Phaser.Input.Keyboard.JustDown(keys.move)) TDChurn.tap();   // SPACE or E drives the legs
+    if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap) || consume('move') || Phaser.Input.Keyboard.JustDown(keys.move)) TDChurn.tap();   // SPACE or E drives the legs
     return;
   }
   // 🌀 THE BOOTLEG (bootleg.js): for the first half-second the quarterback rolls out on his own, away from the back
@@ -1029,7 +1029,7 @@ function controlBallCarrier() {
   // gets hurdled, otherwise a man closing from the side gets juked. No tiny button to chase.
   // ⌨️ E = the runner's BREAK-THE-TACKLE key: the same move SPACE makes after the snap (hurdle a man dead ahead, otherwise juke one closing from the
   // side), on its own key so it is not tied to the big HIKE button. It never does the hook-and-lateral pitch (that stays on SPACE).
-  if (Phaser.Input.Keyboard.JustDown(keys.move)) { if (hurdleState()) hurdle(); else if (jukeState()) juke(); }
+  if (consume('move') || Phaser.Input.Keyboard.JustDown(keys.move)) { if (hurdleState()) hurdle(); else if (jukeState()) juke(); }   // (consume('move') = a controller's B button, gamepad.js)
   if (consume('snap') || Phaser.Input.Keyboard.JustDown(keys.snap)) { if (window.TDHookLat && TDHookLat.ready()) pitch(); else if (hurdleState()) hurdle(); else if (jukeState()) juke(); }
 }
 
