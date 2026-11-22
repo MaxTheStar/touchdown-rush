@@ -483,6 +483,26 @@
     return `<div class="se-cap">🚑 INJURY REPORT</div><div class="se-ticker" style="display:block;padding:6px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px">${body}</div>`;
   }
 
+  // 🧮 STRENGTH OF SCHEDULE (Round 30, pick ②): one line under your schedule saying how hard the games still to come are: your remaining opponents' COMBINED
+  // record right now. DISPLAY ONLY, computed from the standings the season already has (`S.rec`) and the fixtures (`pairFor`); it reads nothing back into the game.
+  // EASY under .400, HARD over .600, else AVERAGE; nothing is shown when no league games remain or when no opponent has played yet (a 0-0 table says nothing).
+  function sosData() {
+    if (!S || S.phase !== 'regular') return null;
+    let w = 0, l = 0, n = 0;
+    for (let wk = S.week; wk <= REG_WEEKS; wk++) {
+      const opp = pairFor(wk, S.you); if (!opp || !S.rec[opp]) continue;
+      w += S.rec[opp].w; l += S.rec[opp].l; n++;
+    }
+    if (!n || w + l === 0) return null;
+    const pct = w / (w + l);
+    return { n, w, l, pct, label: pct < 0.4 ? 'EASY' : pct > 0.6 ? 'HARD' : 'AVERAGE' };
+  }
+  function sosHTML() {
+    const d = sosData(); if (!d) return '';
+    const col = d.label === 'EASY' ? '#7dff9b' : d.label === 'HARD' ? '#ff9a9a' : '#cbd5e1';
+    return `<div style="font:700 11px Arial;color:#aab6c8;margin:-2px 0 8px;text-align:center">🧮 ${d.n} game${d.n === 1 ? '' : 's'} to go · opponents are <b>${d.w}-${d.l}</b> combined · <b style="color:${col}">${d.label}</b></div>`;
+  }
+
   // 📅 SEASON RECAP (Round 29, pick ④ replaced Favorite Plays): when the year is over, one card looks back at your 6 REGULAR-SEASON games: the record and
   // points, your biggest win, your toughest loss and your longest winning run. DISPLAY ONLY, from S.results (the playoff games are not in that list, so
   // the card says "regular season"). Nothing is saved or read back.
@@ -537,7 +557,7 @@
       return;
     }
 
-    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + injuryHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + tickerHTML() + powerHTML() + playoffHTML() + recapHTML() + (window.TDContract ? TDContract.html() : '');
+    body.innerHTML = (S.byeNote ? `<div class="se-cap" style="color:#9be7ff">${S.byeNote}</div>` : '') + headerHTML() + injuryHTML() + (tradeNote() ? `<div class="se-cap" style="color:#ffd60a">${tradeNote()}</div>` : '') + predictHTML() + standingsHTML() + scheduleHTML() + sosHTML() + tickerHTML() + powerHTML() + playoffHTML() + recapHTML() + (window.TDContract ? TDContract.html() : '');
     const ng = nextGame();
     playBtn.textContent = ng ? ng.label : 'NEW SEASON';
   }
@@ -591,7 +611,7 @@
     open,                       // show the season screen (main.js after a season game)
     reportResult,               // main.js: here's how your season game ended
     tradeOpen, tradeNote,       // ⏰ the trade deadline (draft.js asks before every trade)
-    _recap: recapData,
+    _recap: recapData, _sos: sosData,
     predict: makePrediction, _settle: settlePrediction,   // 🔮 (_settle for tests)
     hasSeason: () => !!load(),  // is a season in progress?
     // 📊 LEAGUE LEADERS (leaders.js) reads the whole table: who is in the
