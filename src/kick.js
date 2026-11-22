@@ -525,26 +525,36 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
     g.fillStyle(0x000000, 0.45); g.fillRoundedRect(x, top, w, h, 6);
     const level = (K.state === 'power') ? K.power : K.lockedPower;
     const fillH = h * level;
+    // 🎨 COLOR-BLIND KICK BAR (Round 29, pick ⑥): the bar leaned on green vs yellow (reach zone / fill) and orange vs green (punt zones), which red-green colour
+    // blindness cannot tell apart. With the ⚙️ switch on, the SAME three roles use the Okabe-Ito safe colours (reached = sky blue, not yet = orange, the
+    // touchback zone = vermillion) AND a white tick line is drawn at every threshold, so the boundary is a SHAPE, not only a colour. Switch off = the old colours exactly.
+    const cb = !!(window.TDColorBlind && TDColorBlind.on());
+    const GOOD = cb ? 0x56B4E9 : 0x2ecc40, WAIT = cb ? 0xE69F00 : 0xffcc00, OVER = cb ? 0xD55E00 : 0xff9b3d, COFFIN = cb ? 0x56B4E9 : 0x3ddc84;
     if (K.goalPower != null) {
       // 🦶 A PUNT has no uprights to reach. What the bar shows instead is where the
       // goal line is: power in the orange zone puts it in the end zone — a
       // TOUCHBACK, they start at their 20 — so a bigger punt is not always better.
       const gp = clamp(K.goalPower, 0, 1);
       const zoneBot = top + h * (1 - gp);
-      g.fillStyle(0xff9b3d, 0.38); g.fillRect(x, top, w, zoneBot - top);
+      g.fillStyle(OVER, cb ? 0.5 : 0.38); g.fillRect(x, top, w, zoneBot - top);
       if (K.coffin) {                    // 🎯 the green coffin-corner band, just under the orange
         const cLo = clamp(K.coffin.lo, 0, 1), cHi = clamp(K.coffin.hi, 0, 1);
-        g.fillStyle(0x3ddc84, 0.55); g.fillRect(x, top + h * (1 - cHi), w, h * (cHi - cLo));
+        g.fillStyle(COFFIN, 0.55); g.fillRect(x, top + h * (1 - cHi), w, h * (cHi - cLo));
       }
-      g.fillStyle(level > gp ? 0xff9b3d : 0xffcc00, 1);
+      g.fillStyle(level > gp ? OVER : WAIT, 1);
     } else {
       // Green "reach zone": stop the bar in here (or higher) to reach the goal.
       const zoneBot = top + h * (1 - K.powerToReach);
-      g.fillStyle(0x2ecc40, 0.30); g.fillRect(x, top, w, zoneBot - top);
-      g.fillStyle(level >= K.powerToReach ? 0x2ecc40 : 0xffcc00, 1);
+      g.fillStyle(GOOD, 0.30); g.fillRect(x, top, w, zoneBot - top);
+      g.fillStyle(level >= K.powerToReach ? GOOD : WAIT, 1);
     }
     g.fillRoundedRect(x, bottom - fillH, w, fillH, 6);
     g.lineStyle(2, 0xffffff, 0.8); g.strokeRoundedRect(x, top, w, h, 6);
+    if (cb) {                              // 🎨 ticks again on top of the fill, so a rising bar never hides a threshold
+      const t2 = yy => { g.fillStyle(0xffffff, 1); g.fillRect(x - 5, yy - 1.5, w + 10, 3); };
+      if (K.goalPower != null) { t2(top + h * (1 - clamp(K.goalPower, 0, 1))); if (K.coffin) { t2(top + h * (1 - clamp(K.coffin.hi, 0, 1))); t2(top + h * (1 - clamp(K.coffin.lo, 0, 1))); } }
+      else t2(top + h * (1 - K.powerToReach));
+    }
   }
 
   function updateHUD() {
@@ -635,11 +645,11 @@ window.KickGame = (function () {  // (🌬 READ THE WIND, Round 20 pick ③, liv
       if (K.coffin) {                    // 🎯 …and the green band's label, just under it
         const cm = clamp((K.coffin.lo + K.coffin.hi) / 2, 0, 1);
         keep(scene.add.text(66, 300 + (636 - 300) * (1 - cm), 'POOCH', {
-          fontFamily: 'Arial Black, Arial', fontSize: '11px', color: '#7dffb0',
+          fontFamily: 'Arial Black, Arial', fontSize: '11px', color: (window.TDColorBlind && TDColorBlind.on()) ? '#9fdcff' : '#7dffb0',
           stroke: '#000', strokeThickness: 3, align: 'left' }).setOrigin(0, 0.5));
       }
       keep(scene.add.text(66, 300 + (636 - 300) * (1 - gp) / 2, K.mode === 'kickoff' ? 'END\nZONE' : 'TOUCH-\nBACK', {
-        fontFamily: 'Arial Black, Arial', fontSize: '11px', color: '#ffb36b',
+        fontFamily: 'Arial Black, Arial', fontSize: '11px', color: (window.TDColorBlind && TDColorBlind.on()) ? '#ff9a66' : '#ffb36b',
         stroke: '#000', strokeThickness: 3, align: 'left' }).setOrigin(0, 0.5));
     }
   }
