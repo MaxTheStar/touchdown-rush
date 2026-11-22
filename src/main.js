@@ -4875,6 +4875,8 @@ function endBreak() {
   if (G.state !== 'qbreak') return;
   if (G.scene.time.now < G.breakReadyAt) return;   // too soon — let the break land
   if (G.breakKind === 'half' && window.TDHalfAdj && TDHalfAdj.gate(() => endBreak())) return;   // 🗣 the halftime adjustment panel holds the second half until you choose
+  // 🏁 MERCY RULE (mercy.js): lead by 35+ going into the 3rd or 4th quarter and you may end it here. KEEP asks endBreak again (it only asks once).
+  if (window.TDMercy && TDMercy.gate(() => endBreak(), () => { if (window.TDDrives) TDDrives.hideBreakButton(); destroyBreakOverlay(); G.breakResume = null; endGame(); })) return;
   if (window.TDDrives) TDDrives.hideBreakButton();
   destroyBreakOverlay();
   const resume = G.breakResume;
@@ -5526,7 +5528,8 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   if (window.TDPersonnel) TDPersonnel.newGame(); // 🧑‍🤝‍🧑 everyone back to ⚖️ REGULAR
   if (window.TDWin) TDWin.newGame();             // 📈 a fresh 50/50 and an empty swing chart
   if (window.TDGas) TDGas.newGame();
-  if (window.TDChurn) TDChurn.newGame();                 // 💪 one second effort a quarter, fresh each game             // 😮‍💨 …and a full tank
+  if (window.TDChurn) TDChurn.newGame();
+  if (window.TDMercy) TDMercy.newGame();                  // 🏁 a fresh game asks again                 // 💪 one second effort a quarter, fresh each game             // 😮‍💨 …and a full tank
   if (window.TDHot) TDHot.newGame();             // 🔥 nobody is hot yet
   if (window.TDToss) TDToss.newGame();           // 🪙 a fresh coin toss
   updateTimeoutBtn(); updateFormationBtn();
