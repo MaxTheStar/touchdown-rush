@@ -39,8 +39,9 @@
   // ---- 🎮 POP-UPS (Round 29, pick ⑧): a controller could play a drive but never open the Season screen, answer a card or close anything. While any
   // pop-up is open the stick/D-pad moves a gold highlight between its buttons, A presses the highlighted one, B closes the pop-up. The game itself gets
   // no input meanwhile (a pop-up is a pause for the fingers too). The highlight starts on the pop-up's PRIMARY button (`.yes`, e.g. LET'S PLAY) when it has one.
-  const OVERLAYS = '.ov, #sp-panel, #mr-panel, #ha-panel, #sc-modal';
-  const FOCUSABLE = '.ov-btn, .st-sw, .st-op, [data-act], [data-a], [data-pred], [data-ct], .dr-mini, .dr-tab, button, .choice';
+  const OVERLAYS = '.ov, #sp-panel, #mr-panel, #ha-panel, #sc-modal, #toss-panel';   // #toss-panel = the coin toss card (found by the final check: it is not an .ov, and G.state stays 'menu' under it)
+  const FOCUSABLE = '.ov-btn, .st-sw, .st-op, [data-act], [data-a], [data-pred], [data-ct], .dr-mini, .dr-tab, button, .choice, .ts-btn, .ts-opt';   // .ts-* = the coin toss card
+  const isPrimary = e => e.classList.contains('yes') || e.classList.contains('go');
   const shown = el => { if (!el) return false; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   function topOverlay() {
     let best = null, bz = -1;
@@ -59,12 +60,12 @@
   function overlayStep(ov, dir) {
     const f = focusables(ov); if (!f.length) return;
     let i = f.indexOf(focusEl);
-    if (i < 0) { const prim = f.findIndex(e => e.classList.contains('yes')); i = prim >= 0 ? prim : 0; if (!dir) { setFocus(f[i]); return; } }
+    if (i < 0) { const prim = f.findIndex(isPrimary); i = prim >= 0 ? prim : 0; if (!dir) { setFocus(f[i]); return; } }
     else i = (i + dir + f.length) % f.length;
     focusIdx = i; setFocus(f[i]);
   }
   function overlayPress(ov) {
-    const f = focusables(ov); const el = (focusEl && f.indexOf(focusEl) >= 0) ? focusEl : (f.find(e => e.classList.contains('yes')) || f[0]);
+    const f = focusables(ov); const el = (focusEl && f.indexOf(focusEl) >= 0) ? focusEl : (f.find(isPrimary) || f[0]);
     if (!el) return;
     focusIdx = f.indexOf(el);
     el.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
@@ -109,7 +110,9 @@
       release(t);
       const now = performance.now();
       if ((L || R) && now - navAt > 280) { navAt = now; if (t.menuNav) t.menuNav(L ? -1 : 1); }
-      if (A && !overlayOpen() && t.startGameWithTeam) t.startGameWithTeam();
+      // ⚠️ START ONLY FROM THE REAL FRONT SCREEN (body.menu). G.state is ALSO 'menu' while the scouting card and the coin toss hold the kickoff, and without this guard
+      // an A press on one of those restarted the whole game (the final verification caught it: scouting card, toss, new game, scouting card, forever).
+      if (A && !overlayOpen() && document.body.classList.contains('menu') && t.startGameWithTeam) t.startGameWithTeam();
       keep(p); return true;
     }
     if (G.state === 'gameover') { release(t); if (A && t.returnToMenuFromGameOver) t.returnToMenuFromGameOver(); keep(p); return true; }
