@@ -147,6 +147,26 @@
   // let go of the direction flags (so a stick released, or a pad unplugged, never leaves the runner walking)
   function release(t) { if (hadDir) { const touch = t.touch; touch.left = touch.right = touch.up = touch.down = false; hadDir = false; } }
 
+  // ---- 📳 RUMBLE (Round 30, pick ③): the same events haptics.js buzzes a phone for (a hit, a touchdown, a turnover, a flag) make the controller rumble ----
+  // Chrome/Edge: `pad.vibrationActuator.playEffect('dual-rumble', ...)`; Firefox: `pad.hapticActuators[0].pulse(strength, ms)`. A pad with neither does NOTHING and
+  // throws nothing. ⚠️ Own Settings switch (default ON; inert without a pad), at most one rumble per 120 ms so a pile of events never makes it buzz continuously.
+  const RUMBLE = { hit: { ms: 70, strong: 0.35, weak: 0.5 }, td: { ms: 450, strong: 0.9, weak: 0.9 }, turnover: { ms: 260, strong: 0.8, weak: 0.4 }, flag: { ms: 160, strong: 0.2, weak: 0.7 } };
+  let rumbleOn = true, lastRumble = 0, rumbleCalls = 0;
+  function rumble(kind) {
+    if (!rumbleOn) return false;
+    const p = pad(); if (!p) return false;
+    const now = performance.now(); if (now - lastRumble < 120) return false;
+    const r = RUMBLE[kind] || RUMBLE.hit;
+    try {
+      if (p.vibrationActuator && typeof p.vibrationActuator.playEffect === 'function') {
+        p.vibrationActuator.playEffect('dual-rumble', { startDelay: 0, duration: r.ms, weakMagnitude: r.weak, strongMagnitude: r.strong });
+      } else if (p.hapticActuators && p.hapticActuators[0] && typeof p.hapticActuators[0].pulse === 'function') {
+        p.hapticActuators[0].pulse(Math.max(r.strong, r.weak), r.ms);
+      } else return false;
+      lastRumble = now; rumbleCalls++; return true;
+    } catch (e) { return false; }
+  }
+
   function loop() { if (!running) return; poll(); requestAnimationFrame(loop); }
   function start() {
     if (running) return; running = true; requestAnimationFrame(loop);
@@ -160,7 +180,9 @@
   function init() {
     if (window.TDSettings) TDSettings.register({ id: 'pad', label: '🎮 Controller', type: 'toggle', def: true,
       hint: 'Use a Bluetooth or USB game controller (A snaps, B breaks tackles, stick moves).', onChange: v => { enabled = !!v; } });
+    if (window.TDSettings) TDSettings.register({ id: 'rumble', label: '📳 Controller rumble', type: 'toggle', def: true,
+      hint: 'The controller buzzes on big hits, touchdowns, turnovers and flags.', onChange: v => { rumbleOn = !!v; } });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-  window.TDPad = { poll, pad, start, stop, isRunning: () => running };
+  window.TDPad = { poll, pad, start, stop, isRunning: () => running, rumble, _rumbleCalls: () => rumbleCalls };
 })();

@@ -21,6 +21,7 @@
 
   function buzz(kind) {
     calls++;
+    try { if (window.TDPad && TDPad.rumble) TDPad.rumble(kind); } catch (e) {}   // 📳 a game controller rumbles on the SAME events (gamepad.js), whatever the phone switch says
     const on = window.TDSettings ? TDSettings.get('haptics') : true;
     if (!on) return false;
     last = PATTERNS[kind] || PATTERNS.hit;
