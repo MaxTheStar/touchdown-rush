@@ -4,7 +4,7 @@
 // Twenty-one rounds of new football and nothing had ever changed how the game feels to hold, hear or see. Every comfort option lives in
 // ONE small panel, opened from the 🛍 Pro Shop (so there is no new chip on the front screen), and every option REGISTERS itself here:
 //
-//     TDSettings.register({ id, label, hint, type: 'toggle' | 'range' | 'choice', def, options?, onChange? })
+//     TDSettings.register({ id, label, hint, type: 'toggle' | 'range' | 'choice' | 'action', def, options?, onChange?, onTap?, button? })
 //     TDSettings.get(id)  /  TDSettings.set(id, value)
 //
 // One saved object ('tdr-settings'), one panel, no matter how many options there are. ⚠️ A setting that fails to load (private mode, a
@@ -40,10 +40,12 @@
       let ctl = '';
       if (it.type === 'toggle') ctl = '<div class="st-sw' + (v ? ' on' : '') + '" data-id="' + it.id + '" data-act="toggle">' + (v ? 'ON' : 'OFF') + '</div>';
       else if (it.type === 'range') ctl = '<input class="st-rg" type="range" min="0" max="100" value="' + Math.round(v * 100) + '" data-id="' + it.id + '">';
+      else if (it.type === 'action') ctl = '<div class="st-sw on" data-id="' + it.id + '" data-act="action">' + (it.button || 'OPEN') + '</div>';   // 📋 a button row (Save Code)
       else if (it.type === 'choice') ctl = '<div class="st-ch">' + it.options.map(o => '<span class="st-op' + (o.v === v ? ' on' : '') + '" data-id="' + it.id + '" data-v="' + o.v + '">' + o.label + '</span>').join('') + '</div>';
       return '<div class="st-row"><div class="st-txt"><b>' + it.label + '</b>' + (it.hint ? '<span>' + it.hint + '</span>' : '') + '</div>' + ctl + '</div>';
     }).join('');
     body.querySelectorAll('[data-act="toggle"]').forEach(el => el.addEventListener('pointerdown', e => { e.preventDefault(); set(el.dataset.id, !get(el.dataset.id)); }));
+    body.querySelectorAll('[data-act="action"]').forEach(el => el.addEventListener('pointerdown', e => { e.preventDefault(); const it = items.find(i => i.id === el.dataset.id); try { it && it.onTap && it.onTap(); } catch (x) { console.error(x); } }));
     body.querySelectorAll('.st-op').forEach(el => el.addEventListener('pointerdown', e => { e.preventDefault(); const it = items.find(i => i.id === el.dataset.id); const raw = el.dataset.v; set(el.dataset.id, it.options.find(o => String(o.v) === raw).v); }));
     body.querySelectorAll('.st-rg').forEach(el => el.addEventListener('input', () => { saved[el.dataset.id] = el.value / 100; persist(); const it = items.find(i => i.id === el.dataset.id); try { it.onChange && it.onChange(saved[el.dataset.id], false); } catch (e) {} }));
   }
