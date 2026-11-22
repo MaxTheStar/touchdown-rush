@@ -259,6 +259,8 @@
       }
 
     } else if (S.phase === 'semifinal') {
+      // 🏆 PLAYOFF RECAP (Round 30, pick ①): remember this game in its OWN list. ⚠️ NOT in `S.results`, which the rankings, tiebreakers and the regular-season recap read.
+      (S.playoffs = S.playoffs || []).push({ round: 'SEMIFINAL', opp: S.yourSemiOpp, ys: yourScore, os: oppScore, win });
       if (win) {
         S.yourBowlOpp = simGame(otherSemi()[0], otherSemi()[1]).winner;
         S.phase = 'maxbowl';
@@ -270,6 +272,7 @@
       }
 
     } else if (S.phase === 'maxbowl') {
+      (S.playoffs = S.playoffs || []).push({ round: 'MAX BOWL', opp: S.yourBowlOpp, ys: yourScore, os: oppScore, win });   // 🏆 (see above)
       if (win) { S.phase = 'champion'; S.champion = S.you; awardChampion(); }
       else { S.phase = 'eliminated'; S.champion = S.yourBowlOpp; }
     }
@@ -498,11 +501,12 @@
     if (!S || (S.phase !== 'champion' && S.phase !== 'eliminated')) return '';
     const d = recapData(S.results); if (!d) return '';
     const line = (ic, txt) => `<div style="padding:3px 0">${ic} ${txt}</div>`;
-    return `<div class="se-cap">📅 REGULAR SEASON RECAP</div><div class="se-ticker" style="display:block;padding:8px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px;text-align:left">` +
+    return `<div class="se-cap">📅 SEASON RECAP <small>(6 league games + playoffs)</small></div><div class="se-ticker" style="display:block;padding:8px 10px;margin-bottom:8px;background:rgba(255,255,255,.06);border-radius:8px;text-align:left">` +
       line('📊', `<b>${d.w}-${d.l}</b> · scored ${d.pf}, allowed ${d.pa} (${d.pf - d.pa >= 0 ? '+' : ''}${d.pf - d.pa})`) +
       (d.bigW ? line('💥', `Biggest win: <b>${d.bigW.ys}-${d.bigW.os}</b> over ${d.bigW.opp} (+${d.bigW.m})`) : '') +
       (d.bigL ? line('😤', `Toughest loss: <b>${d.bigL.ys}-${d.bigL.os}</b> to ${d.bigL.opp} (${d.bigL.m})`) : '') +
-      (d.streak >= 2 ? line('🔥', `Longest winning run: <b>${d.streak}</b> in a row`) : '') + `</div>`;
+      (d.streak >= 2 ? line('🔥', `Longest winning run: <b>${d.streak}</b> in a row`) : '') +
+      (S.playoffs || []).map(g => line(g.win ? '🏆' : '💔', `${g.round}: ${g.win ? 'won' : 'lost'} <b>${g.ys}-${g.os}</b> ${g.win ? 'over' : 'to'} ${g.opp}`)).join('') + `</div>`;
   }
 
   function playoffHTML() {
