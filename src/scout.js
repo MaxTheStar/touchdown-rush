@@ -378,6 +378,8 @@
     if (!paint(reportHTML(rep), { go: true, toggle: true, sub: 'Your coaches on this week\'s opponent.' })) return false;
     pendingDone = done;
     showModal();
+    // 🔊 READ ALOUD (Round 30, pick ⑥): the card's two plain sentences, spoken once when it opens (voice.js does nothing unless Read Aloud is on)
+    try { if (window.TDVoice) TDVoice.say('Scouting report on the ' + rep.name + '. ' + rep.leanLine + ' ' + rep.watch); } catch (e) {}
     gameKeyboard(false);       // SPACE must not start a second game behind the card
     // The safety net: if anything at all goes wrong with the buttons, the game
     // kicks off by itself rather than sitting on a field that never starts.

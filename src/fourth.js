@@ -107,6 +107,7 @@
   // ⚠️ The panel's second button is BOTH the field goal and the punt (main.js
   // relabels it), so 'kick' and 'punt' highlight the same button. Getting that
   // wrong would point at a button that is not there.
+  let lastSaid = '';
   function show(ctx) {
     const box = $('fd-advice');
     const a = advise(ctx);
@@ -115,6 +116,12 @@
         '<div class="fd-rec">' + ICON[a.pick] + ' COACH SAYS: <b>' + LABEL[a.pick] + '</b></div>' +
         '<div class="fd-why">' + String(a.why).replace(/</g, '&lt;') + '</div>';
     }
+    // 🔊 READ ALOUD: COACH SAYS (Round 30, pick ⑥): the advice is also spoken when Read Aloud is on. ⚠️ ONCE PER 4TH DOWN: `show()` can be called again for the same
+    // down (a re-draw of the panel), so it is keyed on quarter + clock + spot and a repeat is not spoken a second time. voice.js strips emoji and does nothing when off.
+    try {
+      const key = [ctx && ctx.quarter, ctx && ctx.clock, ctx && ctx.spot].join(':');
+      if (window.TDVoice && key !== lastSaid) { lastSaid = key; TDVoice.say('Coach says: ' + LABEL[a.pick] + '. ' + a.why); }
+    } catch (e) {}
     const goBtn = $('btn-go'), kickBtn = $('btn-kick');
     if (goBtn) goBtn.classList.toggle('rec', a.pick === 'go');
     if (kickBtn) kickBtn.classList.toggle('rec', a.pick !== 'go');
