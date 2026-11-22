@@ -140,6 +140,8 @@ function diff() { return DIFFICULTY[G.difficulty] || DIFFICULTY.medium; }
 // never surprises you — just like the clock flipping to the next down on TV.
 // ============================================================
 const QUARTER_SECONDS = 150;   // game-clock seconds in a quarter (2:30 arcade quarters)
+// ⏱ GAME LENGTH (gamelen.js): an EXHIBITION game may have shorter or longer quarters; every other game is always the standard length.
+function qSecs() { return (G && G.qSecs) || QUARTER_SECONDS; }
 const NUM_QUARTERS    = 4;
 // ⏱️ TWO-MINUTE DRILL (see src/drill.js): the clock it starts on, and how far
 // behind you begin. Four points is chosen on purpose — a field goal cannot
@@ -3375,7 +3377,7 @@ function tickPeriodAtBoundary() {
   // Time expired in this period.
   if (!G.overtime && G.quarter < NUM_QUARTERS) {         // Q1→Q2→Q3→Q4
     G.quarter++;
-    G.clock = QUARTER_SECONDS;
+    G.clock = qSecs();
     if (G.quarter === 3) { G.timeouts = 3; updateTimeoutBtn(); }   // ⏱ fresh timeouts each half
     return (G.quarter === 3) ? 'halftime' : 'qbreak';    // Q2 just ended = halftime
   }
@@ -5484,7 +5486,10 @@ function beginGame(team, opp, isSeason, isRival, isPlayoff, isDrill, isAllStar) 
   // Fresh scoreboard & game clock for a brand-new game.
   G.score = 0; G.oppScore = 0;
   G.pendingXP = false; G.twoPtTry = false;      // 🏈 no leftover try from a past game
-  G.quarter = 1; G.clock = QUARTER_SECONDS;
+  // ⏱ the quarter length for THIS game: the chosen length for an exhibition only (never season, playoffs, rival, boss, drill or all-star)
+  G.qSecs = QUARTER_SECONDS;
+  if (window.TDGameLen && !isSeason && !isPlayoff && !isRival && !isDrill && !isAllStar && !(opp && opp.boss)) G.qSecs = TDGameLen.seconds();
+  G.quarter = 1; G.clock = qSecs();
   G.overtime = false; G.gameOver = false;
   G.twoMinDone = {};                    // 🕑 no warnings given yet
   if (window.TDDefense && TDDefense.resetScout) TDDefense.resetScout();   // 🧠 a new game: they know nothing about your defense yet
@@ -5704,7 +5709,7 @@ window.TDGame = {
     G.score = Math.max(0, resume.my | 0);
     G.oppScore = Math.max(0, resume.opp | 0);
     G.quarter = Math.max(1, Math.min(NUM_QUARTERS, resume.quarter || 3));
-    G.clock = QUARTER_SECONDS;
+    G.clock = qSecs();
     // ⚠️ THE FLAG THAT KEEPS A HALF-SIMMED GAME HONEST. You only played half of
     // it, so it must not reach your 🔥 streak, your 🏅 ladder, your 🎓 coaches or
     // the 📖 record book — otherwise you could sim your way to 28-0, take over,

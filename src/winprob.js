@@ -241,7 +241,7 @@
     const qLeft = Math.max(0, (t.NUM_QUARTERS || 4) - g.quarter);
     return {
       lead: g.score - g.oppScore,
-      secs: g.overtime ? 0 : Math.max(0, g.clock) + qLeft * (t.QUARTER_SECONDS || 150),
+      secs: g.overtime ? 0 : Math.max(0, g.clock) + qLeft * (g.qSecs || t.QUARTER_SECONDS || 150),
       ball: mine,
       spot: mine ? g.losYards : (cpu.spot || 25),
       down: mine ? g.down : (cpu.down || 1),

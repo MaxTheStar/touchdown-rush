@@ -29,6 +29,7 @@
   // ot = overtime, done = { 2: bool, 4: bool } of the warnings already given this game.
   function due(q, quarters, clock, ot, done) {
     if (ot) return false;
+    try { const g = window.__td && __td.G; if (g && g.qSecs && g.qSecs < 150) return false; } catch (e) {}   // ⏱ a SHORT-quarter game has no two-minute warning (the whole quarter is under 2:00)
     if (q !== 2 && q !== quarters) return false;
     if (!(clock > 0) || clock > AT) return false;
     return !(done && done[q]);

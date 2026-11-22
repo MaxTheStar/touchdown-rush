@@ -24,7 +24,8 @@
 
   function eligible(g) {
     return !!(g && g.state === 'presnap' && g.team && g.oppTeam && !g.gameOver && !g.pendingXP && !g.twoPtTry && !g.seasonGame && !g.playoffGame
-      && !g.drillGame && !g.allStarGame && !g.rivalGame && !g.bossGame && !g.houseGame && !g.starGame && !g.simTakeover && !g.twoPlayer);
+      && !g.drillGame && !g.allStarGame && !g.rivalGame && !g.bossGame && !g.houseGame && !g.starGame && !g.simTakeover && !g.twoPlayer
+      && (!g.qSecs || g.qSecs === 150));   // ⏱ only a standard-length game can be resumed (the save checks clock <= 150)
   }
   function snapshot(g) {
     return { v: 1, team: g.team.name, mine: g.team.abbr, opp: g.oppTeam.abbr, diff: g.difficulty, quarter: g.quarter, clock: Math.round(g.clock * 10) / 10,
