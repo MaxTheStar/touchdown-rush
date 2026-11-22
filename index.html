@@ -20,19 +20,19 @@
                                 link into a chat, so people see the game, not a
                                 bare URL. (Chat apps need the WHOLE web address
                                 here, not a short one, so it's spelled out.) -->
-  <link rel="icon" type="image/png" href="favicon.png?v=364" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=364" />
+  <link rel="icon" type="image/png" href="favicon.png?v=365" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=365" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Touchdown Fun 🏈" />
   <meta property="og:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
   <meta property="og:url" content="https://maxthestar.github.io/touchdown-rush/" />
-  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=364" />
+  <meta property="og:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=365" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Touchdown Fun 🏈" />
   <meta name="twitter:description" content="Fast, friendly arcade football — pick your team, snap the ball, and race to the end zone!" />
-  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=364" />
+  <meta name="twitter:image" content="https://maxthestar.github.io/touchdown-rush/share.png?v=365" />
   <style>
     html, body {
       margin: 0;
@@ -101,6 +101,10 @@
     #hud > div { position: fixed; pointer-events: none; z-index: 14;
       font-family: "Arial Black", Arial, sans-serif;
       text-shadow: 0 2px 4px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.9); }
+    /* 🔲 SCOREBOARD BACKING (Round 30, pick ⑦): the score, clock, down and spot are small text drawn straight over a busy field. With the ⚙️ switch on, each row gets a
+       dark plate behind it. ⚠️ A plate made ONLY of background + box-shadow SPREAD (which never changes layout), so no row moves or changes size by a single pixel
+       and nothing can collide with the buttons: that is the whole reason this replaced "bigger scoreboard", which has no room to grow (rows 10-96px, buttons from 104px). */
+    body.hudplate #hud > div { background: rgba(5,10,24,0.78); border-radius: 5px; box-shadow: 0 0 0 3px rgba(5,10,24,0.78); }
     #hud-score { top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left));
       font-size: 20px; font-weight: 800; color: #fff; }
     #hud-clock { top: calc(max(10px, env(safe-area-inset-top)) + 26px); left: max(12px, env(safe-area-inset-left));
@@ -5590,177 +5594,178 @@
   <!-- kick.js must load BEFORE main.js: it defines KickGame, which main.js uses.
        The ?v= number on the end is a "cache buster": bump it by 1 every time we ship
        a change, so your iPad/browser grabs the NEW game instead of an old saved copy. -->
-  <script src="src/stats.js?v=364"></script>
-  <script src="src/sound.js?v=364"></script>
-  <script src="src/shop.js?v=364"></script>
-  <script src="src/spin.js?v=364"></script>
-  <script src="src/challenges.js?v=364"></script>
-  <script src="src/quests.js?v=364"></script>
-  <script src="src/progress.js?v=364"></script>
-  <script src="src/streak.js?v=364"></script>
-  <script src="src/achievements.js?v=364"></script>
-  <script src="src/trophy.js?v=364"></script>
-  <script src="src/records.js?v=364"></script>
-  <script src="src/road.js?v=364"></script>
-  <script src="src/roadtrip.js?v=364"></script>
-  <script src="src/cards.js?v=364"></script>
-  <script src="src/stadium.js?v=364"></script>
-  <script src="src/ranked.js?v=364"></script>
-  <script src="src/halftime.js?v=364"></script>
-  <script src="src/uniform.js?v=364"></script>
-  <script src="src/powerup.js?v=364"></script>
-  <script src="src/arcade.js?v=364"></script>
-  <script src="src/trivia.js?v=364"></script>
-  <script src="src/nemesis.js?v=364"></script>
-  <script src="src/weather.js?v=364"></script>
-  <script src="src/season.js?v=364"></script>
-  <script src="src/playoffs.js?v=364"></script>
-  <script src="src/film.js?v=364"></script>
-  <script src="src/celebration.js?v=364"></script>
-  <script src="src/juice.js?v=364"></script>
-  <script src="src/gamestats.js?v=364"></script>
-  <script src="src/sportspage.js?v=364"></script>
-  <script src="src/press.js?v=364"></script>
-  <script src="src/staff.js?v=364"></script>
-  <script src="src/chemistry.js?v=364"></script>
-  <script src="src/boxscore.js?v=364"></script>
-  <script src="src/field.js?v=364"></script>
-  <script src="src/ball.js?v=364"></script>
-  <script src="src/mascot.js?v=364"></script>
-  <script src="src/poster.js?v=364"></script>
-  <script src="src/house.js?v=364"></script>
-  <script src="src/allstar.js?v=364"></script>
-  <script src="src/leaders.js?v=364"></script>
-  <script src="src/traits.js?v=364"></script>
-  <script src="src/awards.js?v=364"></script>
-  <script src="src/rebrand.js?v=364"></script>
-  <script src="src/draft.js?v=364"></script>
-  <script src="src/training.js?v=364"></script>
-  <script src="src/injuries.js?v=364"></script>
-  <script src="src/flag.js?v=364"></script>
-  <script src="src/freeagency.js?v=364"></script>
-  <script src="src/gameplan.js?v=364"></script>
-  <script src="src/playbook.js?v=364"></script>
-  <script src="src/createplayer.js?v=364"></script>
-  <script src="src/nicknames.js?v=364"></script>
-  <script src="src/special.js?v=364"></script>
-  <script src="src/events.js?v=364"></script>
-  <script src="src/dynasty.js?v=364"></script>
-  <script src="src/legacy.js?v=364"></script>
-  <script src="src/ads.js?v=364"></script>
-  <script src="src/tour.js?v=364"></script>
-  <script src="src/concession.js?v=364"></script>
-  <script src="src/kick.js?v=364"></script>
-  <script src="src/drill.js?v=364"></script>
-  <script src="src/scout.js?v=364"></script>
-  <script src="src/simgame.js?v=364"></script>
-  <script src="src/audible.js?v=364"></script>
-  <script src="src/defcall.js?v=364"></script>
-  <script src="src/superstar.js?v=364"></script>
-  <script src="src/crowd.js?v=364"></script>
-  <script src="src/fourth.js?v=364"></script>
-  <script src="src/clockplay.js?v=364"></script>
-  <script src="src/bighit.js?v=364"></script>
-  <script src="src/selfscout.js?v=364"></script>
-  <script src="src/penalty.js?v=364"></script>
-  <script src="src/hurry.js?v=364"></script>
-  <script src="src/momentum.js?v=364"></script>
-  <script src="src/protect.js?v=364"></script>
-  <script src="src/puntreturn.js?v=364"></script>
-  <script src="src/toss.js?v=364"></script>
-  <script src="src/homeaway.js?v=364"></script>
-  <script src="src/throwback.js?v=364"></script>
-  <script src="src/playclock.js?v=364"></script>
-  <script src="src/silent.js?v=364"></script>
-  <script src="src/personnel.js?v=364"></script>
-  <script src="src/winprob.js?v=364"></script>
-  <script src="src/gastank.js?v=364"></script>
-  <script src="src/twopoint.js?v=364"></script>
-  <script src="src/icing.js?v=364"></script>
-  <script src="src/hothand.js?v=364"></script>
-  <script src="src/motion.js?v=364"></script>
-  <script src="src/kicker.js?v=364"></script>
-  <script src="src/pitch.js?v=364"></script>
-  <script src="src/twelfth.js?v=364"></script>
-  <script src="src/fieldpos.js?v=364"></script>
-  <script src="src/blockkick.js?v=364"></script>
-  <script src="src/formation.js?v=364"></script>
-  <script src="src/tipped.js?v=364"></script>
-  <script src="src/chains.js?v=364"></script>
-  <script src="src/drives.js?v=364"></script>
-  <script src="src/throwaway.js?v=364"></script>
-  <script src="src/dive.js?v=364"></script>
-  <script src="src/jumpball.js?v=364"></script>
-  <script src="src/hailmary.js?v=364"></script>
-  <script src="src/kneel.js?v=364"></script>
-  <script src="src/touchback.js?v=364"></script>
-  <script src="src/goalline.js?v=364"></script>
-  <script src="src/fallon.js?v=364"></script>
-  <script src="src/strip.js?v=364"></script>
-  <script src="src/knockdown.js?v=364"></script>
-  <script src="src/pickreturn.js?v=364"></script>
-  <script src="src/handsteam.js?v=364"></script>
-  <script src="src/boundary.js?v=364"></script>
-  <script src="src/slide.js?v=364"></script>
-  <script src="src/hardcount.js?v=364"></script>
-  <script src="src/toetap.js?v=364"></script>
-  <script src="src/overtime.js?v=364"></script>
-  <script src="src/draw.js?v=364"></script>
-  <script src="src/screen.js?v=364"></script>
-  <script src="src/sneak.js?v=364"></script>
-  <script src="src/playaction.js?v=364"></script>
-  <script src="src/lob.js?v=364"></script>
-  <script src="src/bootleg.js?v=364"></script>
-  <script src="src/calls.js?v=364"></script>
-  <script src="src/wildcat.js?v=364"></script>
-  <script src="src/jet.js?v=364"></script>
-  <script src="src/reverse.js?v=364"></script>
-  <script src="src/stunt.js?v=364"></script>
-  <script src="src/mismatch.js?v=364"></script>
-  <script src="src/backshoulder.js?v=364"></script>
-  <script src="src/wedge.js?v=364"></script>
-  <script src="src/stripsack.js?v=364"></script>
-  <script src="src/doublemove.js?v=364"></script>
-  <script src="src/pickplay.js?v=364"></script>
-  <script src="src/lookoff.js?v=364"></script>
-  <script src="src/halfadj.js?v=364"></script>
-  <script src="src/speech.js?v=364"></script>
-  <script src="src/safety.js?v=364"></script>
-  <script src="src/churn.js?v=364"></script>
-  <script src="src/gang.js?v=364"></script>
-  <script src="src/pancake.js?v=364"></script>
-  <script src="src/textsize.js?v=364"></script>
-  <script src="src/devcoins.js?v=364"></script>
-  <script src="src/wakelock.js?v=364"></script>
-  <script src="src/gamelen.js?v=364"></script>
-  <script src="src/mercy.js?v=364"></script>
-  <script src="src/battery.js?v=364"></script>
-  <script src="src/savecode.js?v=364"></script>
-  <script src="src/offline.js?v=364"></script>
-  <script src="src/gamepad.js?v=364"></script>
-  <script src="src/voice.js?v=364"></script>
-  <script src="src/update.js?v=364"></script>
-  <script src="src/contracts.js?v=364"></script>
-  <script src="src/sketch.js?v=364"></script>
-  <script src="src/hooklat.js?v=364"></script>
-  <script src="src/option.js?v=364"></script>
-  <script src="src/twomin.js?v=364"></script>
-  <script src="src/celebbig.js?v=364"></script>
-  <script src="src/chase.js?v=364"></script>
-  <script src="src/juke.js?v=364"></script>
-  <script src="src/hurdle.js?v=364"></script>
-  <script src="src/swim.js?v=364"></script>
-  <script src="src/retcall.js?v=364"></script>
-  <script src="src/settings.js?v=364"></script>
-  <script src="src/haptics.js?v=364"></script>
-  <script src="src/lefty.js?v=364"></script>
-  <script src="src/mixer.js?v=364"></script>
-  <script src="src/colorblind.js?v=364"></script>
-  <script src="src/pause.js?v=364"></script>
-  <script src="src/guide.js?v=364"></script>
-  <script src="src/rookie.js?v=364"></script>
-  <script src="src/resume.js?v=364"></script>
-  <script src="src/hotroute.js?v=364"></script>
-  <script src="src/main.js?v=364"></script>
+  <script src="src/stats.js?v=365"></script>
+  <script src="src/sound.js?v=365"></script>
+  <script src="src/shop.js?v=365"></script>
+  <script src="src/spin.js?v=365"></script>
+  <script src="src/challenges.js?v=365"></script>
+  <script src="src/quests.js?v=365"></script>
+  <script src="src/progress.js?v=365"></script>
+  <script src="src/streak.js?v=365"></script>
+  <script src="src/achievements.js?v=365"></script>
+  <script src="src/trophy.js?v=365"></script>
+  <script src="src/records.js?v=365"></script>
+  <script src="src/road.js?v=365"></script>
+  <script src="src/roadtrip.js?v=365"></script>
+  <script src="src/cards.js?v=365"></script>
+  <script src="src/stadium.js?v=365"></script>
+  <script src="src/ranked.js?v=365"></script>
+  <script src="src/halftime.js?v=365"></script>
+  <script src="src/uniform.js?v=365"></script>
+  <script src="src/powerup.js?v=365"></script>
+  <script src="src/arcade.js?v=365"></script>
+  <script src="src/trivia.js?v=365"></script>
+  <script src="src/nemesis.js?v=365"></script>
+  <script src="src/weather.js?v=365"></script>
+  <script src="src/season.js?v=365"></script>
+  <script src="src/playoffs.js?v=365"></script>
+  <script src="src/film.js?v=365"></script>
+  <script src="src/celebration.js?v=365"></script>
+  <script src="src/juice.js?v=365"></script>
+  <script src="src/gamestats.js?v=365"></script>
+  <script src="src/sportspage.js?v=365"></script>
+  <script src="src/press.js?v=365"></script>
+  <script src="src/staff.js?v=365"></script>
+  <script src="src/chemistry.js?v=365"></script>
+  <script src="src/boxscore.js?v=365"></script>
+  <script src="src/field.js?v=365"></script>
+  <script src="src/ball.js?v=365"></script>
+  <script src="src/mascot.js?v=365"></script>
+  <script src="src/poster.js?v=365"></script>
+  <script src="src/house.js?v=365"></script>
+  <script src="src/allstar.js?v=365"></script>
+  <script src="src/leaders.js?v=365"></script>
+  <script src="src/traits.js?v=365"></script>
+  <script src="src/awards.js?v=365"></script>
+  <script src="src/rebrand.js?v=365"></script>
+  <script src="src/draft.js?v=365"></script>
+  <script src="src/training.js?v=365"></script>
+  <script src="src/injuries.js?v=365"></script>
+  <script src="src/flag.js?v=365"></script>
+  <script src="src/freeagency.js?v=365"></script>
+  <script src="src/gameplan.js?v=365"></script>
+  <script src="src/playbook.js?v=365"></script>
+  <script src="src/createplayer.js?v=365"></script>
+  <script src="src/nicknames.js?v=365"></script>
+  <script src="src/special.js?v=365"></script>
+  <script src="src/events.js?v=365"></script>
+  <script src="src/dynasty.js?v=365"></script>
+  <script src="src/legacy.js?v=365"></script>
+  <script src="src/ads.js?v=365"></script>
+  <script src="src/tour.js?v=365"></script>
+  <script src="src/concession.js?v=365"></script>
+  <script src="src/kick.js?v=365"></script>
+  <script src="src/drill.js?v=365"></script>
+  <script src="src/scout.js?v=365"></script>
+  <script src="src/simgame.js?v=365"></script>
+  <script src="src/audible.js?v=365"></script>
+  <script src="src/defcall.js?v=365"></script>
+  <script src="src/superstar.js?v=365"></script>
+  <script src="src/crowd.js?v=365"></script>
+  <script src="src/fourth.js?v=365"></script>
+  <script src="src/clockplay.js?v=365"></script>
+  <script src="src/bighit.js?v=365"></script>
+  <script src="src/selfscout.js?v=365"></script>
+  <script src="src/penalty.js?v=365"></script>
+  <script src="src/hurry.js?v=365"></script>
+  <script src="src/momentum.js?v=365"></script>
+  <script src="src/protect.js?v=365"></script>
+  <script src="src/puntreturn.js?v=365"></script>
+  <script src="src/toss.js?v=365"></script>
+  <script src="src/homeaway.js?v=365"></script>
+  <script src="src/throwback.js?v=365"></script>
+  <script src="src/playclock.js?v=365"></script>
+  <script src="src/silent.js?v=365"></script>
+  <script src="src/personnel.js?v=365"></script>
+  <script src="src/winprob.js?v=365"></script>
+  <script src="src/gastank.js?v=365"></script>
+  <script src="src/twopoint.js?v=365"></script>
+  <script src="src/icing.js?v=365"></script>
+  <script src="src/hothand.js?v=365"></script>
+  <script src="src/motion.js?v=365"></script>
+  <script src="src/kicker.js?v=365"></script>
+  <script src="src/pitch.js?v=365"></script>
+  <script src="src/twelfth.js?v=365"></script>
+  <script src="src/fieldpos.js?v=365"></script>
+  <script src="src/blockkick.js?v=365"></script>
+  <script src="src/formation.js?v=365"></script>
+  <script src="src/tipped.js?v=365"></script>
+  <script src="src/chains.js?v=365"></script>
+  <script src="src/drives.js?v=365"></script>
+  <script src="src/throwaway.js?v=365"></script>
+  <script src="src/dive.js?v=365"></script>
+  <script src="src/jumpball.js?v=365"></script>
+  <script src="src/hailmary.js?v=365"></script>
+  <script src="src/kneel.js?v=365"></script>
+  <script src="src/touchback.js?v=365"></script>
+  <script src="src/goalline.js?v=365"></script>
+  <script src="src/fallon.js?v=365"></script>
+  <script src="src/strip.js?v=365"></script>
+  <script src="src/knockdown.js?v=365"></script>
+  <script src="src/pickreturn.js?v=365"></script>
+  <script src="src/handsteam.js?v=365"></script>
+  <script src="src/boundary.js?v=365"></script>
+  <script src="src/slide.js?v=365"></script>
+  <script src="src/hardcount.js?v=365"></script>
+  <script src="src/toetap.js?v=365"></script>
+  <script src="src/overtime.js?v=365"></script>
+  <script src="src/draw.js?v=365"></script>
+  <script src="src/screen.js?v=365"></script>
+  <script src="src/sneak.js?v=365"></script>
+  <script src="src/playaction.js?v=365"></script>
+  <script src="src/lob.js?v=365"></script>
+  <script src="src/bootleg.js?v=365"></script>
+  <script src="src/calls.js?v=365"></script>
+  <script src="src/wildcat.js?v=365"></script>
+  <script src="src/jet.js?v=365"></script>
+  <script src="src/reverse.js?v=365"></script>
+  <script src="src/stunt.js?v=365"></script>
+  <script src="src/mismatch.js?v=365"></script>
+  <script src="src/backshoulder.js?v=365"></script>
+  <script src="src/wedge.js?v=365"></script>
+  <script src="src/stripsack.js?v=365"></script>
+  <script src="src/doublemove.js?v=365"></script>
+  <script src="src/pickplay.js?v=365"></script>
+  <script src="src/lookoff.js?v=365"></script>
+  <script src="src/halfadj.js?v=365"></script>
+  <script src="src/speech.js?v=365"></script>
+  <script src="src/safety.js?v=365"></script>
+  <script src="src/churn.js?v=365"></script>
+  <script src="src/gang.js?v=365"></script>
+  <script src="src/pancake.js?v=365"></script>
+  <script src="src/textsize.js?v=365"></script>
+  <script src="src/devcoins.js?v=365"></script>
+  <script src="src/wakelock.js?v=365"></script>
+  <script src="src/gamelen.js?v=365"></script>
+  <script src="src/mercy.js?v=365"></script>
+  <script src="src/battery.js?v=365"></script>
+  <script src="src/savecode.js?v=365"></script>
+  <script src="src/offline.js?v=365"></script>
+  <script src="src/gamepad.js?v=365"></script>
+  <script src="src/voice.js?v=365"></script>
+  <script src="src/update.js?v=365"></script>
+  <script src="src/hudplate.js?v=365"></script>
+  <script src="src/contracts.js?v=365"></script>
+  <script src="src/sketch.js?v=365"></script>
+  <script src="src/hooklat.js?v=365"></script>
+  <script src="src/option.js?v=365"></script>
+  <script src="src/twomin.js?v=365"></script>
+  <script src="src/celebbig.js?v=365"></script>
+  <script src="src/chase.js?v=365"></script>
+  <script src="src/juke.js?v=365"></script>
+  <script src="src/hurdle.js?v=365"></script>
+  <script src="src/swim.js?v=365"></script>
+  <script src="src/retcall.js?v=365"></script>
+  <script src="src/settings.js?v=365"></script>
+  <script src="src/haptics.js?v=365"></script>
+  <script src="src/lefty.js?v=365"></script>
+  <script src="src/mixer.js?v=365"></script>
+  <script src="src/colorblind.js?v=365"></script>
+  <script src="src/pause.js?v=365"></script>
+  <script src="src/guide.js?v=365"></script>
+  <script src="src/rookie.js?v=365"></script>
+  <script src="src/resume.js?v=365"></script>
+  <script src="src/hotroute.js?v=365"></script>
+  <script src="src/main.js?v=365"></script>
 </body>
 </html>
