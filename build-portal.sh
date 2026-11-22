@@ -52,6 +52,9 @@ perl -ni -e 'print unless /src\/devcoins\.js/' "$OUT/index.html"
 # 📴 the offline switch (src/offline.js + sw.js) is network code a portal does not want: it never ships there either.
 rm -f "$OUT/src/offline.js" "$OUT/sw.js"
 perl -ni -e 'print unless /src\/offline\.js/' "$OUT/index.html"
+# 🔔 the update banner (src/update.js) is network code too: never in a portal.
+rm -f "$OUT/src/update.js"
+perl -ni -e 'print unless /src\/update\.js/' "$OUT/index.html"
 perl -pi -e 's{<script src="https://cdn\.jsdelivr\.net/npm/phaser\@3\.87\.0/dist/phaser\.min\.js"></script>}{<script src="phaser.min.js"></script>}' "$OUT/index.html"
 # 2) the 🌍 world-tracker panel (it uses the counter services + links to the dev dashboard)
 perl -0pi -e 's{  <!-- \xF0\x9F\x8C\x8D The world tracker.*?</aside>\n}{  <!-- World tracker removed for the portal build (it needs outside services). -->\n}s' "$OUT/index.html"

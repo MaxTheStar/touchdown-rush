@@ -264,12 +264,15 @@
     const d = gather();
     const note = $('poster-note');
     const say = t => { if (note) note.innerHTML = t; };
-    const link = 'https://maxthestar.github.io/touchdown-rush/';
+    const link = location.href.split(/[?#]/)[0];      // the page you are on right now (the live game, or a portal): no address is written into the file, so a portal build stays free of outside links
     const text = 'My Touchdown Fun team: ' + (d.name || 'my team') + '! Can you beat us? ' + link;
     try {
       if (navigator.canShare && navigator.share) {
         try {
-          const blob = await (await fetch(lastUrl)).blob();
+          // data: URL -> bytes WITHOUT a network call (the portal build forbids `fetch`, and a data: URL never leaves the page anyway)
+          const b64 = lastUrl.split(',')[1] || '', bin = atob(b64), bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'image/png' });
           const file = new File([blob], (d.name || 'my-team').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-poster.png', { type: 'image/png' });
           if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: text }); return; }
         } catch (e) { if (e && e.name === 'AbortError') return; }
